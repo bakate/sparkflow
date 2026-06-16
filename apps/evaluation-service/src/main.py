@@ -1,5 +1,8 @@
 import os
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Annotated, cast
+from uuid import uuid4
 
 import asyncpg
 from fastapi import FastAPI, Header, HTTPException, Response, status
@@ -17,6 +20,18 @@ from infrastructure.postgres_evaluation_repository import (
     PostgresEvaluationRepository,
     ensure_evaluation_schema,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class SystemClock:
+    def now(self) -> datetime:
+        return datetime.now(UTC)
+
+
+@dataclass(frozen=True, slots=True)
+class UuidGenerator:
+    def generate(self) -> str:
+        return str(uuid4())
 
 
 class SubmitEvaluationRequest(BaseModel):
@@ -67,8 +82,10 @@ async def startup() -> None:
     event_publisher = await create_nats_event_publisher(nats_url=nats_url)
 
     app.state.submit_evaluation_use_case = SubmitEvaluationUseCase(
+        clock=SystemClock(),
         evaluation_repository=PostgresEvaluationRepository(pool=pool),
         event_publisher=event_publisher,
+        id_generator=UuidGenerator(),
     )
 
 

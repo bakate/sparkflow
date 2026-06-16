@@ -1,4 +1,5 @@
 from typing import Protocol
+from datetime import datetime
 
 from domain.evaluation import Evaluation
 from infrastructure.contracts import DomainEvent
@@ -12,3 +13,11 @@ class EvaluationRepository(Protocol):
 
 class EventPublisher(Protocol):
     async def publish(self, *, event: DomainEvent) -> None: ...
+
+
+class Clock(Protocol):
+    def now(self) -> datetime: ...
+
+
+class IdGenerator(Protocol):
+    def generate(self) -> str: ...

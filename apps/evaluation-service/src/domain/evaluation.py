@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 
 EvaluationRecommendation = Literal["strong-fit", "possible-fit", "not-fit"]
@@ -23,6 +23,7 @@ def create_evaluation(
     reviewer_id: str,
     score: int,
     comment: str,
+    now: datetime,
 ) -> Evaluation:
     return Evaluation(
         id=evaluation_id,
@@ -31,7 +32,7 @@ def create_evaluation(
         score=score,
         recommendation=score_to_recommendation(score=score),
         comment=comment.strip(),
-        created_at=datetime.now(UTC),
+        created_at=now,
     )
 
 
