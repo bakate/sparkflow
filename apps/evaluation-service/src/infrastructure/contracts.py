@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.domain.evaluation import Evaluation, EvaluationRecommendation
+from domain.evaluation import Evaluation, EvaluationRecommendation
 
 UserRole = Literal["company-admin", "startup-member", "reviewer"]
 EventName = Literal[

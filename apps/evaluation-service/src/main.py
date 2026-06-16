@@ -1,19 +1,19 @@
 import os
-from typing import Annotated
+from typing import Annotated, cast
 
 import asyncpg
 from fastapi import FastAPI, Header, HTTPException, Response, status
 from pydantic import BaseModel, Field
 
-from src.application.result import Failure, Success
-from src.application.submit_evaluation_use_case import (
+from application.result import Failure, Success
+from application.submit_evaluation_use_case import (
     SubmitEvaluationCommand,
     SubmitEvaluationUseCase,
 )
-from src.domain.evaluation import Evaluation
-from src.infrastructure.contracts import ActorContext, EvaluationSubmittedPayload
-from src.infrastructure.nats_event_publisher import create_nats_event_publisher
-from src.infrastructure.postgres_evaluation_repository import (
+from domain.evaluation import Evaluation
+from infrastructure.contracts import ActorContext, EvaluationSubmittedPayload, UserRole
+from infrastructure.nats_event_publisher import create_nats_event_publisher
+from infrastructure.postgres_evaluation_repository import (
     PostgresEvaluationRepository,
     ensure_evaluation_schema,
 )
@@ -22,6 +22,9 @@ from src.infrastructure.postgres_evaluation_repository import (
 class SubmitEvaluationRequest(BaseModel):
     score: int = Field(ge=0, le=100)
     comment: str
+
+
+allowed_user_roles = ("company-admin", "startup-member", "reviewer")
 
 
 def to_response(*, evaluation: Evaluation) -> dict[str, object]:
@@ -35,7 +38,14 @@ def read_actor(
     organization_id: str,
     role: str,
 ) -> ActorContext:
-    return ActorContext(user_id=user_id, organization_id=organization_id, role=role)
+    if role not in allowed_user_roles:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid-role")
+
+    return ActorContext(
+        user_id=user_id,
+        organization_id=organization_id,
+        role=cast(UserRole, role),
+    )
 
 
 app = FastAPI(title="Sparkflow Evaluation Service")

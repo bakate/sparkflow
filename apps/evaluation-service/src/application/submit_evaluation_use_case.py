@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import uuid4
 
-from src.application.ports import EvaluationRepository, EventPublisher
-from src.application.result import Failure, Result, Success
-from src.domain.evaluation import Evaluation, create_evaluation
-from src.infrastructure.contracts import (
+from application.ports import EvaluationRepository, EventPublisher
+from application.result import Failure, Result, Success
+from domain.evaluation import Evaluation, create_evaluation
+from infrastructure.contracts import (
     ActorContext,
     DomainEvent,
     EvaluationSubmittedPayload,

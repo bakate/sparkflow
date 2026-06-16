@@ -1,6 +1,6 @@
 import nats
 
-from src.infrastructure.contracts import DomainEvent
+from infrastructure.contracts import DomainEvent
 
 
 class NatsEventPublisher:

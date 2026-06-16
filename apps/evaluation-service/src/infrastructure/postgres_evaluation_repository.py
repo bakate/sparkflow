@@ -3,7 +3,7 @@ from typing import cast
 
 import asyncpg
 
-from src.domain.evaluation import Evaluation, EvaluationRecommendation
+from domain.evaluation import Evaluation, EvaluationRecommendation
 
 
 class PostgresEvaluationRepository:

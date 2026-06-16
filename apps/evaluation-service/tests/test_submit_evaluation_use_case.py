@@ -2,13 +2,13 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from src.application.result import Failure, Success
-from src.application.submit_evaluation_use_case import (
+from application.result import Failure, Success
+from application.submit_evaluation_use_case import (
     SubmitEvaluationCommand,
     SubmitEvaluationUseCase,
 )
-from src.domain.evaluation import Evaluation
-from src.infrastructure.contracts import ActorContext, DomainEvent
+from domain.evaluation import Evaluation
+from infrastructure.contracts import ActorContext, DomainEvent
 
 
 @dataclass(slots=True)
@@ -19,7 +19,11 @@ class InMemoryEvaluationRepository:
         self.evaluations.append(evaluation)
 
     async def find_by_submission_id(self, *, submission_id: str) -> tuple[Evaluation, ...]:
-        return tuple(evaluation for evaluation in self.evaluations if evaluation.submission_id == submission_id)
+        return tuple(
+            evaluation
+            for evaluation in self.evaluations
+            if evaluation.submission_id == submission_id
+        )
 
 
 @dataclass(slots=True)

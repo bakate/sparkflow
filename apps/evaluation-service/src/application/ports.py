@@ -1,7 +1,7 @@
 from typing import Protocol
 
-from src.domain.evaluation import Evaluation
-from src.infrastructure.contracts import DomainEvent
+from domain.evaluation import Evaluation
+from infrastructure.contracts import DomainEvent
 
 
 class EvaluationRepository(Protocol):
