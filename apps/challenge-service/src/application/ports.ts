@@ -1,5 +1,5 @@
+import type { ChallengeDto, DomainEvent } from "@sparkflow/contracts";
 import type { Challenge } from "../domain/challenge.ts";
-import type { DomainEvent } from "@sparkflow/contracts";
 
 export type ChallengeRepository = {
   readonly save: (input: { readonly challenge: Challenge }) => Promise<void>;
@@ -8,5 +8,13 @@ export type ChallengeRepository = {
 };
 
 export type EventPublisher = {
-  readonly publish: (input: { readonly event: DomainEvent }) => Promise<void>;
+  readonly publish: (input: { readonly event: DomainEvent<ChallengeDto> }) => Promise<void>;
+};
+
+export type Clock = {
+  readonly now: () => Date;
+};
+
+export type IdGenerator = {
+  readonly generate: () => string;
 };

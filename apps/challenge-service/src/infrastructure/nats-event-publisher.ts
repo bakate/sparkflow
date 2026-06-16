@@ -1,4 +1,4 @@
-import type { DomainEvent } from "@sparkflow/contracts";
+import type { ChallengeDto, DomainEvent } from "@sparkflow/contracts";
 import { connect, JSONCodec, type JetStreamClient } from "nats";
 import type { EventPublisher } from "../application/ports.ts";
 
@@ -22,7 +22,7 @@ export const createNatsEventPublisher = async (input: {
   const jetStream: JetStreamClient = connection.jetstream();
 
   return {
-    publish: async ({ event }) => {
+    publish: async ({ event }: { readonly event: DomainEvent<ChallengeDto> }) => {
       await jetStream.publish(event.eventName, jsonCodec.encode(event));
     },
   };

@@ -5,9 +5,8 @@ import {
   type DomainEvent,
 } from "@sparkflow/contracts";
 import { fail, succeed, type Result } from "@sparkflow/result";
-import { randomUUID } from "node:crypto";
 import { publishChallenge, toChallengeDto, type ChallengeError } from "../domain/challenge.ts";
-import type { ChallengeRepository, EventPublisher } from "./ports.ts";
+import type { ChallengeRepository, Clock, EventPublisher, IdGenerator } from "./ports.ts";
 
 export type PublishChallengeCommand = {
   readonly actor: ActorContext;
@@ -23,7 +22,9 @@ export type PublishChallengeUseCase = {
 
 export const createPublishChallengeUseCase = (input: {
   readonly challengeRepository: ChallengeRepository;
+  readonly clock: Clock;
   readonly eventPublisher: EventPublisher;
+  readonly idGenerator: IdGenerator;
 }): PublishChallengeUseCase => ({
   execute: async (command) => {
     const challenge = await input.challengeRepository.findById({
@@ -45,13 +46,14 @@ export const createPublishChallengeUseCase = (input: {
       return fail("challenge-already-published");
     }
 
-    const publishedChallenge = publishChallenge({ challenge, now: new Date() });
+    const now = input.clock.now();
+    const publishedChallenge = publishChallenge({ challenge, now });
     await input.challengeRepository.save({ challenge: publishedChallenge });
 
-    const event: DomainEvent = {
-      eventId: randomUUID(),
+    const event: DomainEvent<ChallengeDto> = {
+      eventId: input.idGenerator.generate(),
       eventName: eventNames.challengePublished,
-      occurredAt: new Date().toISOString(),
+      occurredAt: now.toISOString(),
       correlationId: command.correlationId,
       producer: "challenge-service",
       payload: toChallengeDto(publishedChallenge),

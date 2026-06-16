@@ -1,5 +1,6 @@
 import { readEnvironmentVariable, readIntegerEnvironmentVariable } from "@sparkflow/config";
 import { logger } from "@sparkflow/logger";
+import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createCreateChallengeUseCase } from "./application/create-challenge.use-case.ts";
 import { createListChallengesUseCase } from "./application/list-challenges.use-case.ts";
@@ -23,10 +24,21 @@ await ensureChallengeSchema({ pool });
 
 const challengeRepository = createPostgresChallengeRepository({ pool });
 const eventPublisher = await createNatsEventPublisher({ natsUrl });
+const clock = { now: () => new Date() } as const;
+const idGenerator = { generate: () => randomUUID() } as const;
 
 const server = await buildChallengeHttpServer({
-  createChallengeUseCase: createCreateChallengeUseCase({ challengeRepository }),
-  publishChallengeUseCase: createPublishChallengeUseCase({ challengeRepository, eventPublisher }),
+  createChallengeUseCase: createCreateChallengeUseCase({
+    challengeRepository,
+    clock,
+    idGenerator,
+  }),
+  publishChallengeUseCase: createPublishChallengeUseCase({
+    challengeRepository,
+    clock,
+    eventPublisher,
+    idGenerator,
+  }),
   listChallengesUseCase: createListChallengesUseCase({ challengeRepository }),
 });
 

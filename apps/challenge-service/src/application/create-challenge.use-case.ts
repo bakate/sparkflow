@@ -1,8 +1,7 @@
 import type { ActorContext, ChallengeDto } from "@sparkflow/contracts";
 import { fail, succeed, type Result } from "@sparkflow/result";
-import { randomUUID } from "node:crypto";
 import { createChallenge, toChallengeDto, type ChallengeError } from "../domain/challenge.ts";
-import type { ChallengeRepository } from "./ports.ts";
+import type { ChallengeRepository, Clock, IdGenerator } from "./ports.ts";
 
 export type CreateChallengeCommand = {
   readonly actor: ActorContext;
@@ -18,6 +17,8 @@ export type CreateChallengeUseCase = {
 
 export const createCreateChallengeUseCase = (input: {
   readonly challengeRepository: ChallengeRepository;
+  readonly clock: Clock;
+  readonly idGenerator: IdGenerator;
 }): CreateChallengeUseCase => ({
   execute: async (command) => {
     if (command.actor.role !== "company-admin") {
@@ -33,11 +34,11 @@ export const createCreateChallengeUseCase = (input: {
     }
 
     const challenge = createChallenge({
-      id: randomUUID(),
+      id: input.idGenerator.generate(),
       title: command.title,
       description: command.description,
       ownerOrganizationId: command.actor.organizationId,
-      now: new Date(),
+      now: input.clock.now(),
     });
 
     await input.challengeRepository.save({ challenge });
