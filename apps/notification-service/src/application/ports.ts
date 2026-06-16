@@ -7,3 +7,11 @@ export type NotificationRepository = {
     readonly organizationId: string;
   }) => Promise<readonly Notification[]>;
 };
+
+export type Clock = {
+  readonly now: () => Date;
+};
+
+export type IdGenerator = {
+  readonly generate: () => string;
+};

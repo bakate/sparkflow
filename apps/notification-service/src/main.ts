@@ -1,5 +1,6 @@
 import { readEnvironmentVariable, readIntegerEnvironmentVariable } from "@sparkflow/config";
 import { logger } from "@sparkflow/logger";
+import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createCreateNotificationFromEventUseCase } from "./application/create-notification-from-event.use-case.ts";
 import { createListNotificationsUseCase } from "./application/list-notifications.use-case.ts";
@@ -21,7 +22,11 @@ const pool = new Pool({ connectionString: databaseUrl });
 await ensureNotificationSchema({ pool });
 
 const notificationRepository = createPostgresNotificationRepository({ pool });
+const clock = { now: () => new Date() } as const;
+const idGenerator = { generate: () => randomUUID() } as const;
 const createNotificationFromEventUseCase = createCreateNotificationFromEventUseCase({
+  clock,
+  idGenerator,
   notificationRepository,
 });
 

@@ -5,9 +5,8 @@ import {
   type NotificationDto,
   type SubmissionDto,
 } from "@sparkflow/contracts";
-import { randomUUID } from "node:crypto";
 import { createNotification, toNotificationDto } from "../domain/notification.ts";
-import type { NotificationRepository } from "./ports.ts";
+import type { Clock, IdGenerator, NotificationRepository } from "./ports.ts";
 
 export type CreateNotificationFromEventUseCase = {
   readonly execute: (input: { readonly event: DomainEvent }) => Promise<NotificationDto | null>;
@@ -64,6 +63,8 @@ const buildNotificationText = (
 };
 
 export const createCreateNotificationFromEventUseCase = (input: {
+  readonly clock: Clock;
+  readonly idGenerator: IdGenerator;
   readonly notificationRepository: NotificationRepository;
 }): CreateNotificationFromEventUseCase => ({
   execute: async ({ event }) => {
@@ -82,12 +83,12 @@ export const createCreateNotificationFromEventUseCase = (input: {
     }
 
     const notification = createNotification({
-      id: randomUUID(),
+      id: input.idGenerator.generate(),
       eventId: event.eventId,
       recipientOrganizationId: notificationText.recipientOrganizationId,
       title: notificationText.title,
       message: notificationText.message,
-      now: new Date(),
+      now: input.clock.now(),
     });
 
     await input.notificationRepository.save({ notification });
