@@ -1,0 +1,16 @@
+{
+  "eventId": "event-submission-rejected-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+  "eventName": "submission.rejected",
+  "occurredAt": "2026-06-16T11:00:00.000Z",
+  "correlationId": "correlation-id",
+  "producer": "submission-service",
+  "payload": {
+    "id": "submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+    "challengeId": "challenge-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+    "startupOrganizationId": "org-startup",
+    "summary": "Bio-based packaging solution.",
+    "status": "rejected",
+    "createdAt": "2026-06-16T10:00:00.000Z",
+    "decidedAt": "2026-06-16T11:00:00.000Z"
+  }
+}

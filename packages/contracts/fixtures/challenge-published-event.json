@@ -1,0 +1,16 @@
+{
+  "eventId": "event-challenge-published-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+  "eventName": "challenge.published",
+  "occurredAt": "2026-06-16T10:00:00.000Z",
+  "correlationId": "correlation-id",
+  "producer": "challenge-service",
+  "payload": {
+    "id": "challenge-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+    "title": "Circular packaging scouting",
+    "description": "Find startups for packaging waste reduction.",
+    "ownerOrganizationId": "org-company",
+    "status": "published",
+    "createdAt": "2026-06-16T09:00:00.000Z",
+    "publishedAt": "2026-06-16T10:00:00.000Z"
+  }
+}
