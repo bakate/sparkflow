@@ -5,14 +5,13 @@ import {
   type SubmissionDto,
 } from "@sparkflow/contracts";
 import { fail, succeed, type Result } from "@sparkflow/result";
-import { randomUUID } from "node:crypto";
 import {
   acceptSubmission,
   rejectSubmission,
   toSubmissionDto,
   type SubmissionError,
 } from "../domain/submission.ts";
-import type { EventPublisher, SubmissionRepository } from "./ports.ts";
+import type { Clock, EventPublisher, IdGenerator, SubmissionRepository } from "./ports.ts";
 
 export type SubmissionDecision = "accept" | "reject";
 
@@ -31,7 +30,9 @@ export type DecideSubmissionUseCase = {
 
 export const createDecideSubmissionUseCase = (input: {
   readonly submissionRepository: SubmissionRepository;
+  readonly clock: Clock;
   readonly eventPublisher: EventPublisher;
+  readonly idGenerator: IdGenerator;
 }): DecideSubmissionUseCase => ({
   execute: async (command) => {
     if (command.actor.role !== "company-admin") {
@@ -50,20 +51,21 @@ export const createDecideSubmissionUseCase = (input: {
       return fail("submission-already-decided");
     }
 
+    const now = input.clock.now();
     const decidedSubmission =
       command.decision === "accept"
-        ? acceptSubmission({ submission, now: new Date() })
-        : rejectSubmission({ submission, now: new Date() });
+        ? acceptSubmission({ submission, now })
+        : rejectSubmission({ submission, now });
 
     await input.submissionRepository.save({ submission: decidedSubmission });
 
-    const event: DomainEvent = {
-      eventId: randomUUID(),
+    const event: DomainEvent<SubmissionDto> = {
+      eventId: input.idGenerator.generate(),
       eventName:
         command.decision === "accept"
           ? eventNames.submissionAccepted
           : eventNames.submissionRejected,
-      occurredAt: new Date().toISOString(),
+      occurredAt: now.toISOString(),
       correlationId: command.correlationId,
       producer: "submission-service",
       payload: toSubmissionDto(decidedSubmission),

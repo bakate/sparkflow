@@ -5,9 +5,8 @@ import {
   type SubmissionDto,
 } from "@sparkflow/contracts";
 import { fail, succeed, type Result } from "@sparkflow/result";
-import { randomUUID } from "node:crypto";
 import { createSubmission, toSubmissionDto, type SubmissionError } from "../domain/submission.ts";
-import type { EventPublisher, SubmissionRepository } from "./ports.ts";
+import type { Clock, EventPublisher, IdGenerator, SubmissionRepository } from "./ports.ts";
 
 export type CreateSubmissionCommand = {
   readonly actor: ActorContext;
@@ -24,7 +23,9 @@ export type CreateSubmissionUseCase = {
 
 export const createCreateSubmissionUseCase = (input: {
   readonly submissionRepository: SubmissionRepository;
+  readonly clock: Clock;
   readonly eventPublisher: EventPublisher;
+  readonly idGenerator: IdGenerator;
 }): CreateSubmissionUseCase => ({
   execute: async (command) => {
     if (command.actor.role !== "startup-member") {
@@ -36,19 +37,19 @@ export const createCreateSubmissionUseCase = (input: {
     }
 
     const submission = createSubmission({
-      id: randomUUID(),
+      id: input.idGenerator.generate(),
       challengeId: command.challengeId,
       startupOrganizationId: command.actor.organizationId,
       summary: command.summary,
-      now: new Date(),
+      now: input.clock.now(),
     });
 
     await input.submissionRepository.save({ submission });
 
-    const event: DomainEvent = {
-      eventId: randomUUID(),
+    const event: DomainEvent<SubmissionDto> = {
+      eventId: input.idGenerator.generate(),
       eventName: eventNames.submissionCreated,
-      occurredAt: new Date().toISOString(),
+      occurredAt: submission.createdAt.toISOString(),
       correlationId: command.correlationId,
       producer: "submission-service",
       payload: toSubmissionDto(submission),

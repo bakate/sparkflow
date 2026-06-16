@@ -1,5 +1,6 @@
 import { readEnvironmentVariable, readIntegerEnvironmentVariable } from "@sparkflow/config";
 import { logger } from "@sparkflow/logger";
+import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createCreateSubmissionUseCase } from "./application/create-submission.use-case.ts";
 import { createDecideSubmissionUseCase } from "./application/decide-submission.use-case.ts";
@@ -23,10 +24,22 @@ await ensureSubmissionSchema({ pool });
 
 const submissionRepository = createPostgresSubmissionRepository({ pool });
 const eventPublisher = await createNatsEventPublisher({ natsUrl });
+const clock = { now: () => new Date() } as const;
+const idGenerator = { generate: () => randomUUID() } as const;
 
 const server = await buildSubmissionHttpServer({
-  createSubmissionUseCase: createCreateSubmissionUseCase({ submissionRepository, eventPublisher }),
-  decideSubmissionUseCase: createDecideSubmissionUseCase({ submissionRepository, eventPublisher }),
+  createSubmissionUseCase: createCreateSubmissionUseCase({
+    submissionRepository,
+    clock,
+    eventPublisher,
+    idGenerator,
+  }),
+  decideSubmissionUseCase: createDecideSubmissionUseCase({
+    submissionRepository,
+    clock,
+    eventPublisher,
+    idGenerator,
+  }),
   listSubmissionsUseCase: createListSubmissionsUseCase({ submissionRepository }),
 });
 

@@ -1,4 +1,4 @@
-import type { DomainEvent } from "@sparkflow/contracts";
+import type { DomainEvent, SubmissionDto } from "@sparkflow/contracts";
 import type { Submission } from "../domain/submission.ts";
 
 export type SubmissionRepository = {
@@ -10,5 +10,13 @@ export type SubmissionRepository = {
 };
 
 export type EventPublisher = {
-  readonly publish: (input: { readonly event: DomainEvent }) => Promise<void>;
+  readonly publish: (input: { readonly event: DomainEvent<SubmissionDto> }) => Promise<void>;
+};
+
+export type Clock = {
+  readonly now: () => Date;
+};
+
+export type IdGenerator = {
+  readonly generate: () => string;
 };

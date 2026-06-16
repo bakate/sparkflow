@@ -6,7 +6,9 @@ packages:
 catalog:
   "@commitlint/cli": ^21.0.2
   "@commitlint/config-conventional": ^21.0.2
+  "@faker-js/faker": 10.4.0
   "@fastify/cors": ^11.1.0
+  "@fast-check/vitest": ^0.4.1
   "@types/node": ^24.10.1
   "@types/pg": ^8.15.6
   "@vitest/coverage-v8": ^4.0.15

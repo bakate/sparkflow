@@ -20,6 +20,8 @@
     "pg": "catalog:"
   },
   "devDependencies": {
+    "@faker-js/faker": "catalog:",
+    "@fast-check/vitest": "catalog:",
     "@sparkflow/testing": "workspace:*",
     "@types/pg": "catalog:",
     "tsx": "catalog:",
