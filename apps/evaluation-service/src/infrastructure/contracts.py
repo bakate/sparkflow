@@ -27,12 +27,12 @@ class EvaluationSubmittedPayload(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
 
     id: str
-    submission_id: str = Field(serialization_alias="submissionId")
-    reviewer_id: str = Field(serialization_alias="reviewerId")
+    submission_id: str = Field(validation_alias="submissionId", serialization_alias="submissionId")
+    reviewer_id: str = Field(validation_alias="reviewerId", serialization_alias="reviewerId")
     score: int
     recommendation: EvaluationRecommendation
     comment: str
-    created_at: str = Field(serialization_alias="createdAt")
+    created_at: str = Field(validation_alias="createdAt", serialization_alias="createdAt")
 
     @classmethod
     def from_evaluation(cls, *, evaluation: Evaluation) -> "EvaluationSubmittedPayload":

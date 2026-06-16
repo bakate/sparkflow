@@ -1,0 +1,16 @@
+{
+  "eventId": "event-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+  "eventName": "evaluation.submitted",
+  "occurredAt": "2026-06-16T10:00:00+00:00",
+  "correlationId": "correlation-id",
+  "producer": "evaluation-service",
+  "payload": {
+    "id": "evaluation-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+    "submissionId": "submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+    "reviewerId": "user-reviewer",
+    "score": 91,
+    "recommendation": "strong-fit",
+    "comment": "Strong strategic fit.",
+    "createdAt": "2026-06-16T10:00:00+00:00"
+  }
+}
