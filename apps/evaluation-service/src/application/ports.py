@@ -1,5 +1,5 @@
-from typing import Protocol
 from datetime import datetime
+from typing import Protocol
 
 from domain.evaluation import Evaluation
 from infrastructure.contracts import DomainEvent

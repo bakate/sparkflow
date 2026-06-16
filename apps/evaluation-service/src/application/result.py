@@ -1,17 +1,13 @@
 from dataclasses import dataclass
-from typing import Generic, TypeVar
-
-ErrorType = TypeVar("ErrorType")
-ValueType = TypeVar("ValueType")
 
 
 @dataclass(frozen=True, slots=True)
-class Success(Generic[ValueType]):
+class Success[ValueType]:
     value: ValueType
 
 
 @dataclass(frozen=True, slots=True)
-class Failure(Generic[ErrorType]):
+class Failure[ErrorType]:
     error: ErrorType
 
 
