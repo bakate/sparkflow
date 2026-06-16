@@ -1,0 +1,34 @@
+[project]
+name = "sparkflow-evaluation-service"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+  "asyncpg>=0.30.0",
+  "fastapi[standard]>=0.124.0",
+  "nats-py>=2.12.0",
+  "pydantic>=2.12.5"
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.1",
+  "mypy>=1.19.0",
+  "pytest>=9.0.2",
+  "pytest-asyncio>=1.3.0",
+  "ruff>=0.14.8"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

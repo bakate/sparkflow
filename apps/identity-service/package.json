@@ -1,0 +1,24 @@
+{
+  "name": "@sparkflow/identity-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@fastify/cors": "catalog:",
+    "@sparkflow/config": "workspace:*",
+    "@sparkflow/contracts": "workspace:*",
+    "@sparkflow/logger": "workspace:*",
+    "fastify": "catalog:"
+  },
+  "devDependencies": {
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

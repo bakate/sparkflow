@@ -1,0 +1,30 @@
+{
+  "name": "@sparkflow/vitest-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/shared-config.js",
+    "./base": "./dist/configs/base-config.js",
+    "./ui": "./dist/configs/ui-config.js"
+  },
+  "main": "dist/shared-config.js",
+  "types": "dist/shared-config.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "collect-coverage": "tsx src/scripts/collect-json-outputs.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "glob": "catalog:"
+  },
+  "devDependencies": {
+    "@sparkflow/typescript-config": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "jsdom": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

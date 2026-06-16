@@ -1,0 +1,34 @@
+import { readEnvironmentVariable, readIntegerEnvironmentVariable } from "@sparkflow/config";
+import { logger } from "@sparkflow/logger";
+import { Pool } from "pg";
+import { createCreateChallengeUseCase } from "./application/create-challenge.use-case.ts";
+import { createListChallengesUseCase } from "./application/list-challenges.use-case.ts";
+import { createPublishChallengeUseCase } from "./application/publish-challenge.use-case.ts";
+import { buildChallengeHttpServer } from "./infrastructure/http-server.ts";
+import { createNatsEventPublisher } from "./infrastructure/nats-event-publisher.ts";
+import {
+  createPostgresChallengeRepository,
+  ensureChallengeSchema,
+} from "./infrastructure/postgres-challenge-repository.ts";
+
+const port = readIntegerEnvironmentVariable({ name: "PORT", fallback: 4001 });
+const databaseUrl = readEnvironmentVariable({
+  name: "DATABASE_URL",
+  fallback: "postgres://sparkflow:sparkflow@localhost:5432/sparkflow_challenge",
+});
+const natsUrl = readEnvironmentVariable({ name: "NATS_URL", fallback: "nats://localhost:4222" });
+
+const pool = new Pool({ connectionString: databaseUrl });
+await ensureChallengeSchema({ pool });
+
+const challengeRepository = createPostgresChallengeRepository({ pool });
+const eventPublisher = await createNatsEventPublisher({ natsUrl });
+
+const server = await buildChallengeHttpServer({
+  createChallengeUseCase: createCreateChallengeUseCase({ challengeRepository }),
+  publishChallengeUseCase: createPublishChallengeUseCase({ challengeRepository, eventPublisher }),
+  listChallengesUseCase: createListChallengesUseCase({ challengeRepository }),
+});
+
+await server.listen({ host: "0.0.0.0", port });
+logger.info("challenge-service started", { port });

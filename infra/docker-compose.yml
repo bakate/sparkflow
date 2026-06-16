@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: sparkflow
+      POSTGRES_PASSWORD: sparkflow
+      POSTGRES_DB: sparkflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - sparkflow-postgres:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sparkflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nats:
+    image: nats:2.11-alpine
+    command: ["-js", "-sd", "/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - sparkflow-nats:/data
+
+volumes:
+  sparkflow-postgres:
+  sparkflow-nats:

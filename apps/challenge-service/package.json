@@ -1,0 +1,32 @@
+{
+  "name": "@sparkflow/challenge-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/main.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/cors": "catalog:",
+    "@sparkflow/config": "workspace:*",
+    "@sparkflow/contracts": "workspace:*",
+    "@sparkflow/logger": "workspace:*",
+    "@sparkflow/result": "workspace:*",
+    "fastify": "catalog:",
+    "nats": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@sparkflow/testing": "workspace:*",
+    "@types/pg": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

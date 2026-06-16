@@ -1,0 +1,12 @@
+{
+  "name": "@sparkflow/prettier-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "exports": {
+    ".": "./index.cjs"
+  },
+  "peerDependencies": {
+    "prettier": "catalog:"
+  }
+}
