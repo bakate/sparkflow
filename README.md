@@ -11,7 +11,7 @@ architecture.
 - `apps/evaluation-service`: Python/FastAPI service for reviewer scoring.
 - `apps/notification-service`: event-driven notifications.
 - `apps/identity-service`: fake identity directory for V1.
-- `apps/web`: Angular dashboard with a light hexagonal frontend structure.
+- `apps/web`: planned Angular dashboard. Frontend work starts after the backend API is stable.
 
 Backend services keep domain/application code independent from Fastify, FastAPI, PostgreSQL, and
 NATS.
@@ -32,11 +32,7 @@ uv sync
 uv run fastapi dev src/main.py --port 4004
 ```
 
-For the Angular UI:
-
-```bash
-pnpm --filter @sparkflow/web dev
-```
+The Angular app is intentionally not implemented yet. The current milestone is backend readiness.
 
 Default ports:
 
@@ -46,7 +42,7 @@ Default ports:
 - Submission service: `4002`
 - Notification service: `4003`
 - Evaluation service: `4004`
-- Angular app: `4200`
+- Angular app: `4200` later
 
 ## Fake auth
 
@@ -71,3 +67,23 @@ The dashboard concept used for the Angular direction is stored at:
 ```txt
 docs/sparkflow-dashboard-concept.png
 ```
+
+## Backend checks
+
+Run the core backend checks:
+
+```bash
+pnpm format:check
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Run Docker-backed integration tests:
+
+```bash
+pnpm infra:up
+pnpm test:integration:backend
+```
+
+More details are in `docs/backend-readiness.md`.
