@@ -4,9 +4,13 @@ import type { EventPublisher } from "../application/ports.ts";
 
 const jsonCodec = JSONCodec<DomainEvent<SubmissionDto>>();
 
+export type NatsEventPublisher = EventPublisher & {
+  readonly close: () => Promise<void>;
+};
+
 export const createNatsEventPublisher = async (input: {
   readonly natsUrl: string;
-}): Promise<EventPublisher> => {
+}): Promise<NatsEventPublisher> => {
   const connection = await connect({ servers: input.natsUrl });
   const jetStreamManager = await connection.jetstreamManager();
 
@@ -22,6 +26,9 @@ export const createNatsEventPublisher = async (input: {
   const jetStream: JetStreamClient = connection.jetstream();
 
   return {
+    close: async () => {
+      await connection.drain();
+    },
     publish: async ({ event }) => {
       await jetStream.publish(event.eventName, jsonCodec.encode(event));
     },
