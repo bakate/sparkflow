@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - sparkflow-postgres:/var/lib/postgresql/data
+      - sparkflow-postgres-18:/var/lib/postgresql
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sparkflow"]
@@ -26,5 +26,5 @@ services:
       - sparkflow-nats:/data
 
 volumes:
-  sparkflow-postgres:
+  sparkflow-postgres-18:
   sparkflow-nats:
