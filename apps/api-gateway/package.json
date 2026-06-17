@@ -16,6 +16,7 @@
     "fastify": "catalog:"
   },
   "devDependencies": {
+    "@faker-js/faker": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

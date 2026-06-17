@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApiGatewayServer } from "./build-api-gateway-server.js";
 
@@ -57,6 +58,60 @@ const createServerWithCapturedRequests = async () => {
   openServers.push(server);
 
   return { requests, server };
+};
+
+const createWorkflowServer = async (input: {
+  readonly challengeId: string;
+  readonly submissionId: string;
+}) => {
+  const requests: CapturedRequest[] = [];
+  const server = await buildApiGatewayServer({
+    serviceUrls,
+    idGenerator: { generate: () => faker.string.uuid() },
+    fetcher: async (url, init) => {
+      requests.push({ url, init });
+
+      if (url.endsWith("/challenges") && init.method === "POST") {
+        return Response.json({ id: input.challengeId, status: "draft" }, { status: 201 });
+      }
+
+      if (url.endsWith(`/challenges/${input.challengeId}/publish`)) {
+        return Response.json({ id: input.challengeId, status: "published" });
+      }
+
+      if (url.endsWith(`/challenges/${input.challengeId}/submissions`) && init.method === "POST") {
+        return Response.json({ id: input.submissionId, status: "submitted" }, { status: 201 });
+      }
+
+      if (url.endsWith(`/submissions/${input.submissionId}/evaluations`)) {
+        return Response.json({ submissionId: input.submissionId, score: 91 }, { status: 201 });
+      }
+
+      if (url.endsWith(`/submissions/${input.submissionId}/accept`)) {
+        return Response.json({ id: input.submissionId, status: "accepted" });
+      }
+
+      if (url.endsWith("/notifications")) {
+        return Response.json([{ eventId: faker.string.uuid(), title: "Submission accepted" }]);
+      }
+
+      return Response.json([]);
+    },
+  });
+
+  openServers.push(server);
+
+  return { requests, server };
+};
+
+const readJsonBody = (input: { readonly request: CapturedRequest }): unknown => {
+  const body = input.request.init.body;
+
+  if (typeof body !== "string") {
+    expect.fail("Expected request body to be a JSON string");
+  }
+
+  return JSON.parse(body) as unknown;
 };
 
 afterEach(async () => {
@@ -153,5 +208,79 @@ describe("buildApiGatewayServer", () => {
         recommendation: "accept",
       }),
     );
+  });
+
+  it("supports the V1 backend workflow through public gateway endpoints", async () => {
+    const challengeId = faker.string.uuid();
+    const submissionId = faker.string.uuid();
+    const challengeTitle = faker.company.catchPhrase();
+    const challengeDescription = faker.lorem.paragraph();
+    const proposalSummary = faker.lorem.paragraph();
+    const reviewComment = faker.lorem.sentence();
+    const correlationId = faker.string.uuid();
+    const { requests, server } = await createWorkflowServer({ challengeId, submissionId });
+
+    await server.inject({
+      method: "POST",
+      url: "/challenges",
+      headers: {
+        "x-correlation-id": correlationId,
+        "x-user-id": faker.string.uuid(),
+        "x-organization-id": "org-company",
+        "x-role": "company-admin",
+      },
+      payload: { title: challengeTitle, description: challengeDescription },
+    });
+    await server.inject({ method: "POST", url: `/challenges/${challengeId}/publish` });
+    await server.inject({ method: "GET", url: "/challenges" });
+    await server.inject({
+      method: "POST",
+      url: `/challenges/${challengeId}/submissions`,
+      headers: {
+        "x-user-id": faker.string.uuid(),
+        "x-organization-id": "org-startup",
+        "x-role": "startup-member",
+      },
+      payload: { summary: proposalSummary },
+    });
+    await server.inject({ method: "GET", url: `/challenges/${challengeId}/submissions` });
+    await server.inject({
+      method: "POST",
+      url: `/submissions/${submissionId}/evaluations`,
+      headers: {
+        "x-user-id": faker.string.uuid(),
+        "x-organization-id": "org-reviewer",
+        "x-role": "reviewer",
+      },
+      payload: { score: 91, comment: reviewComment },
+    });
+    await server.inject({ method: "POST", url: `/submissions/${submissionId}/accept` });
+    await server.inject({
+      method: "GET",
+      url: "/notifications",
+      headers: { "x-organization-id": "org-startup" },
+    });
+
+    expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+      "POST http://challenge-service/challenges",
+      `POST http://challenge-service/challenges/${challengeId}/publish`,
+      "GET http://challenge-service/challenges",
+      `POST http://submission-service/challenges/${challengeId}/submissions`,
+      `GET http://submission-service/challenges/${challengeId}/submissions`,
+      `POST http://evaluation-service/submissions/${submissionId}/evaluations`,
+      `POST http://submission-service/submissions/${submissionId}/accept`,
+      "GET http://notification-service/notifications",
+    ]);
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 0 }) })).toEqual({
+      title: challengeTitle,
+      description: challengeDescription,
+    });
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 3 }) })).toEqual({
+      summary: proposalSummary,
+    });
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 5 }) })).toEqual({
+      score: 91,
+      comment: reviewComment,
+    });
   });
 });
