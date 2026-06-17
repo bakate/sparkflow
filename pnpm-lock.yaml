@@ -225,6 +225,9 @@ importers:
         specifier: 'catalog:'
         version: 8.21.0
     devDependencies:
+      '@faker-js/faker':
+        specifier: 'catalog:'
+        version: 10.4.0
       '@types/pg':
         specifier: 'catalog:'
         version: 8.20.0
