@@ -151,6 +151,9 @@ importers:
         specifier: 'catalog:'
         version: 8.21.0
     devDependencies:
+      '@faker-js/faker':
+        specifier: 'catalog:'
+        version: 10.4.0
       '@sparkflow/testing':
         specifier: workspace:*
         version: link:../../packages/testing

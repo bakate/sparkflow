@@ -24,6 +24,7 @@
     "pg": "catalog:"
   },
   "devDependencies": {
+    "@faker-js/faker": "catalog:",
     "@sparkflow/testing": "workspace:*",
     "@types/pg": "catalog:",
     "tsx": "catalog:",

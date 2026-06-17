@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Submission } from "../domain/submission.ts";
@@ -10,9 +11,6 @@ const testDatabaseUrl = process.env.SUBMISSION_SERVICE_TEST_DATABASE_URL;
 const shouldRunIntegrationTests =
   testDatabaseUrl !== undefined && testDatabaseUrl.trim().length > 0;
 
-const challengeId = "11111111-1111-4111-8111-111111111111";
-const otherChallengeId = "22222222-2222-4222-8222-222222222222";
-
 const createSubmittedSubmission = (input: {
   readonly id: string;
   readonly challengeId: string;
@@ -21,8 +19,8 @@ const createSubmittedSubmission = (input: {
 }): Submission => ({
   id: input.id,
   challengeId: input.challengeId,
-  startupOrganizationId: "org-startup",
-  summary: input.summary ?? "Bio-based packaging solution.",
+  startupOrganizationId: faker.string.uuid(),
+  summary: input.summary ?? faker.company.catchPhrase(),
   status: "submitted",
   createdAt: input.createdAt,
   decidedAt: null,
@@ -51,8 +49,9 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
 
   it("saves and finds a submitted submission by id", async () => {
     const repository = createPostgresSubmissionRepository({ pool });
+    const challengeId = faker.string.uuid();
     const submission = createSubmittedSubmission({
-      id: "33333333-3333-4333-8333-333333333333",
+      id: faker.string.uuid(),
       challengeId,
       createdAt: new Date("2026-06-16T09:00:00.000Z"),
     });
@@ -64,8 +63,8 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
     expect(foundSubmission).toMatchObject({
       id: submission.id,
       challengeId,
-      startupOrganizationId: "org-startup",
-      summary: "Bio-based packaging solution.",
+      startupOrganizationId: submission.startupOrganizationId,
+      summary: submission.summary,
       status: "submitted",
       decidedAt: null,
     });
@@ -74,8 +73,9 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
 
   it("updates an existing submission decision on save", async () => {
     const repository = createPostgresSubmissionRepository({ pool });
+    const challengeId = faker.string.uuid();
     const submission = createSubmittedSubmission({
-      id: "44444444-4444-4444-8444-444444444444",
+      id: faker.string.uuid(),
       challengeId,
       createdAt: new Date("2026-06-16T09:00:00.000Z"),
     });
@@ -96,23 +96,25 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
 
   it("lists submissions for one challenge from newest to oldest", async () => {
     const repository = createPostgresSubmissionRepository({ pool });
+    const challengeId = faker.string.uuid();
+    const otherChallengeId = faker.string.uuid();
     const olderSubmission = createSubmittedSubmission({
-      id: "55555555-5555-4555-8555-555555555555",
+      id: faker.string.uuid(),
       challengeId,
       createdAt: new Date("2026-06-16T09:00:00.000Z"),
-      summary: "Older proposal.",
+      summary: faker.company.catchPhrase(),
     });
     const newerSubmission = createSubmittedSubmission({
-      id: "66666666-6666-4666-8666-666666666666",
+      id: faker.string.uuid(),
       challengeId,
       createdAt: new Date("2026-06-16T10:00:00.000Z"),
-      summary: "Newer proposal.",
+      summary: faker.company.catchPhrase(),
     });
     const unrelatedSubmission = createSubmittedSubmission({
-      id: "77777777-7777-4777-8777-777777777777",
+      id: faker.string.uuid(),
       challengeId: otherChallengeId,
       createdAt: new Date("2026-06-16T11:00:00.000Z"),
-      summary: "Unrelated proposal.",
+      summary: faker.company.catchPhrase(),
     });
 
     await repository.save({ submission: olderSubmission });

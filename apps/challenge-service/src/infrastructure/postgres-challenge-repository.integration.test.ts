@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Challenge } from "../domain/challenge.ts";
@@ -16,9 +17,9 @@ const createDraftChallenge = (input: {
   readonly title?: string;
 }): Challenge => ({
   id: input.id,
-  title: input.title ?? "Circular packaging scouting",
-  description: "Find startups for packaging waste reduction.",
-  ownerOrganizationId: "org-company",
+  title: input.title ?? faker.company.catchPhrase(),
+  description: faker.lorem.sentence(),
+  ownerOrganizationId: faker.string.uuid(),
   status: "draft",
   createdAt: input.createdAt,
   publishedAt: null,
@@ -48,7 +49,7 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresChallengeRepository integra
   it("saves and finds a draft challenge by id", async () => {
     const repository = createPostgresChallengeRepository({ pool });
     const challenge = createDraftChallenge({
-      id: "11111111-1111-4111-8111-111111111111",
+      id: faker.string.uuid(),
       createdAt: new Date("2026-06-16T09:00:00.000Z"),
     });
 
@@ -58,9 +59,9 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresChallengeRepository integra
 
     expect(foundChallenge).toMatchObject({
       id: challenge.id,
-      title: "Circular packaging scouting",
-      description: "Find startups for packaging waste reduction.",
-      ownerOrganizationId: "org-company",
+      title: challenge.title,
+      description: challenge.description,
+      ownerOrganizationId: challenge.ownerOrganizationId,
       status: "draft",
       publishedAt: null,
     });
@@ -70,7 +71,7 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresChallengeRepository integra
   it("updates an existing challenge on save", async () => {
     const repository = createPostgresChallengeRepository({ pool });
     const challenge = createDraftChallenge({
-      id: "22222222-2222-4222-8222-222222222222",
+      id: faker.string.uuid(),
       createdAt: new Date("2026-06-16T09:00:00.000Z"),
     });
     const publishedChallenge: Challenge = {
@@ -91,13 +92,13 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresChallengeRepository integra
   it("lists challenges from newest to oldest", async () => {
     const repository = createPostgresChallengeRepository({ pool });
     const olderChallenge = createDraftChallenge({
-      id: "33333333-3333-4333-8333-333333333333",
-      title: "Older challenge",
+      id: faker.string.uuid(),
+      title: faker.company.catchPhrase(),
       createdAt: new Date("2026-06-16T09:00:00.000Z"),
     });
     const newerChallenge = createDraftChallenge({
-      id: "44444444-4444-4444-8444-444444444444",
-      title: "Newer challenge",
+      id: faker.string.uuid(),
+      title: faker.company.catchPhrase(),
       createdAt: new Date("2026-06-16T10:00:00.000Z"),
     });
 
