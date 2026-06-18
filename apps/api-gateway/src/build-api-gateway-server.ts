@@ -23,9 +23,14 @@ export type ApiGatewayServiceUrls = {
 const createForwardHeaders = (input: {
   readonly headers: Record<string, string | string[] | undefined>;
   readonly idGenerator: IdGenerator;
+  readonly hasBody: boolean;
 }): Headers => {
   const headers = new Headers();
-  headers.set("content-type", "application/json");
+
+  if (input.hasBody) {
+    headers.set("content-type", "application/json");
+  }
+
   headers.set(
     "x-correlation-id",
     String(input.headers["x-correlation-id"] ?? input.idGenerator.generate()),
@@ -48,6 +53,7 @@ const proxyJson = async (input: {
   const headers = createForwardHeaders({
     headers: input.headers,
     idGenerator: input.idGenerator,
+    hasBody: input.body !== undefined,
   });
   const requestInit: RequestInit =
     input.body === undefined

@@ -150,7 +150,7 @@ describe("buildApiGatewayServer", () => {
     expect(response.json()).toEqual({ ok: true });
     expect(request.url).toBe("http://challenge-service/challenges");
     expect(request.init.method).toBe("GET");
-    expect(headers.get("content-type")).toBe("application/json");
+    expect(headers.get("content-type")).toBeNull();
     expect(headers.get("x-correlation-id")).toBe("generated-correlation-id");
     expect(headers.get("x-user-id")).toBe("user-company-admin");
     expect(headers.get("x-organization-id")).toBe("org-company");
@@ -180,6 +180,7 @@ describe("buildApiGatewayServer", () => {
     expect(request.url).toBe("http://submission-service/challenges/challenge-1/submissions");
     expect(request.init.method).toBe("POST");
     expect(request.init.body).toBe(JSON.stringify({ summary: "A strong proposal" }));
+    expect(headers.get("content-type")).toBe("application/json");
     expect(headers.get("x-correlation-id")).toBe("incoming-correlation-id");
     expect(headers.get("x-user-id")).toBe("startup-user");
     expect(headers.get("x-organization-id")).toBe("startup-org");
@@ -282,5 +283,17 @@ describe("buildApiGatewayServer", () => {
       score: 91,
       comment: reviewComment,
     });
+    expect(readCapturedRequest({ requests, index: 1 }).init.body).toBeUndefined();
+    expect(
+      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 1 }) }).get(
+        "content-type",
+      ),
+    ).toBeNull();
+    expect(readCapturedRequest({ requests, index: 6 }).init.body).toBeUndefined();
+    expect(
+      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 6 }) }).get(
+        "content-type",
+      ),
+    ).toBeNull();
   });
 });
