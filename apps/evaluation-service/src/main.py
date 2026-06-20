@@ -120,6 +120,9 @@ async def submit_evaluation(
         if result.error == "forbidden":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=result.error)
 
+        if result.error == "evaluation-already-submitted":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result.error)
+
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result.error)
 
     if isinstance(result, Success):

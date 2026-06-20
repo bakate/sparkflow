@@ -51,6 +51,23 @@ class PostgresEvaluationRepository:
             for row in rows
         )
 
+    async def exists_by_submission_id_and_reviewer_id(
+        self, *, submission_id: str, reviewer_id: str
+    ) -> bool:
+        async with self._pool.acquire() as connection:
+            exists = await connection.fetchval(
+                """
+                SELECT EXISTS (
+                  SELECT 1 FROM evaluations
+                  WHERE submission_id = $1 AND reviewer_id = $2
+                )
+                """,
+                submission_id,
+                reviewer_id,
+            )
+
+        return bool(exists)
+
 
 async def ensure_evaluation_schema(*, pool: asyncpg.Pool) -> None:
     async with pool.acquire() as connection:
@@ -67,5 +84,11 @@ async def ensure_evaluation_schema(*, pool: asyncpg.Pool) -> None:
               comment text NOT NULL,
               created_at timestamptz NOT NULL
             )
+            """
+        )
+        await connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS evaluations_submission_reviewer_unique
+            ON evaluations (submission_id, reviewer_id)
             """
         )

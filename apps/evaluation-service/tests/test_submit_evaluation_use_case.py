@@ -27,6 +27,14 @@ class InMemoryEvaluationRepository:
             if evaluation.submission_id == submission_id
         )
 
+    async def exists_by_submission_id_and_reviewer_id(
+        self, *, submission_id: str, reviewer_id: str
+    ) -> bool:
+        return any(
+            evaluation.submission_id == submission_id and evaluation.reviewer_id == reviewer_id
+            for evaluation in self.evaluations
+        )
+
 
 @dataclass(slots=True)
 class InMemoryEventPublisher:
@@ -126,6 +134,44 @@ async def test_non_reviewer_cannot_submit_evaluation() -> None:
     assert isinstance(result, Failure)
     assert result.error == "forbidden"
     assert len(repository.evaluations) == 0
+    assert len(publisher.events) == 0
+
+
+@pytest.mark.asyncio
+async def test_reviewer_cannot_submit_evaluation_twice_for_same_submission() -> None:
+    submission_id = "f5f8f358-2fd4-4ef2-9720-91b9e96c8c64"
+    repository = InMemoryEvaluationRepository(
+        evaluations=[
+            Evaluation(
+                id="existing-evaluation-id",
+                submission_id=submission_id,
+                reviewer_id="user-reviewer",
+                score=61,
+                recommendation="possible-fit",
+                comment="Already reviewed.",
+                created_at=fixed_now,
+            )
+        ]
+    )
+    use_case, repository, publisher = create_use_case(repository=repository)
+
+    result = await use_case.execute(
+        command=SubmitEvaluationCommand(
+            actor=ActorContext(
+                user_id="user-reviewer",
+                organization_id="org-reviewer",
+                role="reviewer",
+            ),
+            submission_id=submission_id,
+            score=91,
+            comment="Strong strategic fit.",
+            correlation_id="correlation-id",
+        )
+    )
+
+    assert isinstance(result, Failure)
+    assert result.error == "evaluation-already-submitted"
+    assert len(repository.evaluations) == 1
     assert len(publisher.events) == 0
 
 

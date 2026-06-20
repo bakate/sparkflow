@@ -10,6 +10,10 @@ class EvaluationRepository(Protocol):
 
     async def find_by_submission_id(self, *, submission_id: str) -> tuple[Evaluation, ...]: ...
 
+    async def exists_by_submission_id_and_reviewer_id(
+        self, *, submission_id: str, reviewer_id: str
+    ) -> bool: ...
+
 
 class EventPublisher(Protocol):
     async def publish(self, *, event: DomainEvent) -> None: ...

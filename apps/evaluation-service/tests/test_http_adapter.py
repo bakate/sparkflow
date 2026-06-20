@@ -132,6 +132,27 @@ def test_submit_evaluation_maps_forbidden_failure_to_403() -> None:
     assert response.json() == {"detail": "forbidden"}
 
 
+def test_submit_evaluation_maps_duplicate_failure_to_409() -> None:
+    use_case = RecordingSubmitEvaluationUseCase(
+        result=Failure(error="evaluation-already-submitted")
+    )
+    client = create_client(use_case=use_case)
+
+    response = client.post(
+        "/submissions/submission-1/evaluations",
+        headers={
+            "x-role": "reviewer",
+        },
+        json={
+            "score": 91,
+            "comment": "Strong strategic fit.",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "evaluation-already-submitted"}
+
+
 def test_submit_evaluation_rejects_invalid_roles_before_calling_use_case() -> None:
     use_case = RecordingSubmitEvaluationUseCase(result=Success(value=create_evaluation()))
     client = create_client(use_case=use_case)

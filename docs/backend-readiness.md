@@ -94,3 +94,19 @@ pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm test:inte
 ```
 
 If this fails, fix the backend first. The UI should not compensate for backend contract drift.
+
+## Local Database Reset
+
+Reset only the Python evaluation database:
+
+```bash
+pnpm db:reset:evaluation
+```
+
+Reset every local Sparkflow database:
+
+```bash
+pnpm db:reset:local
+```
+
+These commands are destructive and intended for local development only. There is no seed script yet.

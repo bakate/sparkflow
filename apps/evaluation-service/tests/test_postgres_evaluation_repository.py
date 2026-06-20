@@ -82,6 +82,14 @@ async def test_saves_and_finds_evaluations_by_submission_id(pool: asyncpg.Pool) 
 
     assert len(evaluations) == 1
     assert evaluations[0] == evaluation
+    assert await repository.exists_by_submission_id_and_reviewer_id(
+        submission_id=submission_id,
+        reviewer_id=evaluation.reviewer_id,
+    )
+    assert not await repository.exists_by_submission_id_and_reviewer_id(
+        submission_id=submission_id,
+        reviewer_id=faker.uuid4(),
+    )
 
 
 @pytest.mark.skipif(
@@ -126,3 +134,34 @@ async def test_lists_evaluations_for_one_submission_from_newest_to_oldest(
         newer_evaluation.id,
         older_evaluation.id,
     ]
+
+
+@pytest.mark.skipif(
+    not should_run_integration_tests,
+    reason="EVALUATION_SERVICE_TEST_DATABASE_URL is required",
+)
+async def test_rejects_duplicate_reviewer_evaluation_for_same_submission(
+    pool: asyncpg.Pool,
+) -> None:
+    repository = PostgresEvaluationRepository(pool=pool)
+    submission_id = faker.uuid4()
+    reviewer_id = faker.uuid4()
+    original_evaluation = create_evaluation_fixture(
+        evaluation_id=faker.uuid4(),
+        submission_id=submission_id,
+        reviewer_id=reviewer_id,
+        score=61,
+        created_at=datetime(2026, 6, 16, 9, 0, 0, tzinfo=UTC),
+    )
+    duplicate_evaluation = create_evaluation_fixture(
+        evaluation_id=faker.uuid4(),
+        submission_id=submission_id,
+        reviewer_id=reviewer_id,
+        score=91,
+        created_at=datetime(2026, 6, 16, 10, 0, 0, tzinfo=UTC),
+    )
+
+    await repository.save(evaluation=original_evaluation)
+
+    with pytest.raises(asyncpg.UniqueViolationError):
+        await repository.save(evaluation=duplicate_evaluation)

@@ -12,6 +12,7 @@ from infrastructure.contracts import (
 
 SubmitEvaluationError = Literal[
     "forbidden",
+    "evaluation-already-submitted",
     "evaluation-score-out-of-range",
     "evaluation-comment-required",
 ]
@@ -53,6 +54,16 @@ class SubmitEvaluationUseCase:
 
         if len(command.comment.strip()) == 0:
             return Failure(error="evaluation-comment-required")
+
+        already_submitted = (
+            await self._evaluation_repository.exists_by_submission_id_and_reviewer_id(
+                submission_id=command.submission_id,
+                reviewer_id=command.actor.user_id,
+            )
+        )
+
+        if already_submitted:
+            return Failure(error="evaluation-already-submitted")
 
         evaluation = create_evaluation(
             evaluation_id=self._id_generator.generate(),
