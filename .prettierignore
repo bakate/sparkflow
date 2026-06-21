@@ -2,6 +2,8 @@ node_modules/
 dist/
 coverage/
 pnpm-lock.yaml
+.angular/
+apps/web/.angular/
 .venv/
 .pytest_cache/
 .mypy_cache/

@@ -3,6 +3,7 @@ node_modules/
 dist/
 coverage/
 .env
+.idea
 .env.*
 !.env.example
 __pycache__/

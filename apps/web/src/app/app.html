@@ -1,0 +1,23 @@
+<h2>
+  Hello my friend
+</h2>
+
+
+<div class="grid justify-content-evenly">
+@for (item of [1,2,3,4]; track item; let i = $index, odd = $odd, even = $even, first = $first, last = $last) {
+  @if (first){
+    <p-button label="First"></p-button>
+  }
+  @if (odd){
+    <p-button severity="success" label="Odd"></p-button>
+  }
+  @if (even){
+    <p-button severity="info" label="Even"></p-button>
+  }
+  @if (last){
+    <p-button severity="danger" label="Last"></p-button>
+  }
+
+
+}
+</div>
