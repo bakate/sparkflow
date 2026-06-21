@@ -316,6 +316,9 @@ importers:
       '@primeuix/themes':
         specifier: ^2.0.3
         version: 2.0.3
+      '@sparkflow/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       primeflex:
         specifier: ^4.0.0
         version: 4.0.0
@@ -348,7 +351,7 @@ importers:
         specifier: ^28.0.0
         version: 28.1.0
       prettier:
-        specifier: ^3.8.1
+        specifier: 'catalog:'
         version: 3.8.4
       typescript:
         specifier: 'catalog:'

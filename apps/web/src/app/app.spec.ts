@@ -29,7 +29,6 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelector('h1')?.textContent).toContain('Open Innovation Platform');
-    expect(compiled.querySelector('p-button')).not.toBeNull();
-    expect(compiled.querySelector('.p-button')).not.toBeNull();
+    expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });
