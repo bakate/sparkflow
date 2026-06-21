@@ -4,7 +4,9 @@ export const routes: Routes = [
   {
     path: 'challenges',
     loadComponent: () =>
-      import('./features/challenges/ui/challenges-page').then((module) => module.ChallengesPage),
+      import('./features/challenges/ui/challenges-page/challenges-page').then(
+        (module) => module.ChallengesPage,
+      ),
   },
   {
     path: '',

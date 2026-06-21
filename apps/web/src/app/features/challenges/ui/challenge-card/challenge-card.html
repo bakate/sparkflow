@@ -1,0 +1,36 @@
+<p-card class="h-full mb-3">
+  <article
+    class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
+  >
+    <div class="flex flex-column gap-3 min-w-0">
+      <div class="flex align-items-center gap-3 flex-wrap">
+        <h3 class="m-0 text-xl font-bold text-color">{{ challenge().title }}</h3>
+        <challenge-status-label [status]="challenge().status" />
+      </div>
+
+      <p class="m-0 text-color-secondary">{{ challenge().description }}</p>
+
+      <div class="flex flex-column sm:flex-row gap-3 text-color-secondary text-sm">
+        <span class="inline-flex align-items-center gap-2">
+          <i class="pi pi-building" aria-hidden="true"></i>
+          {{ challenge().ownerOrganizationId }}
+        </span>
+        <span class="inline-flex align-items-center gap-2">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          Created {{ formatDate({ date: challenge().createdAt }) }}
+        </span>
+      </div>
+    </div>
+
+    @if (canPublish()) {
+      <p-button
+        icon="pi pi-send"
+        label="Publish"
+        severity="secondary"
+        [loading]="publishing()"
+        [disabled]="publishing()"
+        (onClick)="publish.emit({ challengeId: challenge().id })"
+      />
+    }
+  </article>
+</p-card>

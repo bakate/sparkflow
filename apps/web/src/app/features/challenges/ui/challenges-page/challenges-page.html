@@ -1,0 +1,72 @@
+<section class="flex flex-column gap-4 py-4" aria-labelledby="challenges-title">
+  <div
+    class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
+  >
+    <div>
+      <h2 id="challenges-title" class="m-0 text-2xl font-bold text-color">Challenges</h2>
+      <p class="m-0 text-color-secondary">
+        {{ store.draftCount() }} draft, {{ store.publishedCount() }} published
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      <p-button
+        icon="pi pi-refresh"
+        label="Refresh"
+        severity="secondary"
+        [disabled]="store.loading()"
+        [loading]="store.loading()"
+        (onClick)="reloadChallenges()"
+      />
+      <p-button
+        icon="pi pi-plus"
+        label="Create"
+        (onClick)="openChallengeFormDialog({ challengeId: null })"
+      />
+    </div>
+  </div>
+
+  @if (store.error() !== null && !challengeFormDialogVisible()) {
+    <p
+      class="m-0 p-3 border-1 border-red-200 border-round bg-red-50 text-red-900 font-semibold"
+      role="alert"
+    >
+      {{ errorMessage(store.error()) }}
+    </p>
+  }
+
+  <div class="flex flex-column gap-3" aria-label="Challenge list">
+    @if (store.loading()) {
+      <p class="m-0 p-3 border-1 surface-border border-round surface-card">Loading challenges...</p>
+    } @else if (store.challenges().length === 0) {
+      <p class="m-0 p-3 border-1 surface-border border-round surface-card">No challenges yet.</p>
+    } @else {
+      @for (challenge of store.challenges(); track challenge.id) {
+        <challenge-card
+          [challenge]="challenge"
+          [publishing]="store.isPublishing({ challengeId: challenge.id })"
+          (publish)="publishChallenge($event)"
+        />
+      }
+    }
+  </div>
+
+  <p-dialog
+    [header]="challengeFormDialogTitle()"
+    [modal]="true"
+    [blockScroll]="true"
+    [dismissableMask]="false"
+    [visible]="challengeFormDialogVisible()"
+    [style]="{ width: 'min(42rem, calc(100vw - 2rem))' }"
+    (visibleChange)="setChallengeFormDialogVisible({ visible: $event })"
+  >
+    <challenge-form
+      [challengeId]="selectedChallengeId()"
+      [saving]="store.saving()"
+      [errorMessage]="challengeFormDialogErrorMessage()"
+      [resetKey]="challengeFormResetKey()"
+      (submitted)="submitChallengeForm($event)"
+      (cancelled)="closeChallengeFormDialog()"
+    />
+  </p-dialog>
+</section>

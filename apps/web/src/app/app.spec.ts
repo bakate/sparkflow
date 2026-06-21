@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { providePrimeNG } from 'primeng/config';
+import { MessageService } from 'primeng/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './app';
 import { sparkFlowPrimeNgConfig } from './shell/ui/primeng.config';
@@ -8,7 +10,7 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [providePrimeNG(sparkFlowPrimeNgConfig)],
+      providers: [MessageService, providePrimeNG(sparkFlowPrimeNgConfig), provideRouter([])],
     }).compileComponents();
   });
 
@@ -28,7 +30,7 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('h1')?.textContent).toContain('Open Innovation Platform');
+    expect(compiled.textContent).toContain('Sparkflow');
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });

@@ -2,7 +2,7 @@
 /* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
 {
   "extends": "../../tsconfig.base.json",
-  "compileOnSave": true,
+  "compileOnSave": false,
   "compilerOptions": {
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
@@ -12,12 +12,11 @@
     "importHelpers": true,
     "module": "es2022",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["src/app/shared/*"],
-      "@features/*": ["src/app/features/*"],
-      "@env/*": ["src/environments/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["./src/app/shared/*"],
+      "@features/*": ["./src/app/features/*"],
+      "@env/*": ["./src/environments/*"]
     }
   },
   "angularCompilerOptions": {

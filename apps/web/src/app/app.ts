@@ -1,16 +1,17 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Navbar } from './shell/ui/navbar';
+import { Toast } from 'primeng/toast';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, Navbar],
+  imports: [RouterOutlet, Navbar, Toast],
   template: `
     <main class="app-shell" aria-labelledby="app-title">
       <navbar />
-
       <router-outlet />
     </main>
+    <p-toast />
   `,
   styles: `
     .app-shell {
