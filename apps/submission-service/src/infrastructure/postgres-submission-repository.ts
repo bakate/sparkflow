@@ -66,6 +66,14 @@ export const createPostgresSubmissionRepository = (input: {
 
     return result.rows.map(toSubmission);
   },
+  findByStartupOrganizationId: async ({ startupOrganizationId }) => {
+    const result = await input.pool.query<SubmissionRow>(
+      "SELECT * FROM submissions WHERE startup_organization_id = $1 ORDER BY created_at DESC",
+      [startupOrganizationId],
+    );
+
+    return result.rows.map(toSubmission);
+  },
 });
 
 export const ensureSubmissionSchema = async (input: { readonly pool: Pool }): Promise<void> => {

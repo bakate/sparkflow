@@ -20,6 +20,10 @@ const createInMemorySubmissionRepository = (): SubmissionRepository & {
       submissions.find((submission) => submission.id === submissionId) ?? null,
     findByChallengeId: async ({ challengeId }) =>
       submissions.filter((submission) => submission.challengeId === challengeId),
+    findByStartupOrganizationId: async ({ startupOrganizationId }) =>
+      submissions.filter(
+        (submission) => submission.startupOrganizationId === startupOrganizationId,
+      ),
   };
 };
 

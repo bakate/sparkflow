@@ -9,6 +9,7 @@ import type {
   DecideSubmissionCommand,
   DecideSubmissionUseCase,
 } from "../application/decide-submission.use-case.js";
+import type { ListMySubmissionsUseCase } from "../application/list-my-submissions.use-case.js";
 import type { ListSubmissionsUseCase } from "../application/list-submissions.use-case.js";
 import { buildSubmissionHttpServer } from "./http-server.js";
 
@@ -100,9 +101,26 @@ const createRecordingListSubmissionsUseCase = (input: {
   };
 };
 
+const createRecordingListMySubmissionsUseCase = (input: {
+  readonly result: Awaited<ReturnType<ListMySubmissionsUseCase["execute"]>>;
+}): ListMySubmissionsUseCase & {
+  readonly commands: { readonly actor: ActorContext }[];
+} => {
+  const commands: { readonly actor: ActorContext }[] = [];
+
+  return {
+    commands,
+    execute: async (command) => {
+      commands.push(command);
+      return input.result;
+    },
+  };
+};
+
 const createServer = async (input?: {
   readonly createSubmissionUseCase?: CreateSubmissionUseCase;
   readonly decideSubmissionUseCase?: DecideSubmissionUseCase;
+  readonly listMySubmissionsUseCase?: ListMySubmissionsUseCase;
   readonly listSubmissionsUseCase?: ListSubmissionsUseCase;
 }) => {
   const server = await buildSubmissionHttpServer({
@@ -110,6 +128,9 @@ const createServer = async (input?: {
       input?.createSubmissionUseCase ?? createRecordingCreateSubmissionUseCase(),
     decideSubmissionUseCase:
       input?.decideSubmissionUseCase ?? createRecordingDecideSubmissionUseCase(),
+    listMySubmissionsUseCase:
+      input?.listMySubmissionsUseCase ??
+      createRecordingListMySubmissionsUseCase({ result: succeed([]) }),
     listSubmissionsUseCase:
       input?.listSubmissionsUseCase ?? createRecordingListSubmissionsUseCase({ submissions: [] }),
   });
@@ -127,6 +148,51 @@ afterEach(async () => {
 });
 
 describe("buildSubmissionHttpServer", () => {
+  it("lists submissions for the current startup actor", async () => {
+    const listMySubmissionsUseCase = createRecordingListMySubmissionsUseCase({
+      result: succeed([submissionDto]),
+    });
+    const server = await createServer({ listMySubmissionsUseCase });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/me/submissions",
+      headers: {
+        "x-user-id": "startup-user",
+        "x-organization-id": "org-startup",
+        "x-role": "startup-member",
+      },
+    });
+
+    const command = readRecordedCommand({ commands: listMySubmissionsUseCase.commands });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([submissionDto]);
+    expect(command).toEqual({
+      actor: {
+        userId: "startup-user",
+        organizationId: "org-startup",
+        role: "startup-member",
+      },
+    });
+  });
+
+  it("maps current startup submission failures to 403", async () => {
+    const server = await createServer({
+      listMySubmissionsUseCase: createRecordingListMySubmissionsUseCase({
+        result: fail("forbidden"),
+      }),
+    });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/me/submissions",
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "forbidden" });
+  });
+
   it("lists submissions for a challenge through the list use case", async () => {
     const listSubmissionsUseCase = createRecordingListSubmissionsUseCase({
       submissions: [submissionDto],

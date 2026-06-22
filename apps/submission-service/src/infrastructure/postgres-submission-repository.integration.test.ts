@@ -15,11 +15,12 @@ const createSubmittedSubmission = (input: {
   readonly id: string;
   readonly challengeId: string;
   readonly createdAt: Date;
+  readonly startupOrganizationId?: string;
   readonly summary?: string;
 }): Submission => ({
   id: input.id,
   challengeId: input.challengeId,
-  startupOrganizationId: faker.string.uuid(),
+  startupOrganizationId: input.startupOrganizationId ?? faker.string.uuid(),
   summary: input.summary ?? faker.company.catchPhrase(),
   status: "submitted",
   createdAt: input.createdAt,
@@ -122,6 +123,40 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
     await repository.save({ submission: unrelatedSubmission });
 
     const submissions = await repository.findByChallengeId({ challengeId });
+
+    expect(submissions.map((submission) => submission.id)).toEqual([
+      newerSubmission.id,
+      olderSubmission.id,
+    ]);
+  });
+
+  it("lists submissions for one startup organization from newest to oldest", async () => {
+    const repository = createPostgresSubmissionRepository({ pool });
+    const startupOrganizationId = faker.string.uuid();
+    const olderSubmission = createSubmittedSubmission({
+      id: faker.string.uuid(),
+      challengeId: faker.string.uuid(),
+      startupOrganizationId,
+      createdAt: new Date("2026-06-16T09:00:00.000Z"),
+    });
+    const newerSubmission = createSubmittedSubmission({
+      id: faker.string.uuid(),
+      challengeId: faker.string.uuid(),
+      startupOrganizationId,
+      createdAt: new Date("2026-06-16T10:00:00.000Z"),
+    });
+    const unrelatedSubmission = createSubmittedSubmission({
+      id: faker.string.uuid(),
+      challengeId: faker.string.uuid(),
+      startupOrganizationId: faker.string.uuid(),
+      createdAt: new Date("2026-06-16T11:00:00.000Z"),
+    });
+
+    await repository.save({ submission: olderSubmission });
+    await repository.save({ submission: newerSubmission });
+    await repository.save({ submission: unrelatedSubmission });
+
+    const submissions = await repository.findByStartupOrganizationId({ startupOrganizationId });
 
     expect(submissions.map((submission) => submission.id)).toEqual([
       newerSubmission.id,

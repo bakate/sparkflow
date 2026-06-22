@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createCreateSubmissionUseCase } from "./application/create-submission.use-case.ts";
 import { createDecideSubmissionUseCase } from "./application/decide-submission.use-case.ts";
+import { createListMySubmissionsUseCase } from "./application/list-my-submissions.use-case.ts";
 import { createListSubmissionsUseCase } from "./application/list-submissions.use-case.ts";
 import { buildSubmissionHttpServer } from "./infrastructure/http-server.ts";
 import { createNatsEventPublisher } from "./infrastructure/nats-event-publisher.ts";
@@ -40,6 +41,7 @@ const server = await buildSubmissionHttpServer({
     eventPublisher,
     idGenerator,
   }),
+  listMySubmissionsUseCase: createListMySubmissionsUseCase({ submissionRepository }),
   listSubmissionsUseCase: createListSubmissionsUseCase({ submissionRepository }),
 });
 

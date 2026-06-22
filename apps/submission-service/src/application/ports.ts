@@ -7,6 +7,9 @@ export type SubmissionRepository = {
   readonly findByChallengeId: (input: {
     readonly challengeId: string;
   }) => Promise<readonly Submission[]>;
+  readonly findByStartupOrganizationId: (input: {
+    readonly startupOrganizationId: string;
+  }) => Promise<readonly Submission[]>;
 };
 
 export type EventPublisher = {
