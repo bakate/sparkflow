@@ -47,6 +47,11 @@
     {
       "username": "company-admin",
       "enabled": true,
+      "email": "company-admin@sparkflow.local",
+      "emailVerified": true,
+      "firstName": "Company",
+      "lastName": "Admin",
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",
@@ -62,6 +67,11 @@
     {
       "username": "startup-member",
       "enabled": true,
+      "email": "startup-member@sparkflow.local",
+      "emailVerified": true,
+      "firstName": "Startup",
+      "lastName": "Member",
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",
@@ -77,6 +87,11 @@
     {
       "username": "reviewer",
       "enabled": true,
+      "email": "reviewer@sparkflow.local",
+      "emailVerified": true,
+      "firstName": "Challenge",
+      "lastName": "Reviewer",
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",
