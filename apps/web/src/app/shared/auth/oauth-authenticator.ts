@@ -17,7 +17,10 @@ export class OAuthAuthenticator {
 
     if (!this.oauthService.hasValidAccessToken()) {
       this.oauthService.initCodeFlow();
+      return;
     }
+
+    cleanOAuthCallbackUrl();
   }
 
   accessToken(): string | null {
@@ -54,4 +57,31 @@ const authConfig: AuthConfig = {
   scope: 'openid profile email',
   requireHttps: false,
   showDebugInformation: false,
+};
+
+const oauthCallbackSearchParams = [
+  'code',
+  'error',
+  'error_description',
+  'iss',
+  'session_state',
+  'state',
+] as const;
+
+const cleanOAuthCallbackUrl = (): void => {
+  const url = new URL(window.location.href);
+  const hasOAuthCallbackSearchParam = oauthCallbackSearchParams.some((searchParam) =>
+    url.searchParams.has(searchParam),
+  );
+
+  if (!hasOAuthCallbackSearchParam) {
+    return;
+  }
+
+  for (const searchParam of oauthCallbackSearchParams) {
+    url.searchParams.delete(searchParam);
+  }
+
+  const cleanUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState(window.history.state, document.title, cleanUrl);
 };
