@@ -229,6 +229,22 @@ export const buildApiGatewayServer = async (input: {
     },
   );
 
+  server.get("/me/submissions", async (request, reply) => {
+    const actor = await authenticate(request.headers);
+    if (actor === null) {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+
+    const response = await proxy({
+      actor,
+      url: `${input.serviceUrls.submissionServiceUrl}/me/submissions`,
+      method: "GET",
+      headers: request.headers,
+    });
+
+    return reply.code(response.statusCode).send(response.body);
+  });
+
   server.post<{ Params: { readonly challengeId: string }; Body: unknown }>(
     "/challenges/:challengeId/submissions",
     async (request, reply) => {

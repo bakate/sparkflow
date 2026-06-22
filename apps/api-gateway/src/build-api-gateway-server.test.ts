@@ -97,6 +97,10 @@ const createWorkflowServer = async (input: {
         return Response.json({ id: input.submissionId, status: "submitted" }, { status: 201 });
       }
 
+      if (url.endsWith("/me/submissions")) {
+        return Response.json([{ id: input.submissionId, status: "submitted" }]);
+      }
+
       if (url.endsWith(`/submissions/${input.submissionId}/evaluations`)) {
         return Response.json({ submissionId: input.submissionId, score: 91 }, { status: 201 });
       }
@@ -332,6 +336,13 @@ describe("buildApiGatewayServer", () => {
       },
     });
     await server.inject({
+      method: "GET",
+      url: "/me/submissions",
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+    await server.inject({
       method: "POST",
       url: `/submissions/${submissionId}/evaluations`,
       headers: {
@@ -362,6 +373,7 @@ describe("buildApiGatewayServer", () => {
       "GET http://challenge-service/challenges",
       `POST http://submission-service/challenges/${challengeId}/submissions`,
       `GET http://submission-service/challenges/${challengeId}/submissions`,
+      "GET http://submission-service/me/submissions",
       `POST http://evaluation-service/submissions/${submissionId}/evaluations`,
       `POST http://submission-service/submissions/${submissionId}/accept`,
       "GET http://notification-service/notifications",
@@ -377,7 +389,7 @@ describe("buildApiGatewayServer", () => {
     expect(readJsonBody({ request: readCapturedRequest({ requests, index: 4 }) })).toEqual({
       summary: proposalSummary,
     });
-    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 6 }) })).toEqual({
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 7 }) })).toEqual({
       score: 91,
       comment: reviewComment,
     });
@@ -387,9 +399,9 @@ describe("buildApiGatewayServer", () => {
         "content-type",
       ),
     ).toBeNull();
-    expect(readCapturedRequest({ requests, index: 7 }).init.body).toBeUndefined();
+    expect(readCapturedRequest({ requests, index: 8 }).init.body).toBeUndefined();
     expect(
-      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 7 }) }).get(
+      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 8 }) }).get(
         "content-type",
       ),
     ).toBeNull();
