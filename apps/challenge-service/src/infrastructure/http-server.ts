@@ -1,5 +1,5 @@
 import cors from "@fastify/cors";
-import type { ActorContext, UserRole } from "@sparkflow/contracts";
+import { readActor, readCorrelationId } from "@sparkflow/http";
 import Fastify from "fastify";
 import type { CreateChallengeUseCase } from "../application/create-challenge.use-case.ts";
 import type { ListChallengesUseCase } from "../application/list-challenges.use-case.ts";
@@ -9,15 +9,6 @@ type CreateChallengeBody = {
   readonly title?: string;
   readonly description?: string;
 };
-
-const readActor = (headers: Record<string, string | string[] | undefined>): ActorContext => ({
-  userId: String(headers["x-user-id"] ?? "anonymous"),
-  organizationId: String(headers["x-organization-id"] ?? "unknown-organization"),
-  role: String(headers["x-role"] ?? "startup-member") as UserRole,
-});
-
-const readCorrelationId = (headers: Record<string, string | string[] | undefined>): string =>
-  String(headers["x-correlation-id"] ?? crypto.randomUUID());
 
 export const buildChallengeHttpServer = async (input: {
   readonly createChallengeUseCase: CreateChallengeUseCase;
@@ -33,7 +24,7 @@ export const buildChallengeHttpServer = async (input: {
 
   server.post<{ Body: CreateChallengeBody }>("/challenges", async (request, reply) => {
     const result = await input.createChallengeUseCase.execute({
-      actor: readActor(request.headers),
+      actor: readActor({ headers: request.headers }),
       title: request.body.title ?? "",
       description: request.body.description ?? "",
     });
@@ -49,9 +40,9 @@ export const buildChallengeHttpServer = async (input: {
     "/challenges/:challengeId/publish",
     async (request, reply) => {
       const result = await input.publishChallengeUseCase.execute({
-        actor: readActor(request.headers),
+        actor: readActor({ headers: request.headers }),
         challengeId: request.params.challengeId,
-        correlationId: readCorrelationId(request.headers),
+        correlationId: readCorrelationId({ headers: request.headers }),
       });
 
       if (!result.ok) {

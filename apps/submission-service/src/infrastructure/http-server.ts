@@ -1,5 +1,5 @@
 import cors from "@fastify/cors";
-import type { ActorContext, UserRole } from "@sparkflow/contracts";
+import { readActor, readCorrelationId } from "@sparkflow/http";
 import Fastify from "fastify";
 import type { CreateSubmissionUseCase } from "../application/create-submission.use-case.ts";
 import type { DecideSubmissionUseCase } from "../application/decide-submission.use-case.ts";
@@ -8,15 +8,6 @@ import type { ListSubmissionsUseCase } from "../application/list-submissions.use
 type CreateSubmissionBody = {
   readonly summary?: string;
 };
-
-const readActor = (headers: Record<string, string | string[] | undefined>): ActorContext => ({
-  userId: String(headers["x-user-id"] ?? "anonymous"),
-  organizationId: String(headers["x-organization-id"] ?? "unknown-organization"),
-  role: String(headers["x-role"] ?? "startup-member") as UserRole,
-});
-
-const readCorrelationId = (headers: Record<string, string | string[] | undefined>): string =>
-  String(headers["x-correlation-id"] ?? crypto.randomUUID());
 
 export const buildSubmissionHttpServer = async (input: {
   readonly createSubmissionUseCase: CreateSubmissionUseCase;
@@ -38,10 +29,10 @@ export const buildSubmissionHttpServer = async (input: {
     "/challenges/:challengeId/submissions",
     async (request, reply) => {
       const result = await input.createSubmissionUseCase.execute({
-        actor: readActor(request.headers),
+        actor: readActor({ headers: request.headers }),
         challengeId: request.params.challengeId,
         summary: request.body.summary ?? "",
-        correlationId: readCorrelationId(request.headers),
+        correlationId: readCorrelationId({ headers: request.headers }),
       });
 
       if (!result.ok) {
@@ -56,10 +47,10 @@ export const buildSubmissionHttpServer = async (input: {
     "/submissions/:submissionId/accept",
     async (request, reply) => {
       const result = await input.decideSubmissionUseCase.execute({
-        actor: readActor(request.headers),
+        actor: readActor({ headers: request.headers }),
         submissionId: request.params.submissionId,
         decision: "accept",
-        correlationId: readCorrelationId(request.headers),
+        correlationId: readCorrelationId({ headers: request.headers }),
       });
 
       if (!result.ok) {
@@ -77,10 +68,10 @@ export const buildSubmissionHttpServer = async (input: {
     "/submissions/:submissionId/reject",
     async (request, reply) => {
       const result = await input.decideSubmissionUseCase.execute({
-        actor: readActor(request.headers),
+        actor: readActor({ headers: request.headers }),
         submissionId: request.params.submissionId,
         decision: "reject",
-        correlationId: readCorrelationId(request.headers),
+        correlationId: readCorrelationId({ headers: request.headers }),
       });
 
       if (!result.ok) {
