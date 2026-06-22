@@ -3,9 +3,10 @@ import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import type { ChallengeId } from '@shared/domain/result';
+import { AuthSession } from '@shared/auth/auth-session';
 import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
-import type { Challenge, ChallengeActor } from '../../domain/challenge';
+import type { Challenge } from '../../domain/challenge';
 import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gateway';
 import { ChallengeCard } from '../challenge-card/challenge-card';
 import {
@@ -29,10 +30,7 @@ import {
 export class ChallengesPage {
   protected readonly store = inject(ChallengesStore);
   private readonly messageService = inject(MessageService);
-  protected readonly currentActor: ChallengeActor = {
-    organizationId: 'org-company',
-    role: 'company-admin',
-  };
+  protected readonly currentActor = inject(AuthSession).currentActor;
   protected readonly challengeFormDialogVisible = signal(false);
   protected readonly selectedChallengeId = signal<ChallengeId | null>(null);
   protected readonly challengeFormDialogError = signal<ChallengeFailure | null>(null);

@@ -1,10 +1,7 @@
-import type { ChallengeStatus } from '@sparkflow/contracts';
+import type { ActorContext, ChallengeStatus } from '@sparkflow/contracts';
 import { ChallengeId } from '@shared/domain/result';
 
-export type ChallengeActor = {
-  readonly organizationId: string;
-  readonly role: 'company-admin' | 'reviewer' | 'startup-member';
-};
+export type ChallengeActor = Pick<ActorContext, 'organizationId' | 'role'>;
 
 export type Challenge = {
   readonly id: ChallengeId;

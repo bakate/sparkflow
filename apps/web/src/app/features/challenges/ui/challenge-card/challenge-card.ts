@@ -17,14 +17,20 @@ import { ChallengeStatusLabel } from '../challenge-status-label';
 })
 export class ChallengeCard {
   readonly challenge = input.required<Challenge>();
-  readonly currentActor = input.required<ChallengeActor>();
+  readonly currentActor = input<ChallengeActor | null>(null);
   readonly publishing = input(false);
   readonly edit = output<{ readonly challengeId: ChallengeId }>();
   readonly publish = output<{ readonly challengeId: ChallengeId }>();
 
   protected canEdit(): boolean {
+    const actor = this.currentActor();
+
+    if (actor === null) {
+      return false;
+    }
+
     return canEditChallenge({
-      actor: this.currentActor(),
+      actor,
       challenge: this.challenge(),
     });
   }
