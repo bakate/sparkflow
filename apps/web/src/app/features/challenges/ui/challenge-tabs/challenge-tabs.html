@@ -1,0 +1,18 @@
+<p-tabs [value]="activeTab()" (valueChange)="selectTab({ value: $event })">
+  <p-tablist>
+    @for (tab of tabs(); track tab.value) {
+      <p-tab
+        [value]="tab.value"
+        [routerLink]="['/challenges']"
+        [queryParams]="{ tab: tab.value }"
+        queryParamsHandling="merge"
+        [replaceUrl]="true"
+      >
+        <span class="inline-flex align-items-center gap-2">
+          <i [class]="tab.icon" aria-hidden="true"></i>
+          {{ tab.label }}
+        </span>
+      </p-tab>
+    }
+  </p-tablist>
+</p-tabs>

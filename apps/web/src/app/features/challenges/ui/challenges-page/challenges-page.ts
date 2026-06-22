@@ -1,17 +1,17 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
-import { Tab, TabList, Tabs } from 'primeng/tabs';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { AuthSession } from '@shared/auth/auth-session';
 import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import { canCreateChallenge, type Challenge } from '../../domain/challenge';
+import type { Submission } from '../../domain/submission';
 import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gateway';
-import { ChallengeCard } from '../challenge-card/challenge-card';
+import { ChallengeCard, type ChallengeCardState } from '../challenge-card/challenge-card';
 import {
   ChallengeForm,
   type ChallengeFormSubmitted,
@@ -22,6 +22,7 @@ import {
   type ChallengeSubmissionFormSubmitted,
 } from '../challenge-submission-form/challenge-submission-form';
 import { ChallengeSubmissionsReview } from '../challenge-submissions-review/challenge-submissions-review';
+import { ChallengeTabs, type ChallengeTabItem } from '../challenge-tabs/challenge-tabs';
 
 type StartupChallengeTab = 'assessed' | 'in-progress' | 'published';
 type CompanyChallengeTab = 'archived' | 'draft' | 'assessed' | 'published';
@@ -35,11 +36,8 @@ type ChallengeTab = CompanyChallengeTab | StartupChallengeTab;
     ChallengeForm,
     ChallengeSubmissionForm,
     ChallengeSubmissionsReview,
+    ChallengeTabs,
     Dialog,
-    RouterLink,
-    Tab,
-    TabList,
-    Tabs,
   ],
   providers: [
     ChallengesStore,
@@ -148,6 +146,15 @@ export class ChallengesPage {
       return submission?.status === 'accepted' || submission?.status === 'rejected';
     });
   });
+  protected readonly challengeCards = computed<readonly ChallengeCardViewModel[]>(() =>
+    this.displayedChallenges().map((challenge) => ({
+      challenge,
+      state: this.challengeCardState({ challenge }),
+    })),
+  );
+  protected readonly challengeTabs = computed<readonly ChallengeTabItem[]>(() =>
+    this.usesCompanyChallengeTabs() ? companyChallengeTabs : startupChallengeTabs,
+  );
   protected readonly openStartupChallengeCount = computed(
     () =>
       this.store
@@ -282,22 +289,41 @@ export class ChallengesPage {
     return input.tab === 'published';
   }
 
-  protected selectChallengeTabValue(input: { readonly value: string | number | undefined }): void {
-    if (!isChallengeTab(input.value)) {
+  protected selectChallengeTabValue(input: { readonly tab: string }): void {
+    if (!isChallengeTab(input.tab)) {
       return;
     }
 
-    this.selectChallengeTab({ tab: input.value });
+    this.selectChallengeTab({ tab: input.tab });
   }
 
-  protected isChallengeAssessed(input: { readonly challengeId: ChallengeId }): boolean {
+  private challengeCardState(input: { readonly challenge: Challenge }): ChallengeCardState {
+    const challengeId = input.challenge.id;
+    const submission = this.store.submissionForChallenge({ challengeId });
+
+    return {
+      archiving: this.store.isArchiving({ challengeId }),
+      assessed: this.isChallengeAssessed({ challengeId, submission }),
+      drafting: this.store.isDrafting({ challengeId }),
+      loadingSubmissions: this.store.isLoadingChallengeSubmissions({ challengeId }),
+      pendingProposalCount: this.pendingProposalCountForChallenge({ challengeId }),
+      proposalCount: this.proposalCountForChallenge({ challengeId }),
+      proposalStatus: submission?.status ?? null,
+      proposalSubmitted: submission !== null,
+      publishing: this.store.isPublishing({ challengeId }),
+      submittingProposal: this.store.isSubmittingProposal({ challengeId }),
+    };
+  }
+
+  private isChallengeAssessed(input: {
+    readonly challengeId: ChallengeId;
+    readonly submission: Submission | null;
+  }): boolean {
     if (this.usesCompanyChallengeTabs()) {
       return this.store.hasAssessedSubmissionForChallenge({ challengeId: input.challengeId });
     }
 
-    const submission = this.store.submissionForChallenge({ challengeId: input.challengeId });
-
-    return submission?.status === 'accepted' || submission?.status === 'rejected';
+    return input.submission?.status === 'accepted' || input.submission?.status === 'rejected';
   }
 
   protected proposalCountForChallenge(input: { readonly challengeId: ChallengeId }): number {
@@ -589,6 +615,24 @@ const errorMessages: Record<ChallengeFailure, string> = {
 };
 
 const challengeTabs = ['archived', 'assessed', 'draft', 'in-progress', 'published'] as const;
+
+const companyChallengeTabs: readonly ChallengeTabItem[] = [
+  { icon: 'pi pi-file', label: 'Draft', value: 'draft' },
+  { icon: 'pi pi-send', label: 'Published', value: 'published' },
+  { icon: 'pi pi-check-circle', label: 'Assessed', value: 'assessed' },
+  { icon: 'pi pi-box', label: 'Archived', value: 'archived' },
+] as const;
+
+const startupChallengeTabs: readonly ChallengeTabItem[] = [
+  { icon: 'pi pi-send', label: 'Open', value: 'published' },
+  { icon: 'pi pi-clock', label: 'Under review', value: 'in-progress' },
+  { icon: 'pi pi-check-circle', label: 'Assessed', value: 'assessed' },
+] as const;
+
+type ChallengeCardViewModel = {
+  readonly challenge: Challenge;
+  readonly state: ChallengeCardState;
+};
 
 const isChallengeTab = (value: string | number | undefined): value is ChallengeTab =>
   typeof value === 'string' && challengeTabs.includes(value as ChallengeTab);

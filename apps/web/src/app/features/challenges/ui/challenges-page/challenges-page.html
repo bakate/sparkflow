@@ -52,100 +52,11 @@
   }
 
   @if (usesStartupChallengeTabs() || usesCompanyChallengeTabs()) {
-    <p-tabs
-      [value]="activeChallengeTab()"
-      (valueChange)="selectChallengeTabValue({ value: $event })"
-    >
-      <p-tablist>
-        @if (usesCompanyChallengeTabs()) {
-          <p-tab
-            value="draft"
-            [routerLink]="['/challenges']"
-            [queryParams]="{ tab: 'draft' }"
-            queryParamsHandling="merge"
-            [replaceUrl]="true"
-          >
-            <span class="inline-flex align-items-center gap-2">
-              <i class="pi pi-file" aria-hidden="true"></i>
-              Draft
-            </span>
-          </p-tab>
-          <p-tab
-            value="published"
-            [routerLink]="['/challenges']"
-            [queryParams]="{ tab: 'published' }"
-            queryParamsHandling="merge"
-            [replaceUrl]="true"
-          >
-            <span class="inline-flex align-items-center gap-2">
-              <i class="pi pi-send" aria-hidden="true"></i>
-              Published
-            </span>
-          </p-tab>
-          <p-tab
-            value="assessed"
-            [routerLink]="['/challenges']"
-            [queryParams]="{ tab: 'assessed' }"
-            queryParamsHandling="merge"
-            [replaceUrl]="true"
-          >
-            <span class="inline-flex align-items-center gap-2">
-              <i class="pi pi-check-circle" aria-hidden="true"></i>
-              Assessed
-            </span>
-          </p-tab>
-          <p-tab
-            value="archived"
-            [routerLink]="['/challenges']"
-            [queryParams]="{ tab: 'archived' }"
-            queryParamsHandling="merge"
-            [replaceUrl]="true"
-          >
-            <span class="inline-flex align-items-center gap-2">
-              <i class="pi pi-box" aria-hidden="true"></i>
-              Archived
-            </span>
-          </p-tab>
-        } @else {
-          <p-tab
-            value="published"
-            [routerLink]="['/challenges']"
-            [queryParams]="{ tab: 'published' }"
-            queryParamsHandling="merge"
-            [replaceUrl]="true"
-          >
-            <span class="inline-flex align-items-center gap-2">
-              <i class="pi pi-send" aria-hidden="true"></i>
-              Open
-            </span>
-          </p-tab>
-          <p-tab
-            value="in-progress"
-            [routerLink]="['/challenges']"
-            [queryParams]="{ tab: 'in-progress' }"
-            queryParamsHandling="merge"
-            [replaceUrl]="true"
-          >
-            <span class="inline-flex align-items-center gap-2">
-              <i class="pi pi-clock" aria-hidden="true"></i>
-              Under review
-            </span>
-          </p-tab>
-          <p-tab
-            value="assessed"
-            [routerLink]="['/challenges']"
-            [queryParams]="{ tab: 'assessed' }"
-            queryParamsHandling="merge"
-            [replaceUrl]="true"
-          >
-            <span class="inline-flex align-items-center gap-2">
-              <i class="pi pi-check-circle" aria-hidden="true"></i>
-              Assessed
-            </span>
-          </p-tab>
-        }
-      </p-tablist>
-    </p-tabs>
+    <challenge-tabs
+      [activeTab]="activeChallengeTab()"
+      [tabs]="challengeTabs()"
+      (selected)="selectChallengeTabValue($event)"
+    />
   }
 
   <div class="flex flex-column gap-3" aria-label="Challenge list">
@@ -154,22 +65,11 @@
     } @else if (displayedChallenges().length === 0) {
       <p class="m-0 p-3 border-1 surface-border border-round surface-card">No challenges yet.</p>
     } @else {
-      @for (challenge of displayedChallenges(); track challenge.id) {
+      @for (card of challengeCards(); track card.challenge.id) {
         <challenge-card
-          [challenge]="challenge"
+          [challenge]="card.challenge"
           [currentActor]="currentActor()"
-          [assessed]="isChallengeAssessed({ challengeId: challenge.id })"
-          [archiving]="store.isArchiving({ challengeId: challenge.id })"
-          [drafting]="store.isDrafting({ challengeId: challenge.id })"
-          [proposalCount]="proposalCountForChallenge({ challengeId: challenge.id })"
-          [pendingProposalCount]="pendingProposalCountForChallenge({ challengeId: challenge.id })"
-          [publishing]="store.isPublishing({ challengeId: challenge.id })"
-          [loadingSubmissions]="store.isLoadingChallengeSubmissions({ challengeId: challenge.id })"
-          [submittingProposal]="store.isSubmittingProposal({ challengeId: challenge.id })"
-          [proposalSubmitted]="store.hasSubmittedProposal({ challengeId: challenge.id })"
-          [proposalStatus]="
-            store.submissionForChallenge({ challengeId: challenge.id })?.status ?? null
-          "
+          [state]="card.state"
           (edit)="openChallengeFormDialog($event)"
           (archive)="archiveChallenge($event)"
           (draft)="draftChallenge($event)"

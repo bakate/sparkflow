@@ -26,16 +26,7 @@ import { ChallengeStatusLabel, type ChallengeStatusLabelValue } from '../challen
 export class ChallengeCard {
   readonly challenge = input.required<Challenge>();
   readonly currentActor = input<ChallengeActor | null>(null);
-  readonly assessed = input(false);
-  readonly proposalCount = input(0);
-  readonly archiving = input(false);
-  readonly drafting = input(false);
-  readonly pendingProposalCount = input(0);
-  readonly publishing = input(false);
-  readonly loadingSubmissions = input(false);
-  readonly submittingProposal = input(false);
-  readonly proposalSubmitted = input(false);
-  readonly proposalStatus = input<SubmissionStatus | null>(null);
+  readonly state = input.required<ChallengeCardState>();
   readonly edit = output<{ readonly challengeId: ChallengeId }>();
   readonly archive = output<{ readonly challengeId: ChallengeId }>();
   readonly draft = output<{ readonly challengeId: ChallengeId }>();
@@ -70,7 +61,7 @@ export class ChallengeCard {
   }
 
   protected statusLabelValue(): ChallengeStatusLabelValue {
-    const proposalStatus = this.proposalStatus();
+    const proposalStatus = this.state().proposalStatus;
 
     if (this.challenge().status === 'archived') {
       return 'archived';
@@ -88,7 +79,7 @@ export class ChallengeCard {
       return 'open';
     }
 
-    return this.assessed() ? 'assessed' : this.challenge().status;
+    return this.state().assessed ? 'assessed' : this.challenge().status;
   }
 
   protected canPublish(): boolean {
@@ -126,7 +117,7 @@ export class ChallengeCard {
   }
 
   protected canSubmitProposal(): boolean {
-    if (this.proposalSubmitted()) {
+    if (this.state().proposalSubmitted) {
       return false;
     }
 
@@ -168,7 +159,9 @@ export class ChallengeCard {
   }
 
   protected isCompanyActionPending(): boolean {
-    return this.archiving() || this.drafting() || this.loadingSubmissions() || this.publishing();
+    const state = this.state();
+
+    return state.archiving || state.drafting || state.loadingSubmissions || state.publishing;
   }
 
   protected formatDate(input: { readonly date: Date }): string {
@@ -176,7 +169,7 @@ export class ChallengeCard {
   }
 
   protected proposalStatusLabel(): string {
-    const status = this.proposalStatus();
+    const status = this.state().proposalStatus;
 
     if (status === 'accepted') {
       return 'Proposal accepted';
@@ -190,7 +183,9 @@ export class ChallengeCard {
   }
 
   protected proposalCountLabel(): string {
-    return this.proposalCount() === 1 ? '1 proposal' : `${this.proposalCount()} proposals`;
+    const proposalCount = this.state().proposalCount;
+
+    return proposalCount === 1 ? '1 proposal' : `${proposalCount} proposals`;
   }
 
   private companyActions(): ChallengeCardAction[] {
@@ -281,3 +276,16 @@ export class ChallengeCard {
 }
 
 type ChallengeCardAction = 'archive' | 'draft' | 'edit' | 'proposals' | 'publish';
+
+export type ChallengeCardState = {
+  readonly archiving: boolean;
+  readonly assessed: boolean;
+  readonly drafting: boolean;
+  readonly loadingSubmissions: boolean;
+  readonly pendingProposalCount: number;
+  readonly proposalCount: number;
+  readonly proposalStatus: SubmissionStatus | null;
+  readonly proposalSubmitted: boolean;
+  readonly publishing: boolean;
+  readonly submittingProposal: boolean;
+};

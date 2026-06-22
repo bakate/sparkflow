@@ -1,10 +1,10 @@
 <div class="relative mb-3">
-  @if (pendingProposalCount() > 0) {
+  @if (state().pendingProposalCount > 0) {
     <p-badge
       class="absolute z-1"
       styleClass="shadow-1"
       severity="danger"
-      [value]="pendingProposalCount()"
+      [value]="state().pendingProposalCount"
       [style]="{ top: '-0.5rem', right: '-0.5rem' }"
     />
   }
@@ -30,13 +30,13 @@
             <i class="pi pi-calendar" aria-hidden="true"></i>
             Created {{ formatDate({ date: challenge().createdAt }) }}
           </span>
-          @if (proposalStatus() !== null) {
+          @if (state().proposalStatus !== null) {
             <span class="inline-flex align-items-center gap-2">
               <i class="pi pi-inbox" aria-hidden="true"></i>
               {{ proposalStatusLabel() }}
             </span>
           }
-          @if (canReviewSubmissions() && proposalCount() > 0) {
+          @if (canReviewSubmissions() && state().proposalCount > 0) {
             <span class="inline-flex align-items-center gap-2">
               <i class="pi pi-inbox" aria-hidden="true"></i>
               {{ proposalCountLabel() }}
@@ -63,8 +63,8 @@
             <p-button
               icon="pi pi-send"
               label="Submit"
-              [loading]="submittingProposal()"
-              [disabled]="submittingProposal()"
+              [loading]="state().submittingProposal"
+              [disabled]="state().submittingProposal"
               (onClick)="submitProposal.emit({ challengeId: challenge().id })"
             />
           }
