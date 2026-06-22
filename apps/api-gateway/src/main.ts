@@ -1,10 +1,23 @@
 import { readEnvironmentVariable, readIntegerEnvironmentVariable } from "@sparkflow/config";
 import { logger } from "@sparkflow/logger";
 import { randomUUID } from "node:crypto";
+import { createKeycloakAccessTokenVerifier } from "./auth/keycloak-access-token-verifier.ts";
 import { buildApiGatewayServer } from "./build-api-gateway-server.ts";
 
 const port = readIntegerEnvironmentVariable({ name: "PORT", fallback: 3000 });
+const keycloakIssuer = readEnvironmentVariable({
+  name: "KEYCLOAK_ISSUER",
+  fallback: "http://localhost:8080/realms/sparkflow",
+});
+const keycloakClientId = readEnvironmentVariable({
+  name: "KEYCLOAK_CLIENT_ID",
+  fallback: "sparkflow-web",
+});
 const server = await buildApiGatewayServer({
+  accessTokenVerifier: createKeycloakAccessTokenVerifier({
+    issuer: keycloakIssuer,
+    clientId: keycloakClientId,
+  }),
   fetcher: fetch,
   idGenerator: { generate: () => randomUUID() },
   serviceUrls: {

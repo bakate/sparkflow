@@ -12,8 +12,10 @@
   "dependencies": {
     "@fastify/cors": "catalog:",
     "@sparkflow/config": "workspace:*",
+    "@sparkflow/contracts": "workspace:*",
     "@sparkflow/logger": "workspace:*",
-    "fastify": "catalog:"
+    "fastify": "catalog:",
+    "jose": "^6.2.3"
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",

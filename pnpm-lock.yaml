@@ -107,12 +107,18 @@ importers:
       '@sparkflow/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@sparkflow/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@sparkflow/logger':
         specifier: workspace:*
         version: link:../../packages/logger
       fastify:
         specifier: 'catalog:'
         version: 5.8.5
+      jose:
+        specifier: ^6.2.3
+        version: 6.2.3
     devDependencies:
       '@faker-js/faker':
         specifier: 'catalog:'

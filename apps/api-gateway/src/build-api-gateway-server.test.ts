@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
+import type { ActorContext } from "@sparkflow/contracts";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AccessTokenVerifier } from "./auth/access-token-verifier.js";
 import { buildApiGatewayServer } from "./build-api-gateway-server.js";
 
 type CapturedRequest = {
@@ -16,6 +18,12 @@ const serviceUrls = {
 } as const;
 
 const openServers: { readonly close: () => Promise<void> }[] = [];
+const companyAdminActor: ActorContext = {
+  organizationId: "org-company",
+  role: "company-admin",
+  userId: "user-company-admin",
+};
+const authorizationHeader = "Bearer valid-token";
 
 const readCapturedRequest = (input: {
   readonly requests: readonly CapturedRequest[];
@@ -43,6 +51,7 @@ const readForwardedHeaders = (input: { readonly request: CapturedRequest }): Hea
 const createServerWithCapturedRequests = async () => {
   const requests: CapturedRequest[] = [];
   const server = await buildApiGatewayServer({
+    accessTokenVerifier: createAccessTokenVerifier({ actor: companyAdminActor }),
     serviceUrls,
     idGenerator: { generate: () => "generated-correlation-id" },
     fetcher: async (url, init) => {
@@ -66,6 +75,7 @@ const createWorkflowServer = async (input: {
 }) => {
   const requests: CapturedRequest[] = [];
   const server = await buildApiGatewayServer({
+    accessTokenVerifier: createAccessTokenVerifier({ actor: companyAdminActor }),
     serviceUrls,
     idGenerator: { generate: () => faker.string.uuid() },
     fetcher: async (url, init) => {
@@ -108,6 +118,13 @@ const createWorkflowServer = async (input: {
   return { requests, server };
 };
 
+const createAccessTokenVerifier = (input: {
+  readonly actor: ActorContext | null;
+}): AccessTokenVerifier => ({
+  verify: async ({ authorizationHeader: currentAuthorizationHeader }) =>
+    currentAuthorizationHeader === authorizationHeader ? input.actor : null,
+});
+
 const readJsonBody = (input: { readonly request: CapturedRequest }): unknown => {
   const body = input.request.init.body;
 
@@ -139,12 +156,28 @@ describe("buildApiGatewayServer", () => {
     expect(requests).toEqual([]);
   });
 
-  it("proxies challenge listing with generated correlation and default fake auth headers", async () => {
+  it("rejects requests without a valid access token", async () => {
     const { requests, server } = await createServerWithCapturedRequests();
 
     const response = await server.inject({
       method: "GET",
       url: "/challenges",
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "unauthorized" });
+    expect(requests).toEqual([]);
+  });
+
+  it("proxies challenge listing with generated correlation and authenticated actor headers", async () => {
+    const { requests, server } = await createServerWithCapturedRequests();
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/challenges",
+      headers: {
+        authorization: authorizationHeader,
+      },
     });
 
     const request = readCapturedRequest({ requests });
@@ -178,13 +211,14 @@ describe("buildApiGatewayServer", () => {
     expect(response.headers["access-control-allow-methods"]).toContain("PATCH");
   });
 
-  it("proxies submission creation with body and preserves incoming auth headers", async () => {
+  it("proxies submission creation with body and authenticated actor headers", async () => {
     const { requests, server } = await createServerWithCapturedRequests();
 
     await server.inject({
       method: "POST",
       url: "/challenges/challenge-1/submissions",
       headers: {
+        authorization: authorizationHeader,
         "x-correlation-id": "incoming-correlation-id",
         "x-user-id": "startup-user",
         "x-organization-id": "startup-org",
@@ -203,9 +237,9 @@ describe("buildApiGatewayServer", () => {
     expect(request.init.body).toBe(JSON.stringify({ summary: "A strong proposal" }));
     expect(headers.get("content-type")).toBe("application/json");
     expect(headers.get("x-correlation-id")).toBe("incoming-correlation-id");
-    expect(headers.get("x-user-id")).toBe("startup-user");
-    expect(headers.get("x-organization-id")).toBe("startup-org");
-    expect(headers.get("x-role")).toBe("startup-member");
+    expect(headers.get("x-user-id")).toBe("user-company-admin");
+    expect(headers.get("x-organization-id")).toBe("org-company");
+    expect(headers.get("x-role")).toBe("company-admin");
   });
 
   it("routes evaluation submission to the Python evaluation service", async () => {
@@ -217,6 +251,9 @@ describe("buildApiGatewayServer", () => {
       payload: {
         score: 88,
         recommendation: "accept",
+      },
+      headers: {
+        authorization: authorizationHeader,
       },
     });
 
@@ -246,6 +283,7 @@ describe("buildApiGatewayServer", () => {
       method: "POST",
       url: "/challenges",
       headers: {
+        authorization: authorizationHeader,
         "x-correlation-id": correlationId,
         "x-user-id": faker.string.uuid(),
         "x-organization-id": "org-company",
@@ -256,36 +294,65 @@ describe("buildApiGatewayServer", () => {
     await server.inject({
       method: "PATCH",
       url: `/challenges/${challengeId}`,
+      headers: {
+        authorization: authorizationHeader,
+      },
       payload: { title: `${challengeTitle} updated`, description: challengeDescription },
     });
-    await server.inject({ method: "POST", url: `/challenges/${challengeId}/publish` });
-    await server.inject({ method: "GET", url: "/challenges" });
+    await server.inject({
+      method: "POST",
+      url: `/challenges/${challengeId}/publish`,
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+    await server.inject({
+      method: "GET",
+      url: "/challenges",
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
     await server.inject({
       method: "POST",
       url: `/challenges/${challengeId}/submissions`,
       headers: {
+        authorization: authorizationHeader,
         "x-user-id": faker.string.uuid(),
         "x-organization-id": "org-startup",
         "x-role": "startup-member",
       },
       payload: { summary: proposalSummary },
     });
-    await server.inject({ method: "GET", url: `/challenges/${challengeId}/submissions` });
+    await server.inject({
+      method: "GET",
+      url: `/challenges/${challengeId}/submissions`,
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
     await server.inject({
       method: "POST",
       url: `/submissions/${submissionId}/evaluations`,
       headers: {
+        authorization: authorizationHeader,
         "x-user-id": faker.string.uuid(),
         "x-organization-id": "org-reviewer",
         "x-role": "reviewer",
       },
       payload: { score: 91, comment: reviewComment },
     });
-    await server.inject({ method: "POST", url: `/submissions/${submissionId}/accept` });
+    await server.inject({
+      method: "POST",
+      url: `/submissions/${submissionId}/accept`,
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
     await server.inject({
       method: "GET",
       url: "/notifications",
-      headers: { "x-organization-id": "org-startup" },
+      headers: { authorization: authorizationHeader, "x-organization-id": "org-startup" },
     });
 
     expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
