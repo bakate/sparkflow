@@ -14,7 +14,10 @@ import { WEB_API_CONFIG } from '@shared/infrastructure/web-api.config';
 import type {
   ChallengeFailure,
   ChallengeGateway,
+  ArchiveChallengeCommand,
   CreateChallengeCommand,
+  DecideSubmissionCommand,
+  ListChallengeSubmissionsCommand,
   PublishChallengeCommand,
   SubmitChallengeProposalCommand,
   UpdateChallengeCommand,
@@ -25,8 +28,11 @@ import type { Submission } from '../domain/submission';
 const challengeFailures = [
   'challenge-title-required',
   'challenge-description-required',
+  'challenge-already-archived',
   'challenge-already-published',
   'challenge-not-found',
+  'submission-not-found',
+  'submission-already-decided',
   'submission-summary-required',
   'forbidden',
   'network-error',
@@ -56,6 +62,23 @@ export class HttpChallengeGateway implements ChallengeGateway {
       const submissionDtos = await firstValueFrom(
         this.httpClient
           .get<SubmissionDto[]>(this.buildUrl({ path: '/me/submissions' }))
+          .pipe(timeout(5000)),
+      );
+      return succeed(submissionDtos.map((submissionDto) => toSubmission({ submissionDto })));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
+  async listChallengeSubmissions(
+    command: ListChallengeSubmissionsCommand,
+  ): Promise<Result<ChallengeFailure, readonly Submission[]>> {
+    try {
+      const submissionDtos = await firstValueFrom(
+        this.httpClient
+          .get<
+            SubmissionDto[]
+          >(this.buildUrl({ path: `/challenges/${command.challengeId}/submissions` }))
           .pipe(timeout(5000)),
       );
       return succeed(submissionDtos.map((submissionDto) => toSubmission({ submissionDto })));
@@ -112,6 +135,22 @@ export class HttpChallengeGateway implements ChallengeGateway {
     }
   }
 
+  async archiveChallenge(
+    command: ArchiveChallengeCommand,
+  ): Promise<Result<ChallengeFailure, Challenge>> {
+    try {
+      const challengeDto = await firstValueFrom(
+        this.httpClient.post<ChallengeDto>(
+          this.buildUrl({ path: `/challenges/${command.challengeId}/archive` }),
+          null,
+        ),
+      );
+      return succeed(toChallenge({ challengeDto }));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
   async submitChallengeProposal(
     command: SubmitChallengeProposalCommand,
   ): Promise<Result<ChallengeFailure, Submission>> {
@@ -128,8 +167,48 @@ export class HttpChallengeGateway implements ChallengeGateway {
     }
   }
 
+  async acceptSubmission(
+    command: DecideSubmissionCommand,
+  ): Promise<Result<ChallengeFailure, Submission>> {
+    return this.decideSubmission({
+      challengeId: command.challengeId,
+      submissionId: command.submissionId,
+      decision: 'accept',
+    });
+  }
+
+  async rejectSubmission(
+    command: DecideSubmissionCommand,
+  ): Promise<Result<ChallengeFailure, Submission>> {
+    return this.decideSubmission({
+      challengeId: command.challengeId,
+      submissionId: command.submissionId,
+      decision: 'reject',
+    });
+  }
+
   private buildUrl(input: { readonly path: string }): string {
     return `${this.webApiConfig.apiUrl}${input.path}`;
+  }
+
+  private async decideSubmission(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionId: SubmissionId;
+    readonly decision: 'accept' | 'reject';
+  }): Promise<Result<ChallengeFailure, Submission>> {
+    try {
+      const submissionDto = await firstValueFrom(
+        this.httpClient.post<SubmissionDto>(
+          this.buildUrl({
+            path: `/challenges/${input.challengeId}/submissions/${input.submissionId}/${input.decision}`,
+          }),
+          null,
+        ),
+      );
+      return succeed(toSubmission({ submissionDto }));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
   }
 }
 

@@ -14,10 +14,14 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
+        listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
         submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -32,10 +36,14 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
         listMySubmissions: async () => succeed([]),
+        listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => succeed(createdChallenge),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
         submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -60,10 +68,14 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
         listMySubmissions: async () => succeed([]),
+        listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => succeed(updatedChallenge),
         publishChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
         submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -83,10 +95,14 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => fail('network-error'),
         listMySubmissions: async () => succeed([]),
+        listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
         submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -100,10 +116,14 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
+        listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
         submitChallengeProposal: async () => succeed(submission),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -115,6 +135,42 @@ describe('ChallengesStore', () => {
     expect(result).toEqual(succeed(submission));
     expect(store.isSubmittingProposal({ challengeId: challenge.id })).toBe(false);
     expect(store.hasSubmittedProposal({ challengeId: challenge.id })).toBe(true);
+  });
+
+  it('loads and accepts challenge submissions', async () => {
+    const challenge = createChallenge({ id: 'challenge-1' });
+    const submission = createSubmission({ challengeId: challenge.id });
+    const acceptedSubmission: Submission = {
+      ...submission,
+      status: 'accepted',
+      decidedAt: new Date('2026-06-22T11:00:00.000Z'),
+    };
+    const store = createStore({
+      challengeGateway: {
+        listChallenges: async () => succeed([challenge]),
+        listMySubmissions: async () => succeed([]),
+        listChallengeSubmissions: async () => succeed([submission]),
+        createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => fail('unexpected-error'),
+        publishChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => succeed(acceptedSubmission),
+        rejectSubmission: async () => fail('unexpected-error'),
+      },
+    });
+
+    await store.loadChallengeSubmissions({ challengeId: challenge.id });
+    const result = await store.acceptSubmission({
+      challengeId: challenge.id,
+      submissionId: submission.id,
+    });
+
+    expect(result).toEqual(succeed(acceptedSubmission));
+    expect(store.isDecidingSubmission({ submissionId: submission.id })).toBe(false);
+    expect(store.submissionsForChallenge({ challengeId: challenge.id })).toEqual([
+      acceptedSubmission,
+    ]);
   });
 });
 

@@ -1,13 +1,16 @@
 import { InjectionToken } from '@angular/core';
-import type { ChallengeId, Result } from '@shared/domain/result';
+import type { ChallengeId, Result, SubmissionId } from '@shared/domain/result';
 import type { Challenge } from '@features/challenges/domain/challenge';
 import type { Submission } from '@features/challenges/domain/submission';
 
 export type ChallengeFailure =
   | 'challenge-title-required'
   | 'challenge-description-required'
+  | 'challenge-already-archived'
   | 'challenge-already-published'
   | 'challenge-not-found'
+  | 'submission-not-found'
+  | 'submission-already-decided'
   | 'submission-summary-required'
   | 'forbidden'
   | 'network-error'
@@ -28,14 +31,30 @@ export type PublishChallengeCommand = {
   readonly challengeId: ChallengeId;
 };
 
+export type ArchiveChallengeCommand = {
+  readonly challengeId: ChallengeId;
+};
+
 export type SubmitChallengeProposalCommand = {
   readonly challengeId: ChallengeId;
   readonly summary: string;
 };
 
+export type ListChallengeSubmissionsCommand = {
+  readonly challengeId: ChallengeId;
+};
+
+export type DecideSubmissionCommand = {
+  readonly challengeId: ChallengeId;
+  readonly submissionId: SubmissionId;
+};
+
 export type ChallengeGateway = {
   readonly listChallenges: () => Promise<Result<ChallengeFailure, readonly Challenge[]>>;
   readonly listMySubmissions: () => Promise<Result<ChallengeFailure, readonly Submission[]>>;
+  readonly listChallengeSubmissions: (
+    command: ListChallengeSubmissionsCommand,
+  ) => Promise<Result<ChallengeFailure, readonly Submission[]>>;
   readonly createChallenge: (
     command: CreateChallengeCommand,
   ) => Promise<Result<ChallengeFailure, Challenge>>;
@@ -45,8 +64,17 @@ export type ChallengeGateway = {
   readonly publishChallenge: (
     command: PublishChallengeCommand,
   ) => Promise<Result<ChallengeFailure, Challenge>>;
+  readonly archiveChallenge: (
+    command: ArchiveChallengeCommand,
+  ) => Promise<Result<ChallengeFailure, Challenge>>;
   readonly submitChallengeProposal: (
     command: SubmitChallengeProposalCommand,
+  ) => Promise<Result<ChallengeFailure, Submission>>;
+  readonly acceptSubmission: (
+    command: DecideSubmissionCommand,
+  ) => Promise<Result<ChallengeFailure, Submission>>;
+  readonly rejectSubmission: (
+    command: DecideSubmissionCommand,
   ) => Promise<Result<ChallengeFailure, Submission>>;
 };
 

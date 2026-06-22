@@ -1,9 +1,9 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, Service } from '@angular/core';
 import { AuthConfig, OAuthService } from 'angular-oauth2-oidc';
 import { environment } from '@env/environment';
 import { AuthSession } from './auth-session';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class OAuthAuthenticator {
   private readonly authSession = inject(AuthSession);
   private readonly oauthService = inject(OAuthService);

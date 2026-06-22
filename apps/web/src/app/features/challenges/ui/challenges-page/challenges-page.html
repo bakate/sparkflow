@@ -6,9 +6,15 @@
       <h2 id="challenges-title" class="m-0 text-2xl font-bold text-color">Challenges</h2>
       @if (usesStartupChallengeTabs()) {
         <p class="m-0 text-color-secondary">
-          {{ publishedStartupChallengeCount() }} published,
-          {{ inProgressStartupChallengeCount() }} in progress,
-          {{ archivedStartupChallengeCount() }} archived
+          {{ openStartupChallengeCount() }} open, {{ underReviewStartupChallengeCount() }} under
+          review, {{ assessedStartupChallengeCount() }} assessed
+        </p>
+      } @else if (usesCompanyChallengeTabs()) {
+        <p class="m-0 text-color-secondary">
+          {{ draftCompanyChallengeCount() }} draft,
+          {{ publishedCompanyChallengeCount() }} published,
+          {{ assessedCompanyChallengeCount() }} assessed,
+          {{ archivedCompanyChallengeCount() }} archived
         </p>
       } @else {
         <p class="m-0 text-color-secondary">
@@ -45,27 +51,59 @@
     </p>
   }
 
-  @if (usesStartupChallengeTabs()) {
-    <div class="flex flex-wrap gap-2" aria-label="Challenge filters">
-      <p-button
-        label="Published"
-        icon="pi pi-send"
-        [outlined]="activeChallengeTab() !== 'published'"
-        (onClick)="selectChallengeTab({ tab: 'published' })"
-      />
-      <p-button
-        label="In progress"
-        icon="pi pi-clock"
-        [outlined]="activeChallengeTab() !== 'in-progress'"
-        (onClick)="selectChallengeTab({ tab: 'in-progress' })"
-      />
-      <p-button
-        label="Archived"
-        icon="pi pi-archive"
-        [outlined]="activeChallengeTab() !== 'archived'"
-        (onClick)="selectChallengeTab({ tab: 'archived' })"
-      />
-    </div>
+  @if (usesStartupChallengeTabs() || usesCompanyChallengeTabs()) {
+    <p-tabs
+      [value]="activeChallengeTab()"
+      (valueChange)="selectChallengeTabValue({ value: $event })"
+    >
+      <p-tablist>
+        @if (usesCompanyChallengeTabs()) {
+          <p-tab value="draft">
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-file" aria-hidden="true"></i>
+              Draft
+            </span>
+          </p-tab>
+          <p-tab value="published">
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-send" aria-hidden="true"></i>
+              Published
+            </span>
+          </p-tab>
+          <p-tab value="assessed">
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+              Assessed
+            </span>
+          </p-tab>
+          <p-tab value="archived">
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-box" aria-hidden="true"></i>
+              Archived
+            </span>
+          </p-tab>
+        } @else {
+          <p-tab value="published">
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-send" aria-hidden="true"></i>
+              Open
+            </span>
+          </p-tab>
+          <p-tab value="in-progress">
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-clock" aria-hidden="true"></i>
+              Under review
+            </span>
+          </p-tab>
+          <p-tab value="assessed">
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+              Assessed
+            </span>
+          </p-tab>
+        }
+      </p-tablist>
+    </p-tabs>
   }
 
   <div class="flex flex-column gap-3" aria-label="Challenge list">
@@ -78,14 +116,21 @@
         <challenge-card
           [challenge]="challenge"
           [currentActor]="currentActor()"
+          [assessed]="isChallengeAssessed({ challengeId: challenge.id })"
+          [archiving]="store.isArchiving({ challengeId: challenge.id })"
+          [proposalCount]="proposalCountForChallenge({ challengeId: challenge.id })"
+          [pendingProposalCount]="pendingProposalCountForChallenge({ challengeId: challenge.id })"
           [publishing]="store.isPublishing({ challengeId: challenge.id })"
+          [loadingSubmissions]="store.isLoadingChallengeSubmissions({ challengeId: challenge.id })"
           [submittingProposal]="store.isSubmittingProposal({ challengeId: challenge.id })"
           [proposalSubmitted]="store.hasSubmittedProposal({ challengeId: challenge.id })"
           [proposalStatus]="
             store.submissionForChallenge({ challengeId: challenge.id })?.status ?? null
           "
           (edit)="openChallengeFormDialog($event)"
+          (archive)="archiveChallenge($event)"
           (publish)="publishChallenge($event)"
+          (reviewSubmissions)="openReviewDialog($event)"
           (submitProposal)="openProposalDialog($event)"
         />
       }
@@ -129,6 +174,27 @@
         [resetKey]="proposalFormResetKey()"
         (submitted)="submitChallengeProposal($event)"
         (cancelled)="closeProposalDialog()"
+      />
+    }
+  </p-dialog>
+
+  <p-dialog
+    header="Review proposals"
+    [modal]="true"
+    [blockScroll]="true"
+    [dismissableMask]="false"
+    [visible]="reviewDialogVisible()"
+    [style]="{ width: 'min(54rem, calc(100vw - 2rem))' }"
+    (visibleChange)="setReviewDialogVisible({ visible: $event })"
+  >
+    @if (selectedReviewChallenge(); as selectedReviewChallenge) {
+      <challenge-submissions-review
+        [submissions]="store.submissionsForChallenge({ challengeId: selectedReviewChallenge.id })"
+        [loading]="store.isLoadingChallengeSubmissions({ challengeId: selectedReviewChallenge.id })"
+        [errorMessage]="reviewDialogErrorMessage()"
+        [decidingSubmissionIds]="store.decidingSubmissionIds()"
+        (accepted)="acceptSubmission($event)"
+        (rejected)="rejectSubmission($event)"
       />
     }
   </p-dialog>

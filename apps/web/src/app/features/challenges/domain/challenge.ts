@@ -19,6 +19,14 @@ export const canCreateChallenge = (input: { readonly actor: ChallengeActor }): b
 export const canPublishChallenge = (input: { readonly challenge: Challenge }): boolean =>
   input.challenge.status === 'draft';
 
+export const canArchiveChallenge = (input: {
+  readonly actor: ChallengeActor;
+  readonly challenge: Challenge;
+}): boolean =>
+  input.actor.role === 'company-admin' &&
+  input.actor.organizationId === input.challenge.ownerOrganizationId &&
+  input.challenge.status === 'published';
+
 export const canEditChallenge = (input: {
   readonly actor: ChallengeActor;
   readonly challenge: Challenge;
@@ -30,3 +38,11 @@ export const canSubmitChallengeProposal = (input: {
   readonly actor: ChallengeActor;
   readonly challenge: Challenge;
 }): boolean => input.actor.role === 'startup-member' && input.challenge.status === 'published';
+
+export const canReviewChallengeSubmissions = (input: {
+  readonly actor: ChallengeActor;
+  readonly challenge: Challenge;
+}): boolean =>
+  input.actor.role === 'company-admin' &&
+  input.actor.organizationId === input.challenge.ownerOrganizationId &&
+  (input.challenge.status === 'published' || input.challenge.status === 'archived');

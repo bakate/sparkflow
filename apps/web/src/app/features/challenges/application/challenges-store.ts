@@ -1,10 +1,19 @@
-import { computed, inject, Injectable, resource, signal } from '@angular/core';
+import { computed, inject, Injectable, resource, Service, signal } from '@angular/core';
 import { AuthSession } from '@shared/auth/auth-session';
-import { fail, type Result, succeed } from '../../../shared/domain/result';
+import {
+  fail,
+  type ChallengeId,
+  type Result,
+  type SubmissionId,
+  succeed,
+} from '../../../shared/domain/result';
 import {
   CHALLENGE_GATEWAY,
+  type ArchiveChallengeCommand,
   type ChallengeFailure,
   type CreateChallengeCommand,
+  type DecideSubmissionCommand,
+  type ListChallengeSubmissionsCommand,
   type PublishChallengeCommand,
   type SubmitChallengeProposalCommand,
   type UpdateChallengeCommand,
@@ -12,7 +21,7 @@ import {
 import { canPublishChallenge, type Challenge } from '../domain/challenge';
 import type { Submission } from '../domain/submission';
 
-@Injectable()
+@Service()
 export class ChallengesStore {
   private readonly authSession = inject(AuthSession);
   private readonly challengeGateway = inject(CHALLENGE_GATEWAY);
@@ -31,8 +40,15 @@ export class ChallengesStore {
     },
   });
   private readonly savingState = signal(false);
+  private readonly archivingIdsState = signal<readonly string[]>([]);
   private readonly publishingIdsState = signal<readonly string[]>([]);
   private readonly submittingProposalIdsState = signal<readonly string[]>([]);
+  private readonly loadingSubmissionChallengeIdsState = signal<readonly string[]>([]);
+  private readonly loadedSubmissionChallengeIdsState = signal<readonly string[]>([]);
+  private readonly decidingSubmissionIdsState = signal<readonly string[]>([]);
+  private readonly challengeSubmissionsByChallengeIdState = signal<
+    Record<string, readonly Submission[]>
+  >({});
   private readonly commandErrorState = signal<ChallengeFailure | null>(null);
 
   readonly challenges = computed(() => {
@@ -48,8 +64,12 @@ export class ChallengesStore {
   readonly loading = this.challengesResource.isLoading;
   readonly loadingMySubmissions = this.mySubmissionsResource.isLoading;
   readonly saving = this.savingState.asReadonly();
+  readonly archivingIds = this.archivingIdsState.asReadonly();
   readonly publishingIds = this.publishingIdsState.asReadonly();
   readonly submittingProposalIds = this.submittingProposalIdsState.asReadonly();
+  readonly loadingSubmissionChallengeIds = this.loadingSubmissionChallengeIdsState.asReadonly();
+  readonly loadedSubmissionChallengeIds = this.loadedSubmissionChallengeIdsState.asReadonly();
+  readonly decidingSubmissionIds = this.decidingSubmissionIdsState.asReadonly();
   readonly error = computed(() => {
     const commandError = this.commandErrorState();
 
@@ -138,6 +158,24 @@ export class ChallengesStore {
     return succeed(result.value);
   }
 
+  async archiveChallenge(
+    command: ArchiveChallengeCommand,
+  ): Promise<Result<ChallengeFailure, Challenge>> {
+    this.archivingIdsState.update((challengeIds) => [...challengeIds, command.challengeId]);
+    this.commandErrorState.set(null);
+
+    const result = await this.challengeGateway.archiveChallenge(command);
+    this.removeArchivingId({ challengeId: command.challengeId });
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    this.replaceChallenge({ challenge: result.value });
+    return succeed(result.value);
+  }
+
   async submitChallengeProposal(
     command: SubmitChallengeProposalCommand,
   ): Promise<Result<ChallengeFailure, Submission>> {
@@ -161,8 +199,78 @@ export class ChallengesStore {
     return succeed(result.value);
   }
 
+  async loadChallengeSubmissions(
+    command: ListChallengeSubmissionsCommand,
+  ): Promise<Result<ChallengeFailure, readonly Submission[]>> {
+    this.loadingSubmissionChallengeIdsState.update((challengeIds) =>
+      challengeIds.includes(command.challengeId)
+        ? challengeIds
+        : [...challengeIds, command.challengeId],
+    );
+    this.commandErrorState.set(null);
+
+    const result = await this.challengeGateway.listChallengeSubmissions(command);
+    this.removeLoadingSubmissionChallengeId({ challengeId: command.challengeId });
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    this.challengeSubmissionsByChallengeIdState.update((submissionsByChallengeId) => ({
+      ...submissionsByChallengeId,
+      [command.challengeId]: result.value,
+    }));
+    this.loadedSubmissionChallengeIdsState.update((challengeIds) =>
+      challengeIds.includes(command.challengeId)
+        ? challengeIds
+        : [...challengeIds, command.challengeId],
+    );
+    return succeed(result.value);
+  }
+
+  async loadMissingChallengeSubmissions(input: {
+    readonly challengeIds: readonly ChallengeId[];
+  }): Promise<void> {
+    const missingChallengeIds = input.challengeIds.filter(
+      (challengeId) =>
+        !this.loadedSubmissionChallengeIds().includes(challengeId) &&
+        !this.loadingSubmissionChallengeIds().includes(challengeId),
+    );
+
+    await Promise.all(
+      missingChallengeIds.map((challengeId) => this.loadChallengeSubmissions({ challengeId })),
+    );
+  }
+
+  async acceptSubmission(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionId: SubmissionId;
+  }): Promise<Result<ChallengeFailure, Submission>> {
+    return this.decideSubmission({
+      challengeId: input.challengeId,
+      submissionId: input.submissionId,
+      decision: 'accept',
+    });
+  }
+
+  async rejectSubmission(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionId: SubmissionId;
+  }): Promise<Result<ChallengeFailure, Submission>> {
+    return this.decideSubmission({
+      challengeId: input.challengeId,
+      submissionId: input.submissionId,
+      decision: 'reject',
+    });
+  }
+
   isPublishing(input: { readonly challengeId: string }): boolean {
     return this.publishingIds().includes(input.challengeId);
+  }
+
+  isArchiving(input: { readonly challengeId: string }): boolean {
+    return this.archivingIds().includes(input.challengeId);
   }
 
   isSubmittingProposal(input: { readonly challengeId: string }): boolean {
@@ -178,6 +286,24 @@ export class ChallengesStore {
       this.mySubmissions().find((submission) => submission.challengeId === input.challengeId) ??
       null
     );
+  }
+
+  submissionsForChallenge(input: { readonly challengeId: string }): readonly Submission[] {
+    return this.challengeSubmissionsByChallengeIdState()[input.challengeId] ?? [];
+  }
+
+  hasAssessedSubmissionForChallenge(input: { readonly challengeId: string }): boolean {
+    return this.submissionsForChallenge({ challengeId: input.challengeId }).some(
+      (submission) => submission.status === 'accepted' || submission.status === 'rejected',
+    );
+  }
+
+  isLoadingChallengeSubmissions(input: { readonly challengeId: string }): boolean {
+    return this.loadingSubmissionChallengeIds().includes(input.challengeId);
+  }
+
+  isDecidingSubmission(input: { readonly submissionId: string }): boolean {
+    return this.decidingSubmissionIds().includes(input.submissionId);
   }
 
   private replaceChallenge(input: { readonly challenge: Challenge }): void {
@@ -198,9 +324,81 @@ export class ChallengesStore {
     );
   }
 
+  private removeArchivingId(input: { readonly challengeId: string }): void {
+    this.archivingIdsState.update((challengeIds) =>
+      challengeIds.filter((challengeId) => challengeId !== input.challengeId),
+    );
+  }
+
   private removeSubmittingProposalId(input: { readonly challengeId: string }): void {
     this.submittingProposalIdsState.update((challengeIds) =>
       challengeIds.filter((challengeId) => challengeId !== input.challengeId),
+    );
+  }
+
+  private async decideSubmission(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionId: SubmissionId;
+    readonly decision: 'accept' | 'reject';
+  }): Promise<Result<ChallengeFailure, Submission>> {
+    this.decidingSubmissionIdsState.update((submissionIds) => [
+      ...submissionIds,
+      input.submissionId,
+    ]);
+    this.commandErrorState.set(null);
+
+    const result = await this.runSubmissionDecision(input);
+    this.removeDecidingSubmissionId({ submissionId: input.submissionId });
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    this.replaceSubmission({ challengeId: input.challengeId, submission: result.value });
+    return succeed(result.value);
+  }
+
+  private runSubmissionDecision(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionId: SubmissionId;
+    readonly decision: 'accept' | 'reject';
+  }): Promise<Result<ChallengeFailure, Submission>> {
+    const command: DecideSubmissionCommand = {
+      challengeId: input.challengeId,
+      submissionId: input.submissionId,
+    };
+
+    return input.decision === 'accept'
+      ? this.challengeGateway.acceptSubmission(command)
+      : this.challengeGateway.rejectSubmission(command);
+  }
+
+  private replaceSubmission(input: {
+    readonly challengeId: ChallengeId;
+    readonly submission: Submission;
+  }): void {
+    this.challengeSubmissionsByChallengeIdState.update((submissionsByChallengeId) => {
+      const currentSubmissions = submissionsByChallengeId[input.challengeId] ?? [];
+
+      return {
+        ...submissionsByChallengeId,
+        [input.challengeId]: currentSubmissions.map((submission) =>
+          submission.id === input.submission.id ? input.submission : submission,
+        ),
+      };
+    });
+  }
+
+  private removeLoadingSubmissionChallengeId(input: { readonly challengeId: string }): void {
+    this.loadingSubmissionChallengeIdsState.update((challengeIds) =>
+      challengeIds.filter((challengeId) => challengeId !== input.challengeId),
+    );
+  }
+
+  private removeDecidingSubmissionId(input: { readonly submissionId: string }): void {
+    this.decidingSubmissionIdsState.update((submissionIds) =>
+      submissionIds.filter((submissionId) => submissionId !== input.submissionId),
     );
   }
 }

@@ -1,65 +1,75 @@
-<p-card class="h-full mb-3">
-  <article
-    class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
-  >
-    <div class="flex flex-column gap-3 min-w-0">
-      <div class="flex align-items-center gap-3 flex-wrap">
-        <h3 class="m-0 text-xl font-bold text-color">{{ challenge().title }}</h3>
-        <challenge-status-label [status]="challenge().status" />
-      </div>
+<div class="relative mb-3">
+  @if (pendingProposalCount() > 0) {
+    <p-badge
+      class="absolute z-1"
+      styleClass="shadow-1"
+      severity="danger"
+      [value]="pendingProposalCount()"
+      [style]="{ top: '-0.5rem', right: '-0.5rem' }"
+    />
+  }
 
-      <p class="m-0 text-color-secondary">{{ challenge().description }}</p>
+  <p-card class="h-full">
+    <article
+      class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
+    >
+      <div class="flex flex-column gap-3 min-w-0">
+        <div class="flex align-items-center gap-3 flex-wrap">
+          <h3 class="m-0 text-xl font-bold text-color">{{ challenge().title }}</h3>
+          <challenge-status-label [status]="statusLabelValue()" />
+        </div>
 
-      <div class="flex flex-column sm:flex-row gap-3 text-color-secondary text-sm">
-        <span class="inline-flex align-items-center gap-2">
-          <i class="pi pi-building" aria-hidden="true"></i>
-          {{ challenge().ownerOrganizationId }}
-        </span>
-        <span class="inline-flex align-items-center gap-2">
-          <i class="pi pi-calendar" aria-hidden="true"></i>
-          Created {{ formatDate({ date: challenge().createdAt }) }}
-        </span>
-        @if (proposalStatus() !== null) {
+        <p class="m-0 text-color-secondary">{{ challenge().description }}</p>
+
+        <div class="flex flex-column sm:flex-row gap-3 text-color-secondary text-sm">
           <span class="inline-flex align-items-center gap-2">
-            <i class="pi pi-inbox" aria-hidden="true"></i>
-            {{ proposalStatusLabel() }}
+            <i class="pi pi-building" aria-hidden="true"></i>
+            {{ challenge().ownerOrganizationId }}
           </span>
-        }
+          <span class="inline-flex align-items-center gap-2">
+            <i class="pi pi-calendar" aria-hidden="true"></i>
+            Created {{ formatDate({ date: challenge().createdAt }) }}
+          </span>
+          @if (proposalStatus() !== null) {
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-inbox" aria-hidden="true"></i>
+              {{ proposalStatusLabel() }}
+            </span>
+          }
+          @if (canReviewSubmissions() && proposalCount() > 0) {
+            <span class="inline-flex align-items-center gap-2">
+              <i class="pi pi-inbox" aria-hidden="true"></i>
+              {{ proposalCountLabel() }}
+            </span>
+          }
+        </div>
       </div>
-    </div>
 
-    @if (canEdit() || canPublish() || canSubmitProposal()) {
-      <div class="flex gap-2 justify-content-end">
-        @if (canEdit()) {
-          <p-button
-            icon="pi pi-pencil"
-            label="Edit"
-            severity="secondary"
-            (onClick)="edit.emit({ challengeId: challenge().id })"
-          />
-        }
+      @if (hasCompanyActions() || canSubmitProposal()) {
+        <div class="flex gap-2 justify-content-end">
+          @if (hasCompanyActions()) {
+            <p-splitbutton
+              appendTo="body"
+              [icon]="primaryCompanyActionIcon()"
+              [label]="primaryCompanyActionLabel()"
+              [model]="companyActionMenuItems()"
+              severity="secondary"
+              [disabled]="isCompanyActionPending()"
+              (onClick)="runPrimaryCompanyAction()"
+            />
+          }
 
-        @if (canPublish()) {
-          <p-button
-            icon="pi pi-send"
-            label="Publish"
-            severity="secondary"
-            [loading]="publishing()"
-            [disabled]="publishing()"
-            (onClick)="publish.emit({ challengeId: challenge().id })"
-          />
-        }
-
-        @if (canSubmitProposal()) {
-          <p-button
-            icon="pi pi-send"
-            label="Submit"
-            [loading]="submittingProposal()"
-            [disabled]="submittingProposal()"
-            (onClick)="submitProposal.emit({ challengeId: challenge().id })"
-          />
-        }
-      </div>
-    }
-  </article>
-</p-card>
+          @if (canSubmitProposal()) {
+            <p-button
+              icon="pi pi-send"
+              label="Submit"
+              [loading]="submittingProposal()"
+              [disabled]="submittingProposal()"
+              (onClick)="submitProposal.emit({ challengeId: challenge().id })"
+            />
+          }
+        </div>
+      }
+    </article>
+  </p-card>
+</div>

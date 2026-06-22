@@ -1,0 +1,83 @@
+<div class="flex flex-column gap-3">
+  @if (errorMessage() !== null) {
+    <p class="m-0 p-3 border-1 border-red-200 border-round bg-red-50 text-red-900 font-semibold">
+      {{ errorMessage() }}
+    </p>
+  }
+
+  @if (loading()) {
+    @for (skeletonIndex of [1, 2, 3]; track skeletonIndex) {
+      <div class="p-3 border-1 surface-border border-round surface-card">
+        <div class="flex justify-content-between gap-3">
+          <div class="flex flex-column gap-2 flex-1">
+            <p-skeleton width="9rem" height="1.25rem" />
+            <p-skeleton width="100%" height="3.5rem" />
+            <p-skeleton width="13rem" height="1rem" />
+          </div>
+          <p-skeleton width="9rem" height="2.25rem" />
+        </div>
+      </div>
+    }
+  } @else if (submissions().length === 0) {
+    <p class="m-0 p-3 border-1 surface-border border-round surface-card">
+      No proposals submitted yet.
+    </p>
+  } @else {
+    @for (submission of submissions(); track submission.id) {
+      <article class="p-3 border-1 surface-border border-round surface-card">
+        <div
+          class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
+        >
+          <div class="flex flex-column gap-3 min-w-0">
+            <div class="flex align-items-center gap-2 flex-wrap">
+              <h3 class="m-0 text-base font-bold text-color">
+                {{ submission.startupOrganizationId }}
+              </h3>
+              <p-tag
+                [severity]="statusSeverity({ status: submission.status })"
+                [value]="statusLabel({ status: submission.status })"
+              />
+            </div>
+
+            <p class="m-0 text-color-secondary line-height-3">{{ submission.summary }}</p>
+
+            <div class="flex flex-column sm:flex-row gap-3 text-color-secondary text-sm">
+              <span class="inline-flex align-items-center gap-2">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                Submitted {{ formatDate({ date: submission.createdAt }) }}
+              </span>
+              @if (submission.decidedAt !== null) {
+                <span class="inline-flex align-items-center gap-2">
+                  <i class="pi pi-check-circle" aria-hidden="true"></i>
+                  Decided {{ formatDate({ date: submission.decidedAt }) }}
+                </span>
+              }
+            </div>
+          </div>
+
+          @if (canDecide({ submission })) {
+            <div class="flex gap-2 justify-content-end">
+              <p-button
+                icon="pi pi-times"
+                label="Reject"
+                severity="danger"
+                [outlined]="true"
+                [loading]="isDeciding({ submissionId: submission.id })"
+                [disabled]="isDeciding({ submissionId: submission.id })"
+                (onClick)="rejected.emit({ submissionId: submission.id })"
+              />
+              <p-button
+                icon="pi pi-check"
+                label="Accept"
+                severity="success"
+                [loading]="isDeciding({ submissionId: submission.id })"
+                [disabled]="isDeciding({ submissionId: submission.id })"
+                (onClick)="accepted.emit({ submissionId: submission.id })"
+              />
+            </div>
+          }
+        </div>
+      </article>
+    }
+  }
+</div>
