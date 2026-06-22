@@ -7,6 +7,7 @@ export type ChallengeFailure =
   | 'challenge-title-required'
   | 'challenge-description-required'
   | 'challenge-already-archived'
+  | 'challenge-already-draft'
   | 'challenge-already-published'
   | 'challenge-not-found'
   | 'submission-not-found'
@@ -28,6 +29,10 @@ export type UpdateChallengeCommand = {
 };
 
 export type PublishChallengeCommand = {
+  readonly challengeId: ChallengeId;
+};
+
+export type DraftChallengeCommand = {
   readonly challengeId: ChallengeId;
 };
 
@@ -63,6 +68,9 @@ export type ChallengeGateway = {
   ) => Promise<Result<ChallengeFailure, Challenge>>;
   readonly publishChallenge: (
     command: PublishChallengeCommand,
+  ) => Promise<Result<ChallengeFailure, Challenge>>;
+  readonly draftChallenge: (
+    command: DraftChallengeCommand,
   ) => Promise<Result<ChallengeFailure, Challenge>>;
   readonly archiveChallenge: (
     command: ArchiveChallengeCommand,

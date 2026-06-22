@@ -1,4 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
@@ -34,6 +36,7 @@ type ChallengeTab = CompanyChallengeTab | StartupChallengeTab;
     ChallengeSubmissionForm,
     ChallengeSubmissionsReview,
     Dialog,
+    RouterLink,
     Tab,
     TabList,
     Tabs,
@@ -50,6 +53,8 @@ type ChallengeTab = CompanyChallengeTab | StartupChallengeTab;
 export class ChallengesPage {
   protected readonly store = inject(ChallengesStore);
   private readonly messageService = inject(MessageService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   protected readonly currentActor = inject(AuthSession).currentActor;
   protected readonly challengeFormDialogVisible = signal(false);
   protected readonly selectedChallengeId = signal<ChallengeId | null>(null);
@@ -62,7 +67,9 @@ export class ChallengesPage {
   protected readonly reviewDialogVisible = signal(false);
   protected readonly selectedReviewChallengeId = signal<ChallengeId | null>(null);
   protected readonly reviewDialogError = signal<ChallengeFailure | null>(null);
-  protected readonly activeChallengeTab = signal<ChallengeTab>('published');
+  protected readonly activeChallengeTab = signal<ChallengeTab>(
+    readInitialChallengeTab({ value: this.route.snapshot.queryParamMap.get('tab') }),
+  );
   protected readonly challengeFormDialogTitle = computed(() =>
     this.selectedChallengeId() === null ? 'Create challenge' : 'Edit challenge',
   );
@@ -126,11 +133,16 @@ export class ChallengesPage {
     if (selectedTab === 'in-progress') {
       return challenges.filter(
         (challenge) =>
+          challenge.status === 'published' &&
           this.store.submissionForChallenge({ challengeId: challenge.id })?.status === 'submitted',
       );
     }
 
     return challenges.filter((challenge) => {
+      if (challenge.status !== 'published') {
+        return false;
+      }
+
       const submission = this.store.submissionForChallenge({ challengeId: challenge.id });
 
       return submission?.status === 'accepted' || submission?.status === 'rejected';
@@ -152,13 +164,18 @@ export class ChallengesPage {
         .challenges()
         .filter(
           (challenge) =>
+            challenge.status === 'published' &&
             this.store.submissionForChallenge({ challengeId: challenge.id })?.status ===
-            'submitted',
+              'submitted',
         ).length,
   );
   protected readonly assessedStartupChallengeCount = computed(
     () =>
       this.store.challenges().filter((challenge) => {
+        if (challenge.status !== 'published') {
+          return false;
+        }
+
         const submission = this.store.submissionForChallenge({ challengeId: challenge.id });
 
         return submission?.status === 'accepted' || submission?.status === 'rejected';
@@ -202,6 +219,28 @@ export class ChallengesPage {
   });
 
   constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((queryParamMap) => {
+      const tab = readInitialChallengeTab({ value: queryParamMap.get('tab') });
+
+      if (tab === this.activeChallengeTab()) {
+        return;
+      }
+
+      this.activeChallengeTab.set(tab);
+    });
+
+    effect(() => {
+      const activeTab = this.activeChallengeTab();
+
+      if (this.isAllowedActiveChallengeTab({ tab: activeTab })) {
+        return;
+      }
+
+      queueMicrotask(() => {
+        this.selectChallengeTab({ tab: 'published' });
+      });
+    });
+
     effect(() => {
       if (!this.usesCompanyChallengeTabs()) {
         return;
@@ -224,6 +263,23 @@ export class ChallengesPage {
 
   protected selectChallengeTab(input: { readonly tab: ChallengeTab }): void {
     this.activeChallengeTab.set(input.tab);
+    void this.router.navigate(['/challenges'], {
+      queryParams: { tab: input.tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private isAllowedActiveChallengeTab(input: { readonly tab: ChallengeTab }): boolean {
+    if (this.usesCompanyChallengeTabs()) {
+      return input.tab !== 'in-progress';
+    }
+
+    if (this.usesStartupChallengeTabs()) {
+      return input.tab !== 'archived' && input.tab !== 'draft';
+    }
+
+    return input.tab === 'published';
   }
 
   protected selectChallengeTabValue(input: { readonly value: string | number | undefined }): void {
@@ -441,6 +497,10 @@ export class ChallengesPage {
     void this.store.publishChallenge(input);
   }
 
+  protected draftChallenge(input: { readonly challengeId: ChallengeId }): void {
+    void this.store.draftChallenge(input);
+  }
+
   protected archiveChallenge(input: { readonly challengeId: ChallengeId }): void {
     void this.store.archiveChallenge(input);
   }
@@ -517,6 +577,7 @@ const errorMessages: Record<ChallengeFailure, string> = {
   'challenge-title-required': 'Title is required.',
   'challenge-description-required': 'Description is required.',
   'challenge-already-archived': 'Challenge is already archived.',
+  'challenge-already-draft': 'Challenge is already a draft.',
   'challenge-already-published': 'Challenge is already published.',
   'challenge-not-found': 'Challenge was not found.',
   'submission-not-found': 'Submission was not found.',
@@ -531,3 +592,9 @@ const challengeTabs = ['archived', 'assessed', 'draft', 'in-progress', 'publishe
 
 const isChallengeTab = (value: string | number | undefined): value is ChallengeTab =>
   typeof value === 'string' && challengeTabs.includes(value as ChallengeTab);
+
+const readInitialChallengeTab = (input: { readonly value: string | null }): ChallengeTab => {
+  const value = input.value ?? undefined;
+
+  return isChallengeTab(value) ? value : 'published';
+};

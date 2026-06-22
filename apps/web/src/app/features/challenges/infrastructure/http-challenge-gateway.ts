@@ -17,6 +17,7 @@ import type {
   ArchiveChallengeCommand,
   CreateChallengeCommand,
   DecideSubmissionCommand,
+  DraftChallengeCommand,
   ListChallengeSubmissionsCommand,
   PublishChallengeCommand,
   SubmitChallengeProposalCommand,
@@ -29,6 +30,7 @@ const challengeFailures = [
   'challenge-title-required',
   'challenge-description-required',
   'challenge-already-archived',
+  'challenge-already-draft',
   'challenge-already-published',
   'challenge-not-found',
   'submission-not-found',
@@ -126,6 +128,22 @@ export class HttpChallengeGateway implements ChallengeGateway {
       const challengeDto = await firstValueFrom(
         this.httpClient.post<ChallengeDto>(
           this.buildUrl({ path: `/challenges/${command.challengeId}/publish` }),
+          null,
+        ),
+      );
+      return succeed(toChallenge({ challengeDto }));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
+  async draftChallenge(
+    command: DraftChallengeCommand,
+  ): Promise<Result<ChallengeFailure, Challenge>> {
+    try {
+      const challengeDto = await firstValueFrom(
+        this.httpClient.post<ChallengeDto>(
+          this.buildUrl({ path: `/challenges/${command.challengeId}/draft` }),
           null,
         ),
       );

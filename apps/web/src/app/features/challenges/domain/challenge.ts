@@ -19,6 +19,9 @@ export const canCreateChallenge = (input: { readonly actor: ChallengeActor }): b
 export const canPublishChallenge = (input: { readonly challenge: Challenge }): boolean =>
   input.challenge.status === 'draft';
 
+export const canDraftChallenge = (input: { readonly challenge: Challenge }): boolean =>
+  input.challenge.status === 'published';
+
 export const canArchiveChallenge = (input: {
   readonly actor: ChallengeActor;
   readonly challenge: Challenge;

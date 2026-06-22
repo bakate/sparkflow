@@ -8,6 +8,7 @@ import { SplitButton } from 'primeng/splitbutton';
 import type { ChallengeId } from '@shared/domain/result';
 import {
   canArchiveChallenge,
+  canDraftChallenge,
   canEditChallenge,
   canPublishChallenge,
   canReviewChallengeSubmissions,
@@ -28,6 +29,7 @@ export class ChallengeCard {
   readonly assessed = input(false);
   readonly proposalCount = input(0);
   readonly archiving = input(false);
+  readonly drafting = input(false);
   readonly pendingProposalCount = input(0);
   readonly publishing = input(false);
   readonly loadingSubmissions = input(false);
@@ -36,6 +38,7 @@ export class ChallengeCard {
   readonly proposalStatus = input<SubmissionStatus | null>(null);
   readonly edit = output<{ readonly challengeId: ChallengeId }>();
   readonly archive = output<{ readonly challengeId: ChallengeId }>();
+  readonly draft = output<{ readonly challengeId: ChallengeId }>();
   readonly publish = output<{ readonly challengeId: ChallengeId }>();
   readonly reviewSubmissions = output<{ readonly challengeId: ChallengeId }>();
   readonly submitProposal = output<{ readonly challengeId: ChallengeId }>();
@@ -90,6 +93,10 @@ export class ChallengeCard {
 
   protected canPublish(): boolean {
     return this.canEdit() && canPublishChallenge({ challenge: this.challenge() });
+  }
+
+  protected canDraft(): boolean {
+    return this.canEdit() && canDraftChallenge({ challenge: this.challenge() });
   }
 
   protected canArchive(): boolean {
@@ -161,7 +168,7 @@ export class ChallengeCard {
   }
 
   protected isCompanyActionPending(): boolean {
-    return this.archiving() || this.loadingSubmissions() || this.publishing();
+    return this.archiving() || this.drafting() || this.loadingSubmissions() || this.publishing();
   }
 
   protected formatDate(input: { readonly date: Date }): string {
@@ -197,6 +204,10 @@ export class ChallengeCard {
       actions.push('publish');
     }
 
+    if (this.canDraft()) {
+      actions.push('draft');
+    }
+
     if (this.canArchive()) {
       actions.push('archive');
     }
@@ -221,6 +232,7 @@ export class ChallengeCard {
   private actionIcon(input: { readonly action: ChallengeCardAction }): string {
     const icons: Record<ChallengeCardAction, string> = {
       archive: 'pi pi-box',
+      draft: 'pi pi-file',
       edit: 'pi pi-pencil',
       proposals: 'pi pi-inbox',
       publish: 'pi pi-send',
@@ -232,6 +244,7 @@ export class ChallengeCard {
   private actionLabel(input: { readonly action: ChallengeCardAction }): string {
     const labels: Record<ChallengeCardAction, string> = {
       archive: 'Archive',
+      draft: 'Move to draft',
       edit: 'Edit',
       proposals: 'Review',
       publish: 'Publish',
@@ -253,6 +266,11 @@ export class ChallengeCard {
       return;
     }
 
+    if (input.action === 'draft') {
+      this.draft.emit({ challengeId });
+      return;
+    }
+
     if (input.action === 'proposals') {
       this.reviewSubmissions.emit({ challengeId });
       return;
@@ -262,4 +280,4 @@ export class ChallengeCard {
   }
 }
 
-type ChallengeCardAction = 'archive' | 'edit' | 'proposals' | 'publish';
+type ChallengeCardAction = 'archive' | 'draft' | 'edit' | 'proposals' | 'publish';

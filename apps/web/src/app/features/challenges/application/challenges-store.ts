@@ -13,6 +13,7 @@ import {
   type ChallengeFailure,
   type CreateChallengeCommand,
   type DecideSubmissionCommand,
+  type DraftChallengeCommand,
   type ListChallengeSubmissionsCommand,
   type PublishChallengeCommand,
   type SubmitChallengeProposalCommand,
@@ -41,6 +42,7 @@ export class ChallengesStore {
   });
   private readonly savingState = signal(false);
   private readonly archivingIdsState = signal<readonly string[]>([]);
+  private readonly draftingIdsState = signal<readonly string[]>([]);
   private readonly publishingIdsState = signal<readonly string[]>([]);
   private readonly submittingProposalIdsState = signal<readonly string[]>([]);
   private readonly loadingSubmissionChallengeIdsState = signal<readonly string[]>([]);
@@ -65,6 +67,7 @@ export class ChallengesStore {
   readonly loadingMySubmissions = this.mySubmissionsResource.isLoading;
   readonly saving = this.savingState.asReadonly();
   readonly archivingIds = this.archivingIdsState.asReadonly();
+  readonly draftingIds = this.draftingIdsState.asReadonly();
   readonly publishingIds = this.publishingIdsState.asReadonly();
   readonly submittingProposalIds = this.submittingProposalIdsState.asReadonly();
   readonly loadingSubmissionChallengeIds = this.loadingSubmissionChallengeIdsState.asReadonly();
@@ -148,6 +151,24 @@ export class ChallengesStore {
 
     const result = await this.challengeGateway.publishChallenge(command);
     this.removePublishingId({ challengeId: command.challengeId });
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    this.replaceChallenge({ challenge: result.value });
+    return succeed(result.value);
+  }
+
+  async draftChallenge(
+    command: DraftChallengeCommand,
+  ): Promise<Result<ChallengeFailure, Challenge>> {
+    this.draftingIdsState.update((challengeIds) => [...challengeIds, command.challengeId]);
+    this.commandErrorState.set(null);
+
+    const result = await this.challengeGateway.draftChallenge(command);
+    this.removeDraftingId({ challengeId: command.challengeId });
 
     if (!result.ok) {
       this.commandErrorState.set(result.error);
@@ -269,6 +290,10 @@ export class ChallengesStore {
     return this.publishingIds().includes(input.challengeId);
   }
 
+  isDrafting(input: { readonly challengeId: string }): boolean {
+    return this.draftingIds().includes(input.challengeId);
+  }
+
   isArchiving(input: { readonly challengeId: string }): boolean {
     return this.archivingIds().includes(input.challengeId);
   }
@@ -320,6 +345,12 @@ export class ChallengesStore {
 
   private removePublishingId(input: { readonly challengeId: string }): void {
     this.publishingIdsState.update((challengeIds) =>
+      challengeIds.filter((challengeId) => challengeId !== input.challengeId),
+    );
+  }
+
+  private removeDraftingId(input: { readonly challengeId: string }): void {
+    this.draftingIdsState.update((challengeIds) =>
       challengeIds.filter((challengeId) => challengeId !== input.challengeId),
     );
   }
