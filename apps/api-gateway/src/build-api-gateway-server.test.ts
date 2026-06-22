@@ -89,6 +89,14 @@ const createWorkflowServer = async (input: {
         return Response.json({ id: input.challengeId, status: "draft" });
       }
 
+      if (url.endsWith(`/challenges/${input.challengeId}`) && init.method === "GET") {
+        return Response.json({
+          id: input.challengeId,
+          ownerOrganizationId: companyAdminActor.organizationId,
+          status: "published",
+        });
+      }
+
       if (url.endsWith(`/challenges/${input.challengeId}/publish`)) {
         return Response.json({ id: input.challengeId, status: "published" });
       }
@@ -273,6 +281,41 @@ describe("buildApiGatewayServer", () => {
     );
   });
 
+  it("rejects submission review when the company does not own the challenge", async () => {
+    const requests: CapturedRequest[] = [];
+    const server = await buildApiGatewayServer({
+      accessTokenVerifier: createAccessTokenVerifier({
+        actor: { ...companyAdminActor, organizationId: "org-other-company" },
+      }),
+      serviceUrls,
+      idGenerator: { generate: () => "generated-correlation-id" },
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+
+        return Response.json({
+          id: "challenge-1",
+          ownerOrganizationId: "org-company",
+          status: "published",
+        });
+      },
+    });
+    openServers.push(server);
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/challenges/challenge-1/submissions",
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "forbidden" });
+    expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+      "GET http://challenge-service/challenges/challenge-1",
+    ]);
+  });
+
   it("supports the V1 backend workflow through public gateway endpoints", async () => {
     const challengeId = faker.string.uuid();
     const submissionId = faker.string.uuid();
@@ -355,7 +398,7 @@ describe("buildApiGatewayServer", () => {
     });
     await server.inject({
       method: "POST",
-      url: `/submissions/${submissionId}/accept`,
+      url: `/challenges/${challengeId}/submissions/${submissionId}/accept`,
       headers: {
         authorization: authorizationHeader,
       },
@@ -372,9 +415,11 @@ describe("buildApiGatewayServer", () => {
       `POST http://challenge-service/challenges/${challengeId}/publish`,
       "GET http://challenge-service/challenges",
       `POST http://submission-service/challenges/${challengeId}/submissions`,
+      `GET http://challenge-service/challenges/${challengeId}`,
       `GET http://submission-service/challenges/${challengeId}/submissions`,
       "GET http://submission-service/me/submissions",
       `POST http://evaluation-service/submissions/${submissionId}/evaluations`,
+      `GET http://challenge-service/challenges/${challengeId}`,
       `POST http://submission-service/submissions/${submissionId}/accept`,
       "GET http://notification-service/notifications",
     ]);
@@ -389,7 +434,7 @@ describe("buildApiGatewayServer", () => {
     expect(readJsonBody({ request: readCapturedRequest({ requests, index: 4 }) })).toEqual({
       summary: proposalSummary,
     });
-    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 7 }) })).toEqual({
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 8 }) })).toEqual({
       score: 91,
       comment: reviewComment,
     });
@@ -399,9 +444,9 @@ describe("buildApiGatewayServer", () => {
         "content-type",
       ),
     ).toBeNull();
-    expect(readCapturedRequest({ requests, index: 8 }).init.body).toBeUndefined();
+    expect(readCapturedRequest({ requests, index: 10 }).init.body).toBeUndefined();
     expect(
-      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 8 }) }).get(
+      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 10 }) }).get(
         "content-type",
       ),
     ).toBeNull();

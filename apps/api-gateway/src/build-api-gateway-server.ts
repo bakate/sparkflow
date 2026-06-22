@@ -1,5 +1,5 @@
 import cors from "@fastify/cors";
-import type { ActorContext } from "@sparkflow/contracts";
+import type { ActorContext, ChallengeDto } from "@sparkflow/contracts";
 import Fastify from "fastify";
 import type { AccessTokenVerifier } from "./auth/access-token-verifier.ts";
 
@@ -115,6 +115,37 @@ export const buildApiGatewayServer = async (input: {
     });
   };
 
+  const requireOwnedChallenge = async (requestInput: {
+    readonly actor: ActorContext;
+    readonly challengeId: string;
+    readonly headers: Record<string, string | string[] | undefined>;
+  }): Promise<ServiceResponse | null> => {
+    if (requestInput.actor.role !== "company-admin") {
+      return { statusCode: 403, body: { error: "forbidden" } };
+    }
+
+    const challengeResponse = await proxy({
+      actor: requestInput.actor,
+      url: `${input.serviceUrls.challengeServiceUrl}/challenges/${requestInput.challengeId}`,
+      method: "GET",
+      headers: requestInput.headers,
+    });
+
+    if (challengeResponse.statusCode !== 200) {
+      return challengeResponse;
+    }
+
+    if (!isChallengeDto(challengeResponse.body)) {
+      return { statusCode: 502, body: { error: "unexpected-error" } };
+    }
+
+    if (challengeResponse.body.ownerOrganizationId !== requestInput.actor.organizationId) {
+      return { statusCode: 403, body: { error: "forbidden" } };
+    }
+
+    return null;
+  };
+
   const authenticate = async (headers: Record<string, string | string[] | undefined>) =>
     input.accessTokenVerifier.verify({
       authorizationHeader: readHeader({ headers, name: "authorization" }),
@@ -192,6 +223,25 @@ export const buildApiGatewayServer = async (input: {
   );
 
   server.post<{ Params: { readonly challengeId: string } }>(
+    "/challenges/:challengeId/archive",
+    async (request, reply) => {
+      const actor = await authenticate(request.headers);
+      if (actor === null) {
+        return reply.code(401).send({ error: "unauthorized" });
+      }
+
+      const response = await proxy({
+        actor,
+        url: `${input.serviceUrls.challengeServiceUrl}/challenges/${request.params.challengeId}/archive`,
+        method: "POST",
+        headers: request.headers,
+      });
+
+      return reply.code(response.statusCode).send(response.body);
+    },
+  );
+
+  server.post<{ Params: { readonly challengeId: string } }>(
     "/challenges/:challengeId/publish",
     async (request, reply) => {
       const actor = await authenticate(request.headers);
@@ -216,6 +266,16 @@ export const buildApiGatewayServer = async (input: {
       const actor = await authenticate(request.headers);
       if (actor === null) {
         return reply.code(401).send({ error: "unauthorized" });
+      }
+
+      const guardResponse = await requireOwnedChallenge({
+        actor,
+        challengeId: request.params.challengeId,
+        headers: request.headers,
+      });
+
+      if (guardResponse !== null) {
+        return reply.code(guardResponse.statusCode).send(guardResponse.body);
       }
 
       const response = await proxy({
@@ -285,12 +345,22 @@ export const buildApiGatewayServer = async (input: {
     },
   );
 
-  server.post<{ Params: { readonly submissionId: string } }>(
-    "/submissions/:submissionId/accept",
+  server.post<{ Params: { readonly challengeId: string; readonly submissionId: string } }>(
+    "/challenges/:challengeId/submissions/:submissionId/accept",
     async (request, reply) => {
       const actor = await authenticate(request.headers);
       if (actor === null) {
         return reply.code(401).send({ error: "unauthorized" });
+      }
+
+      const guardResponse = await requireOwnedChallenge({
+        actor,
+        challengeId: request.params.challengeId,
+        headers: request.headers,
+      });
+
+      if (guardResponse !== null) {
+        return reply.code(guardResponse.statusCode).send(guardResponse.body);
       }
 
       const response = await proxy({
@@ -304,12 +374,22 @@ export const buildApiGatewayServer = async (input: {
     },
   );
 
-  server.post<{ Params: { readonly submissionId: string } }>(
-    "/submissions/:submissionId/reject",
+  server.post<{ Params: { readonly challengeId: string; readonly submissionId: string } }>(
+    "/challenges/:challengeId/submissions/:submissionId/reject",
     async (request, reply) => {
       const actor = await authenticate(request.headers);
       if (actor === null) {
         return reply.code(401).send({ error: "unauthorized" });
+      }
+
+      const guardResponse = await requireOwnedChallenge({
+        actor,
+        challengeId: request.params.challengeId,
+        headers: request.headers,
+      });
+
+      if (guardResponse !== null) {
+        return reply.code(guardResponse.statusCode).send(guardResponse.body);
       }
 
       const response = await proxy({
@@ -349,4 +429,16 @@ const readHeader = (input: {
   const value = input.headers[input.name];
 
   return Array.isArray(value) ? value[0] : value;
+};
+
+const isChallengeDto = (value: unknown): value is ChallengeDto => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  if (!("id" in value) || !("ownerOrganizationId" in value)) {
+    return false;
+  }
+
+  return typeof value.id === "string" && typeof value.ownerOrganizationId === "string";
 };
