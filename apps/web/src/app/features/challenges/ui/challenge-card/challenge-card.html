@@ -22,15 +22,28 @@
       </div>
     </div>
 
-    @if (canPublish()) {
-      <p-button
-        icon="pi pi-send"
-        label="Publish"
-        severity="secondary"
-        [loading]="publishing()"
-        [disabled]="publishing()"
-        (onClick)="publish.emit({ challengeId: challenge().id })"
-      />
+    @if (canEdit() || canPublish()) {
+      <div class="flex gap-2 justify-content-end">
+        @if (canEdit()) {
+          <p-button
+            icon="pi pi-pencil"
+            label="Edit"
+            severity="secondary"
+            (onClick)="edit.emit({ challengeId: challenge().id })"
+          />
+        }
+
+        @if (canPublish()) {
+          <p-button
+            icon="pi pi-send"
+            label="Publish"
+            severity="secondary"
+            [loading]="publishing()"
+            [disabled]="publishing()"
+            (onClick)="publish.emit({ challengeId: challenge().id })"
+          />
+        }
+      </div>
     }
   </article>
 </p-card>

@@ -5,6 +5,7 @@ import {
   type ChallengeFailure,
   type CreateChallengeCommand,
   type PublishChallengeCommand,
+  type UpdateChallengeCommand,
 } from './challenge-gateway';
 import { canPublishChallenge, type Challenge } from '../domain/challenge';
 
@@ -67,6 +68,24 @@ export class ChallengesStore {
     this.challengesResource.update((currentResult) =>
       currentResult.ok ? succeed([result.value, ...currentResult.value]) : succeed([result.value]),
     );
+    return succeed(result.value);
+  }
+
+  async updateChallenge(
+    command: UpdateChallengeCommand,
+  ): Promise<Result<ChallengeFailure, Challenge>> {
+    this.savingState.set(true);
+    this.commandErrorState.set(null);
+
+    const result = await this.challengeGateway.updateChallenge(command);
+    this.savingState.set(false);
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    this.replaceChallenge({ challenge: result.value });
     return succeed(result.value);
   }
 

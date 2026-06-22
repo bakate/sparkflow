@@ -2,7 +2,12 @@ import { Component, input, output } from '@angular/core';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import type { ChallengeId } from '@shared/domain/result';
-import { canPublishChallenge, type Challenge } from '../../domain/challenge';
+import {
+  canEditChallenge,
+  canPublishChallenge,
+  type Challenge,
+  type ChallengeActor,
+} from '../../domain/challenge';
 import { ChallengeStatusLabel } from '../challenge-status-label';
 
 @Component({
@@ -12,11 +17,20 @@ import { ChallengeStatusLabel } from '../challenge-status-label';
 })
 export class ChallengeCard {
   readonly challenge = input.required<Challenge>();
+  readonly currentActor = input.required<ChallengeActor>();
   readonly publishing = input(false);
+  readonly edit = output<{ readonly challengeId: ChallengeId }>();
   readonly publish = output<{ readonly challengeId: ChallengeId }>();
 
+  protected canEdit(): boolean {
+    return canEditChallenge({
+      actor: this.currentActor(),
+      challenge: this.challenge(),
+    });
+  }
+
   protected canPublish(): boolean {
-    return canPublishChallenge({ challenge: this.challenge() });
+    return this.canEdit() && canPublishChallenge({ challenge: this.challenge() });
   }
 
   protected formatDate(input: { readonly date: Date }): string {

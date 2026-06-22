@@ -18,6 +18,8 @@ type ChallengeFormModel = {
   readonly description: string;
 };
 
+export type ChallengeFormValue = ChallengeFormModel;
+
 export type ChallengeFormSubmitted = ChallengeFormModel & {
   readonly challengeId: ChallengeId | null;
 };
@@ -45,6 +47,7 @@ const validationPriority = ['required', 'minLength', 'maxLength'] as const;
 })
 export class ChallengeForm {
   readonly challengeId = input<ChallengeId | null>(null);
+  readonly value = input<ChallengeFormValue>(emptyChallengeFormModel);
   readonly saving = input(false);
   readonly errorMessage = input<string | null>(null);
   readonly resetKey = input(0);
@@ -133,7 +136,7 @@ export class ChallengeForm {
   }
 
   private resetForm(): void {
-    this.challengeForm().reset(emptyChallengeFormModel);
+    this.challengeForm().reset(this.value());
   }
 }
 

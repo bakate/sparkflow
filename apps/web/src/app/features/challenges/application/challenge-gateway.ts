@@ -16,6 +16,12 @@ export type CreateChallengeCommand = {
   readonly description: string;
 };
 
+export type UpdateChallengeCommand = {
+  readonly challengeId: ChallengeId;
+  readonly title: string;
+  readonly description: string;
+};
+
 export type PublishChallengeCommand = {
   readonly challengeId: ChallengeId;
 };
@@ -24,6 +30,9 @@ export type ChallengeGateway = {
   readonly listChallenges: () => Promise<Result<ChallengeFailure, readonly Challenge[]>>;
   readonly createChallenge: (
     command: CreateChallengeCommand,
+  ) => Promise<Result<ChallengeFailure, Challenge>>;
+  readonly updateChallenge: (
+    command: UpdateChallengeCommand,
   ) => Promise<Result<ChallengeFailure, Challenge>>;
   readonly publishChallenge: (
     command: PublishChallengeCommand,

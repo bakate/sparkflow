@@ -10,6 +10,7 @@ import type {
   ChallengeGateway,
   CreateChallengeCommand,
   PublishChallengeCommand,
+  UpdateChallengeCommand,
 } from '../application/challenge-gateway';
 import type { Challenge } from '../domain/challenge';
 
@@ -47,6 +48,25 @@ export class HttpChallengeGateway implements ChallengeGateway {
     try {
       const challengeDto = await firstValueFrom(
         this.httpClient.post<ChallengeDto>(this.buildUrl({ path: '/challenges' }), command),
+      );
+      return succeed(toChallenge({ challengeDto }));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
+  async updateChallenge(
+    command: UpdateChallengeCommand,
+  ): Promise<Result<ChallengeFailure, Challenge>> {
+    try {
+      const challengeDto = await firstValueFrom(
+        this.httpClient.patch<ChallengeDto>(
+          this.buildUrl({ path: `/challenges/${command.challengeId}` }),
+          {
+            title: command.title,
+            description: command.description,
+          },
+        ),
       );
       return succeed(toChallenge({ challengeDto }));
     } catch (error: unknown) {

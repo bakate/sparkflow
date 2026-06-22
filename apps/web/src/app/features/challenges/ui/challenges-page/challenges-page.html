@@ -44,7 +44,9 @@
       @for (challenge of store.challenges(); track challenge.id) {
         <challenge-card
           [challenge]="challenge"
+          [currentActor]="currentActor"
           [publishing]="store.isPublishing({ challengeId: challenge.id })"
+          (edit)="openChallengeFormDialog($event)"
           (publish)="publishChallenge($event)"
         />
       }
@@ -62,6 +64,7 @@
   >
     <challenge-form
       [challengeId]="selectedChallengeId()"
+      [value]="challengeFormValue()"
       [saving]="store.saving()"
       [errorMessage]="challengeFormDialogErrorMessage()"
       [resetKey]="challengeFormResetKey()"

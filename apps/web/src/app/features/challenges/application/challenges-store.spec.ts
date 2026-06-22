@@ -12,6 +12,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
       },
     });
@@ -27,6 +28,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
         createChallenge: async () => succeed(createdChallenge),
+        updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
       },
     });
@@ -41,11 +43,39 @@ describe('ChallengesStore', () => {
     expect(store.challenges()).toEqual([createdChallenge, existingChallenge]);
   });
 
+  it('replaces updated challenges', async () => {
+    const existingChallenge = createChallenge({ id: 'challenge-1' });
+    const updatedChallenge = {
+      ...existingChallenge,
+      title: 'Updated challenge',
+      description: 'Updated description',
+    };
+    const store = createStore({
+      challengeGateway: {
+        listChallenges: async () => succeed([existingChallenge]),
+        createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => succeed(updatedChallenge),
+        publishChallenge: async () => fail('unexpected-error'),
+      },
+    });
+
+    await expect.poll(() => store.challenges()).toEqual([existingChallenge]);
+    const result = await store.updateChallenge({
+      challengeId: existingChallenge.id,
+      title: updatedChallenge.title,
+      description: updatedChallenge.description,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(store.challenges()).toEqual([updatedChallenge]);
+  });
+
   it('exposes gateway failures', async () => {
     const store = createStore({
       challengeGateway: {
         listChallenges: async () => fail('network-error'),
         createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
       },
     });
