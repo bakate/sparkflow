@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createArchiveChallengeUseCase } from "./application/archive-challenge.use-case.ts";
 import { createCreateChallengeUseCase } from "./application/create-challenge.use-case.ts";
+import { createDraftChallengeUseCase } from "./application/draft-challenge.use-case.ts";
 import { createGetChallengeUseCase } from "./application/get-challenge.use-case.ts";
 import { createListChallengesUseCase } from "./application/list-challenges.use-case.ts";
 import { createPublishChallengeUseCase } from "./application/publish-challenge.use-case.ts";
@@ -37,6 +38,7 @@ const server = await buildChallengeHttpServer({
     clock,
     idGenerator,
   }),
+  draftChallengeUseCase: createDraftChallengeUseCase({ challengeRepository }),
   getChallengeUseCase: createGetChallengeUseCase({ challengeRepository }),
   updateChallengeUseCase: createUpdateChallengeUseCase({
     challengeRepository,

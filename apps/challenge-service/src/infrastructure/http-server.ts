@@ -3,6 +3,7 @@ import { readActor, readCorrelationId } from "@sparkflow/http";
 import Fastify from "fastify";
 import type { ArchiveChallengeUseCase } from "../application/archive-challenge.use-case.ts";
 import type { CreateChallengeUseCase } from "../application/create-challenge.use-case.ts";
+import type { DraftChallengeUseCase } from "../application/draft-challenge.use-case.ts";
 import type { GetChallengeUseCase } from "../application/get-challenge.use-case.ts";
 import type { ListChallengesUseCase } from "../application/list-challenges.use-case.ts";
 import type { PublishChallengeUseCase } from "../application/publish-challenge.use-case.ts";
@@ -21,6 +22,7 @@ type UpdateChallengeBody = {
 export const buildChallengeHttpServer = async (input: {
   readonly archiveChallengeUseCase: ArchiveChallengeUseCase;
   readonly createChallengeUseCase: CreateChallengeUseCase;
+  readonly draftChallengeUseCase: DraftChallengeUseCase;
   readonly getChallengeUseCase: GetChallengeUseCase;
   readonly updateChallengeUseCase: UpdateChallengeUseCase;
   readonly publishChallengeUseCase: PublishChallengeUseCase;
@@ -101,6 +103,25 @@ export const buildChallengeHttpServer = async (input: {
     "/challenges/:challengeId/archive",
     async (request, reply) => {
       const result = await input.archiveChallengeUseCase.execute({
+        actor: readActor({ headers: request.headers }),
+        challengeId: request.params.challengeId,
+      });
+
+      if (!result.ok) {
+        const statusCode = result.error === "challenge-not-found" ? 404 : 400;
+        return reply
+          .code(result.error === "forbidden" ? 403 : statusCode)
+          .send({ error: result.error });
+      }
+
+      return reply.send(result.value);
+    },
+  );
+
+  server.post<{ Params: { readonly challengeId: string } }>(
+    "/challenges/:challengeId/draft",
+    async (request, reply) => {
+      const result = await input.draftChallengeUseCase.execute({
         actor: readActor({ headers: request.headers }),
         challengeId: request.params.challengeId,
       });

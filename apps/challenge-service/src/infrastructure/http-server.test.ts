@@ -9,6 +9,10 @@ import type {
   CreateChallengeCommand,
   CreateChallengeUseCase,
 } from "../application/create-challenge.use-case.js";
+import type {
+  DraftChallengeCommand,
+  DraftChallengeUseCase,
+} from "../application/draft-challenge.use-case.js";
 import type { GetChallengeUseCase } from "../application/get-challenge.use-case.js";
 import type { ListChallengesUseCase } from "../application/list-challenges.use-case.js";
 import type {
@@ -40,6 +44,12 @@ const publishedChallengeDto: ChallengeDto = {
 const archivedChallengeDto: ChallengeDto = {
   ...publishedChallengeDto,
   status: "archived",
+};
+
+const draftedChallengeDto: ChallengeDto = {
+  ...publishedChallengeDto,
+  status: "draft",
+  publishedAt: null,
 };
 
 const openServers: { readonly close: () => Promise<void> }[] = [];
@@ -99,6 +109,20 @@ const createRecordingArchiveChallengeUseCase = (input?: {
   };
 };
 
+const createRecordingDraftChallengeUseCase = (input?: {
+  readonly result?: Awaited<ReturnType<DraftChallengeUseCase["execute"]>>;
+}): DraftChallengeUseCase & { readonly commands: DraftChallengeCommand[] } => {
+  const commands: DraftChallengeCommand[] = [];
+
+  return {
+    commands,
+    execute: async (command) => {
+      commands.push(command);
+      return input?.result ?? succeed(draftedChallengeDto);
+    },
+  };
+};
+
 const createRecordingUpdateChallengeUseCase = (input?: {
   readonly result?: Awaited<ReturnType<UpdateChallengeUseCase["execute"]>>;
 }): UpdateChallengeUseCase & { readonly commands: UpdateChallengeCommand[] } => {
@@ -136,6 +160,7 @@ const createGetChallengeUseCase = (input: {
 const createServer = async (input?: {
   readonly archiveChallengeUseCase?: ArchiveChallengeUseCase;
   readonly createChallengeUseCase?: CreateChallengeUseCase;
+  readonly draftChallengeUseCase?: DraftChallengeUseCase;
   readonly getChallengeUseCase?: GetChallengeUseCase;
   readonly updateChallengeUseCase?: UpdateChallengeUseCase;
   readonly publishChallengeUseCase?: PublishChallengeUseCase;
@@ -146,6 +171,7 @@ const createServer = async (input?: {
       input?.archiveChallengeUseCase ?? createRecordingArchiveChallengeUseCase(),
     createChallengeUseCase:
       input?.createChallengeUseCase ?? createRecordingCreateChallengeUseCase(),
+    draftChallengeUseCase: input?.draftChallengeUseCase ?? createRecordingDraftChallengeUseCase(),
     getChallengeUseCase:
       input?.getChallengeUseCase ?? createGetChallengeUseCase({ result: succeed(challengeDto) }),
     updateChallengeUseCase:
@@ -380,6 +406,34 @@ describe("buildChallengeHttpServer", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(archivedChallengeDto);
+    expect(command).toEqual({
+      actor: {
+        userId: "company-user",
+        organizationId: "org-company",
+        role: "company-admin",
+      },
+      challengeId: "challenge-1",
+    });
+  });
+
+  it("maps POST /challenges/:challengeId/draft to the draft use case", async () => {
+    const draftChallengeUseCase = createRecordingDraftChallengeUseCase();
+    const server = await createServer({ draftChallengeUseCase });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/challenges/challenge-1/draft",
+      headers: {
+        "x-user-id": "company-user",
+        "x-organization-id": "org-company",
+        "x-role": "company-admin",
+      },
+    });
+
+    const command = readRecordedCommand({ commands: draftChallengeUseCase.commands });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(draftedChallengeDto);
     expect(command).toEqual({
       actor: {
         userId: "company-user",

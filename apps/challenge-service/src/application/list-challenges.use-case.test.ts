@@ -40,6 +40,11 @@ describe("createListChallengesUseCase", () => {
   });
 
   it("lists only published challenges for startup members", async () => {
+    const archivedChallenge = createChallenge({
+      id: "challenge-archived",
+      ownerOrganizationId: "org-company-a",
+      status: "archived",
+    });
     const draftChallenge = createChallenge({
       id: "challenge-draft",
       ownerOrganizationId: "org-company-a",
@@ -52,7 +57,7 @@ describe("createListChallengesUseCase", () => {
     });
     const useCase = createListChallengesUseCase({
       challengeRepository: createChallengeRepository({
-        challenges: [draftChallenge, publishedChallenge],
+        challenges: [archivedChallenge, draftChallenge, publishedChallenge],
       }),
     });
 
@@ -74,7 +79,7 @@ const createChallengeRepository = (input: {
 const createChallenge = (input: {
   readonly id: string;
   readonly ownerOrganizationId: string;
-  readonly status: "draft" | "published";
+  readonly status: "archived" | "draft" | "published";
 }): Challenge => ({
   id: input.id,
   title: `Challenge ${input.id}`,
@@ -82,5 +87,5 @@ const createChallenge = (input: {
   ownerOrganizationId: input.ownerOrganizationId,
   status: input.status,
   createdAt: new Date("2026-06-22T10:00:00.000Z"),
-  publishedAt: input.status === "published" ? new Date("2026-06-22T11:00:00.000Z") : null,
+  publishedAt: input.status === "draft" ? null : new Date("2026-06-22T11:00:00.000Z"),
 });
