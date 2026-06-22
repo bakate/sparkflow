@@ -2,9 +2,14 @@ import type { ActorContext, ChallengeDto } from "@sparkflow/contracts";
 import { fail, succeed } from "@sparkflow/result";
 import { afterEach, describe, expect, it } from "vitest";
 import type {
+  ArchiveChallengeCommand,
+  ArchiveChallengeUseCase,
+} from "../application/archive-challenge.use-case.js";
+import type {
   CreateChallengeCommand,
   CreateChallengeUseCase,
 } from "../application/create-challenge.use-case.js";
+import type { GetChallengeUseCase } from "../application/get-challenge.use-case.js";
 import type { ListChallengesUseCase } from "../application/list-challenges.use-case.js";
 import type {
   PublishChallengeCommand,
@@ -30,6 +35,11 @@ const publishedChallengeDto: ChallengeDto = {
   ...challengeDto,
   status: "published",
   publishedAt: "2026-06-16T11:00:00.000Z",
+};
+
+const archivedChallengeDto: ChallengeDto = {
+  ...publishedChallengeDto,
+  status: "archived",
 };
 
 const openServers: { readonly close: () => Promise<void> }[] = [];
@@ -75,6 +85,20 @@ const createRecordingPublishChallengeUseCase = (input?: {
   };
 };
 
+const createRecordingArchiveChallengeUseCase = (input?: {
+  readonly result?: Awaited<ReturnType<ArchiveChallengeUseCase["execute"]>>;
+}): ArchiveChallengeUseCase & { readonly commands: ArchiveChallengeCommand[] } => {
+  const commands: ArchiveChallengeCommand[] = [];
+
+  return {
+    commands,
+    execute: async (command) => {
+      commands.push(command);
+      return input?.result ?? succeed(archivedChallengeDto);
+    },
+  };
+};
+
 const createRecordingUpdateChallengeUseCase = (input?: {
   readonly result?: Awaited<ReturnType<UpdateChallengeUseCase["execute"]>>;
 }): UpdateChallengeUseCase & { readonly commands: UpdateChallengeCommand[] } => {
@@ -91,19 +115,39 @@ const createRecordingUpdateChallengeUseCase = (input?: {
 
 const createListChallengesUseCase = (input: {
   readonly challenges: readonly ChallengeDto[];
-}): ListChallengesUseCase => ({
-  execute: async () => input.challenges,
+}): ListChallengesUseCase & { readonly actors: ActorContext[] } => {
+  const actors: ActorContext[] = [];
+
+  return {
+    actors,
+    execute: async ({ actor }) => {
+      actors.push(actor);
+      return input.challenges;
+    },
+  };
+};
+
+const createGetChallengeUseCase = (input: {
+  readonly result: Awaited<ReturnType<GetChallengeUseCase["execute"]>>;
+}): GetChallengeUseCase => ({
+  execute: async () => input.result,
 });
 
 const createServer = async (input?: {
+  readonly archiveChallengeUseCase?: ArchiveChallengeUseCase;
   readonly createChallengeUseCase?: CreateChallengeUseCase;
+  readonly getChallengeUseCase?: GetChallengeUseCase;
   readonly updateChallengeUseCase?: UpdateChallengeUseCase;
   readonly publishChallengeUseCase?: PublishChallengeUseCase;
   readonly listChallengesUseCase?: ListChallengesUseCase;
 }) => {
   const server = await buildChallengeHttpServer({
+    archiveChallengeUseCase:
+      input?.archiveChallengeUseCase ?? createRecordingArchiveChallengeUseCase(),
     createChallengeUseCase:
       input?.createChallengeUseCase ?? createRecordingCreateChallengeUseCase(),
+    getChallengeUseCase:
+      input?.getChallengeUseCase ?? createGetChallengeUseCase({ result: succeed(challengeDto) }),
     updateChallengeUseCase:
       input?.updateChallengeUseCase ?? createRecordingUpdateChallengeUseCase(),
     publishChallengeUseCase:
@@ -126,17 +170,58 @@ afterEach(async () => {
 
 describe("buildChallengeHttpServer", () => {
   it("lists challenges through the list use case", async () => {
+    const listChallengesUseCase = createListChallengesUseCase({ challenges: [challengeDto] });
     const server = await createServer({
-      listChallengesUseCase: createListChallengesUseCase({ challenges: [challengeDto] }),
+      listChallengesUseCase,
     });
 
     const response = await server.inject({
       method: "GET",
       url: "/challenges",
+      headers: {
+        "x-user-id": "company-user",
+        "x-organization-id": "org-company",
+        "x-role": "company-admin",
+      },
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual([challengeDto]);
+    expect(listChallengesUseCase.actors).toEqual([
+      {
+        userId: "company-user",
+        organizationId: "org-company",
+        role: "company-admin",
+      },
+    ]);
+  });
+
+  it("gets one challenge through the get use case", async () => {
+    const server = await createServer({
+      getChallengeUseCase: createGetChallengeUseCase({ result: succeed(challengeDto) }),
+    });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/challenges/challenge-1",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(challengeDto);
+  });
+
+  it("maps missing challenge reads to 404", async () => {
+    const server = await createServer({
+      getChallengeUseCase: createGetChallengeUseCase({ result: fail("challenge-not-found") }),
+    });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/challenges/missing-challenge",
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "challenge-not-found" });
   });
 
   it("maps POST /challenges to the create challenge use case", async () => {
@@ -274,6 +359,34 @@ describe("buildChallengeHttpServer", () => {
       },
       challengeId: "challenge-1",
       correlationId: "correlation-1",
+    });
+  });
+
+  it("maps POST /challenges/:challengeId/archive to the archive use case", async () => {
+    const archiveChallengeUseCase = createRecordingArchiveChallengeUseCase();
+    const server = await createServer({ archiveChallengeUseCase });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/challenges/challenge-1/archive",
+      headers: {
+        "x-user-id": "company-user",
+        "x-organization-id": "org-company",
+        "x-role": "company-admin",
+      },
+    });
+
+    const command = readRecordedCommand({ commands: archiveChallengeUseCase.commands });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(archivedChallengeDto);
+    expect(command).toEqual({
+      actor: {
+        userId: "company-user",
+        organizationId: "org-company",
+        role: "company-admin",
+      },
+      challengeId: "challenge-1",
     });
   });
 

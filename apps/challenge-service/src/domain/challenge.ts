@@ -23,6 +23,10 @@ export type PublishChallengeInput = {
   readonly now: Date;
 };
 
+export type ArchiveChallengeInput = {
+  readonly challenge: Challenge;
+};
+
 export type UpdateChallengeInput = {
   readonly challenge: Challenge;
   readonly title: string;
@@ -32,6 +36,7 @@ export type UpdateChallengeInput = {
 export type ChallengeError =
   | "challenge-title-required"
   | "challenge-description-required"
+  | "challenge-already-archived"
   | "challenge-already-published";
 
 export const createChallenge = (input: CreateChallengeInput): Challenge => ({
@@ -48,6 +53,11 @@ export const publishChallenge = (input: PublishChallengeInput): Challenge => ({
   ...input.challenge,
   status: "published",
   publishedAt: input.now,
+});
+
+export const archiveChallenge = (input: ArchiveChallengeInput): Challenge => ({
+  ...input.challenge,
+  status: "archived",
 });
 
 export const updateChallenge = (input: UpdateChallengeInput): Challenge => ({

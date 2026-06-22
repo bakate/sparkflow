@@ -7,7 +7,7 @@ type ChallengeRow = {
   readonly title: string;
   readonly description: string;
   readonly owner_organization_id: string;
-  readonly status: "draft" | "published";
+  readonly status: "archived" | "draft" | "published";
   readonly created_at: Date;
   readonly published_at: Date | null;
 };
@@ -74,9 +74,17 @@ export const ensureChallengeSchema = async (input: { readonly pool: Pool }): Pro
       title text NOT NULL,
       description text NOT NULL,
       owner_organization_id text NOT NULL,
-      status text NOT NULL CHECK (status IN ('draft', 'published')),
+      status text NOT NULL CHECK (status IN ('archived', 'draft', 'published')),
       created_at timestamptz NOT NULL,
       published_at timestamptz NULL
     )
+  `);
+  await input.pool.query(`
+    ALTER TABLE challenges DROP CONSTRAINT IF EXISTS challenges_status_check
+  `);
+  await input.pool.query(`
+    ALTER TABLE challenges
+      ADD CONSTRAINT challenges_status_check
+      CHECK (status IN ('archived', 'draft', 'published'))
   `);
 };

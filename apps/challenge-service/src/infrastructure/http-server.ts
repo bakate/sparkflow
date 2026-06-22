@@ -1,7 +1,9 @@
 import cors from "@fastify/cors";
 import { readActor, readCorrelationId } from "@sparkflow/http";
 import Fastify from "fastify";
+import type { ArchiveChallengeUseCase } from "../application/archive-challenge.use-case.ts";
 import type { CreateChallengeUseCase } from "../application/create-challenge.use-case.ts";
+import type { GetChallengeUseCase } from "../application/get-challenge.use-case.ts";
 import type { ListChallengesUseCase } from "../application/list-challenges.use-case.ts";
 import type { PublishChallengeUseCase } from "../application/publish-challenge.use-case.ts";
 import type { UpdateChallengeUseCase } from "../application/update-challenge.use-case.ts";
@@ -17,7 +19,9 @@ type UpdateChallengeBody = {
 };
 
 export const buildChallengeHttpServer = async (input: {
+  readonly archiveChallengeUseCase: ArchiveChallengeUseCase;
   readonly createChallengeUseCase: CreateChallengeUseCase;
+  readonly getChallengeUseCase: GetChallengeUseCase;
   readonly updateChallengeUseCase: UpdateChallengeUseCase;
   readonly publishChallengeUseCase: PublishChallengeUseCase;
   readonly listChallengesUseCase: ListChallengesUseCase;
@@ -37,7 +41,26 @@ export const buildChallengeHttpServer = async (input: {
 
   server.get("/health", async () => ({ status: "ok" }));
 
-  server.get("/challenges", async () => input.listChallengesUseCase.execute());
+  server.get("/challenges", async (request) =>
+    input.listChallengesUseCase.execute({
+      actor: readActor({ headers: request.headers }),
+    }),
+  );
+
+  server.get<{ Params: { readonly challengeId: string } }>(
+    "/challenges/:challengeId",
+    async (request, reply) => {
+      const result = await input.getChallengeUseCase.execute({
+        challengeId: request.params.challengeId,
+      });
+
+      if (!result.ok) {
+        return reply.code(404).send({ error: result.error });
+      }
+
+      return reply.send(result.value);
+    },
+  );
 
   server.post<{ Body: CreateChallengeBody }>("/challenges", async (request, reply) => {
     const result = await input.createChallengeUseCase.execute({
@@ -61,6 +84,25 @@ export const buildChallengeHttpServer = async (input: {
         challengeId: request.params.challengeId,
         title: request.body.title ?? "",
         description: request.body.description ?? "",
+      });
+
+      if (!result.ok) {
+        const statusCode = result.error === "challenge-not-found" ? 404 : 400;
+        return reply
+          .code(result.error === "forbidden" ? 403 : statusCode)
+          .send({ error: result.error });
+      }
+
+      return reply.send(result.value);
+    },
+  );
+
+  server.post<{ Params: { readonly challengeId: string } }>(
+    "/challenges/:challengeId/archive",
+    async (request, reply) => {
+      const result = await input.archiveChallengeUseCase.execute({
+        actor: readActor({ headers: request.headers }),
+        challengeId: request.params.challengeId,
       });
 
       if (!result.ok) {

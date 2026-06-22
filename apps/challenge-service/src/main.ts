@@ -2,7 +2,9 @@ import { readEnvironmentVariable, readIntegerEnvironmentVariable } from "@sparkf
 import { logger } from "@sparkflow/logger";
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { createArchiveChallengeUseCase } from "./application/archive-challenge.use-case.ts";
 import { createCreateChallengeUseCase } from "./application/create-challenge.use-case.ts";
+import { createGetChallengeUseCase } from "./application/get-challenge.use-case.ts";
 import { createListChallengesUseCase } from "./application/list-challenges.use-case.ts";
 import { createPublishChallengeUseCase } from "./application/publish-challenge.use-case.ts";
 import { createUpdateChallengeUseCase } from "./application/update-challenge.use-case.ts";
@@ -29,11 +31,13 @@ const clock = { now: () => new Date() } as const;
 const idGenerator = { generate: () => randomUUID() } as const;
 
 const server = await buildChallengeHttpServer({
+  archiveChallengeUseCase: createArchiveChallengeUseCase({ challengeRepository }),
   createChallengeUseCase: createCreateChallengeUseCase({
     challengeRepository,
     clock,
     idGenerator,
   }),
+  getChallengeUseCase: createGetChallengeUseCase({ challengeRepository }),
   updateChallengeUseCase: createUpdateChallengeUseCase({
     challengeRepository,
   }),
