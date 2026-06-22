@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import { createCreateChallengeUseCase } from "./application/create-challenge.use-case.ts";
 import { createListChallengesUseCase } from "./application/list-challenges.use-case.ts";
 import { createPublishChallengeUseCase } from "./application/publish-challenge.use-case.ts";
+import { createUpdateChallengeUseCase } from "./application/update-challenge.use-case.ts";
 import { buildChallengeHttpServer } from "./infrastructure/http-server.ts";
 import { createNatsEventPublisher } from "./infrastructure/nats-event-publisher.ts";
 import {
@@ -32,6 +33,9 @@ const server = await buildChallengeHttpServer({
     challengeRepository,
     clock,
     idGenerator,
+  }),
+  updateChallengeUseCase: createUpdateChallengeUseCase({
+    challengeRepository,
   }),
   publishChallengeUseCase: createPublishChallengeUseCase({
     challengeRepository,

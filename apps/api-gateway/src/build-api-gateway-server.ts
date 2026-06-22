@@ -46,7 +46,7 @@ const proxyJson = async (input: {
   readonly fetcher: Fetcher;
   readonly idGenerator: IdGenerator;
   readonly url: string;
-  readonly method: "GET" | "POST";
+  readonly method: "GET" | "PATCH" | "POST";
   readonly headers: Record<string, string | string[] | undefined>;
   readonly body?: unknown;
 }): Promise<ServiceResponse> => {
@@ -82,11 +82,21 @@ export const buildApiGatewayServer = async (input: {
   readonly serviceUrls: ApiGatewayServiceUrls;
 }) => {
   const server = Fastify({ logger: false });
-  await server.register(cors, { origin: true });
+  await server.register(cors, {
+    allowedHeaders: [
+      "content-type",
+      "x-correlation-id",
+      "x-organization-id",
+      "x-role",
+      "x-user-id",
+    ],
+    methods: ["GET", "HEAD", "OPTIONS", "PATCH", "POST"],
+    origin: true,
+  });
 
   const proxy = (requestInput: {
     readonly url: string;
-    readonly method: "GET" | "POST";
+    readonly method: "GET" | "PATCH" | "POST";
     readonly headers: Record<string, string | string[] | undefined>;
     readonly body?: unknown;
   }) =>
@@ -128,6 +138,20 @@ export const buildApiGatewayServer = async (input: {
 
     return reply.code(response.statusCode).send(response.body);
   });
+
+  server.patch<{ Params: { readonly challengeId: string }; Body: unknown }>(
+    "/challenges/:challengeId",
+    async (request, reply) => {
+      const response = await proxy({
+        url: `${input.serviceUrls.challengeServiceUrl}/challenges/${request.params.challengeId}`,
+        method: "PATCH",
+        headers: request.headers,
+        body: request.body,
+      });
+
+      return reply.code(response.statusCode).send(response.body);
+    },
+  );
 
   server.post<{ Params: { readonly challengeId: string } }>(
     "/challenges/:challengeId/publish",

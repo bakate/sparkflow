@@ -10,6 +10,10 @@ import type {
   PublishChallengeCommand,
   PublishChallengeUseCase,
 } from "../application/publish-challenge.use-case.js";
+import type {
+  UpdateChallengeCommand,
+  UpdateChallengeUseCase,
+} from "../application/update-challenge.use-case.js";
 import { buildChallengeHttpServer } from "./http-server.js";
 
 const challengeDto: ChallengeDto = {
@@ -71,6 +75,20 @@ const createRecordingPublishChallengeUseCase = (input?: {
   };
 };
 
+const createRecordingUpdateChallengeUseCase = (input?: {
+  readonly result?: Awaited<ReturnType<UpdateChallengeUseCase["execute"]>>;
+}): UpdateChallengeUseCase & { readonly commands: UpdateChallengeCommand[] } => {
+  const commands: UpdateChallengeCommand[] = [];
+
+  return {
+    commands,
+    execute: async (command) => {
+      commands.push(command);
+      return input?.result ?? succeed(challengeDto);
+    },
+  };
+};
+
 const createListChallengesUseCase = (input: {
   readonly challenges: readonly ChallengeDto[];
 }): ListChallengesUseCase => ({
@@ -79,12 +97,15 @@ const createListChallengesUseCase = (input: {
 
 const createServer = async (input?: {
   readonly createChallengeUseCase?: CreateChallengeUseCase;
+  readonly updateChallengeUseCase?: UpdateChallengeUseCase;
   readonly publishChallengeUseCase?: PublishChallengeUseCase;
   readonly listChallengesUseCase?: ListChallengesUseCase;
 }) => {
   const server = await buildChallengeHttpServer({
     createChallengeUseCase:
       input?.createChallengeUseCase ?? createRecordingCreateChallengeUseCase(),
+    updateChallengeUseCase:
+      input?.updateChallengeUseCase ?? createRecordingUpdateChallengeUseCase(),
     publishChallengeUseCase:
       input?.publishChallengeUseCase ?? createRecordingPublishChallengeUseCase(),
     listChallengesUseCase:
@@ -170,6 +191,60 @@ describe("buildChallengeHttpServer", () => {
 
     expect(response.statusCode).toBe(403);
     expect(response.json()).toEqual({ error: "forbidden" });
+  });
+
+  it("maps PATCH /challenges/:challengeId to the update challenge use case", async () => {
+    const updateChallengeUseCase = createRecordingUpdateChallengeUseCase();
+    const server = await createServer({ updateChallengeUseCase });
+
+    const response = await server.inject({
+      method: "PATCH",
+      url: "/challenges/challenge-1",
+      headers: {
+        "x-user-id": "company-user",
+        "x-organization-id": "org-company",
+        "x-role": "company-admin",
+      },
+      payload: {
+        title: " Updated scouting ",
+        description: " Updated description. ",
+      },
+    });
+
+    const command = readRecordedCommand({ commands: updateChallengeUseCase.commands });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(challengeDto);
+    expect(command).toEqual({
+      actor: {
+        userId: "company-user",
+        organizationId: "org-company",
+        role: "company-admin",
+      },
+      challengeId: "challenge-1",
+      title: " Updated scouting ",
+      description: " Updated description. ",
+    });
+  });
+
+  it("maps missing challenge update failures to 404", async () => {
+    const server = await createServer({
+      updateChallengeUseCase: createRecordingUpdateChallengeUseCase({
+        result: fail("challenge-not-found"),
+      }),
+    });
+
+    const response = await server.inject({
+      method: "PATCH",
+      url: "/challenges/missing-challenge",
+      payload: {
+        title: "Updated scouting",
+        description: "Updated description.",
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "challenge-not-found" });
   });
 
   it("maps POST /challenges/:challengeId/publish to the publish use case", async () => {

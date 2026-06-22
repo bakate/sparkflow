@@ -23,6 +23,12 @@ export type PublishChallengeInput = {
   readonly now: Date;
 };
 
+export type UpdateChallengeInput = {
+  readonly challenge: Challenge;
+  readonly title: string;
+  readonly description: string;
+};
+
 export type ChallengeError =
   | "challenge-title-required"
   | "challenge-description-required"
@@ -42,6 +48,12 @@ export const publishChallenge = (input: PublishChallengeInput): Challenge => ({
   ...input.challenge,
   status: "published",
   publishedAt: input.now,
+});
+
+export const updateChallenge = (input: UpdateChallengeInput): Challenge => ({
+  ...input.challenge,
+  title: input.title.trim(),
+  description: input.description.trim(),
 });
 
 export const toChallengeDto = (challenge: Challenge): ChallengeDto => ({

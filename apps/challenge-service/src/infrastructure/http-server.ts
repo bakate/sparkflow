@@ -4,19 +4,36 @@ import Fastify from "fastify";
 import type { CreateChallengeUseCase } from "../application/create-challenge.use-case.ts";
 import type { ListChallengesUseCase } from "../application/list-challenges.use-case.ts";
 import type { PublishChallengeUseCase } from "../application/publish-challenge.use-case.ts";
+import type { UpdateChallengeUseCase } from "../application/update-challenge.use-case.ts";
 
 type CreateChallengeBody = {
   readonly title?: string;
   readonly description?: string;
 };
 
+type UpdateChallengeBody = {
+  readonly title?: string;
+  readonly description?: string;
+};
+
 export const buildChallengeHttpServer = async (input: {
   readonly createChallengeUseCase: CreateChallengeUseCase;
+  readonly updateChallengeUseCase: UpdateChallengeUseCase;
   readonly publishChallengeUseCase: PublishChallengeUseCase;
   readonly listChallengesUseCase: ListChallengesUseCase;
 }) => {
   const server = Fastify({ logger: false });
-  await server.register(cors);
+  await server.register(cors, {
+    allowedHeaders: [
+      "content-type",
+      "x-correlation-id",
+      "x-organization-id",
+      "x-role",
+      "x-user-id",
+    ],
+    methods: ["GET", "HEAD", "OPTIONS", "PATCH", "POST"],
+    origin: true,
+  });
 
   server.get("/health", async () => ({ status: "ok" }));
 
@@ -35,6 +52,27 @@ export const buildChallengeHttpServer = async (input: {
 
     return reply.code(201).send(result.value);
   });
+
+  server.patch<{ Params: { readonly challengeId: string }; Body: UpdateChallengeBody }>(
+    "/challenges/:challengeId",
+    async (request, reply) => {
+      const result = await input.updateChallengeUseCase.execute({
+        actor: readActor({ headers: request.headers }),
+        challengeId: request.params.challengeId,
+        title: request.body.title ?? "",
+        description: request.body.description ?? "",
+      });
+
+      if (!result.ok) {
+        const statusCode = result.error === "challenge-not-found" ? 404 : 400;
+        return reply
+          .code(result.error === "forbidden" ? 403 : statusCode)
+          .send({ error: result.error });
+      }
+
+      return reply.send(result.value);
+    },
+  );
 
   server.post<{ Params: { readonly challengeId: string } }>(
     "/challenges/:challengeId/publish",

@@ -75,6 +75,10 @@ const createWorkflowServer = async (input: {
         return Response.json({ id: input.challengeId, status: "draft" }, { status: 201 });
       }
 
+      if (url.endsWith(`/challenges/${input.challengeId}`) && init.method === "PATCH") {
+        return Response.json({ id: input.challengeId, status: "draft" });
+      }
+
       if (url.endsWith(`/challenges/${input.challengeId}/publish`)) {
         return Response.json({ id: input.challengeId, status: "published" });
       }
@@ -157,6 +161,23 @@ describe("buildApiGatewayServer", () => {
     expect(headers.get("x-role")).toBe("company-admin");
   });
 
+  it("allows PATCH preflight requests", async () => {
+    const { server } = await createServerWithCapturedRequests();
+
+    const response = await server.inject({
+      method: "OPTIONS",
+      url: "/challenges/challenge-1",
+      headers: {
+        "access-control-request-headers": "content-type",
+        "access-control-request-method": "PATCH",
+        origin: "http://127.0.0.1:4200",
+      },
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(response.headers["access-control-allow-methods"]).toContain("PATCH");
+  });
+
   it("proxies submission creation with body and preserves incoming auth headers", async () => {
     const { requests, server } = await createServerWithCapturedRequests();
 
@@ -232,6 +253,11 @@ describe("buildApiGatewayServer", () => {
       },
       payload: { title: challengeTitle, description: challengeDescription },
     });
+    await server.inject({
+      method: "PATCH",
+      url: `/challenges/${challengeId}`,
+      payload: { title: `${challengeTitle} updated`, description: challengeDescription },
+    });
     await server.inject({ method: "POST", url: `/challenges/${challengeId}/publish` });
     await server.inject({ method: "GET", url: "/challenges" });
     await server.inject({
@@ -264,6 +290,7 @@ describe("buildApiGatewayServer", () => {
 
     expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
       "POST http://challenge-service/challenges",
+      `PATCH http://challenge-service/challenges/${challengeId}`,
       `POST http://challenge-service/challenges/${challengeId}/publish`,
       "GET http://challenge-service/challenges",
       `POST http://submission-service/challenges/${challengeId}/submissions`,
@@ -276,22 +303,26 @@ describe("buildApiGatewayServer", () => {
       title: challengeTitle,
       description: challengeDescription,
     });
-    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 3 }) })).toEqual({
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 1 }) })).toEqual({
+      title: `${challengeTitle} updated`,
+      description: challengeDescription,
+    });
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 4 }) })).toEqual({
       summary: proposalSummary,
     });
-    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 5 }) })).toEqual({
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 6 }) })).toEqual({
       score: 91,
       comment: reviewComment,
     });
-    expect(readCapturedRequest({ requests, index: 1 }).init.body).toBeUndefined();
+    expect(readCapturedRequest({ requests, index: 2 }).init.body).toBeUndefined();
     expect(
-      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 1 }) }).get(
+      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 2 }) }).get(
         "content-type",
       ),
     ).toBeNull();
-    expect(readCapturedRequest({ requests, index: 6 }).init.body).toBeUndefined();
+    expect(readCapturedRequest({ requests, index: 7 }).init.body).toBeUndefined();
     expect(
-      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 6 }) }).get(
+      readForwardedHeaders({ request: readCapturedRequest({ requests, index: 7 }) }).get(
         "content-type",
       ),
     ).toBeNull();
