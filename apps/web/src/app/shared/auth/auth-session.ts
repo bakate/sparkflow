@@ -1,5 +1,11 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { roles, type ActorContext, type UserRole } from '@sparkflow/contracts';
+import type { ActorContext, UserRole } from '@sparkflow/contracts';
+
+const authRoles = [
+  'company-admin',
+  'startup-member',
+  'reviewer',
+] as const satisfies readonly UserRole[];
 
 type RealmAccessClaim = {
   readonly roles?: readonly string[];
@@ -94,7 +100,7 @@ const readRole = (input: { readonly payload: Record<string, unknown> }): UserRol
     return null;
   }
 
-  return roles.find((role) => realmAccess.roles?.includes(role)) ?? null;
+  return authRoles.find((role) => realmAccess.roles?.includes(role)) ?? null;
 };
 
 const isRealmAccessClaim = (value: unknown): value is RealmAccessClaim =>
