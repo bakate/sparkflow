@@ -19,10 +19,16 @@
           <i class="pi pi-calendar" aria-hidden="true"></i>
           Created {{ formatDate({ date: challenge().createdAt }) }}
         </span>
+        @if (proposalStatus() !== null) {
+          <span class="inline-flex align-items-center gap-2">
+            <i class="pi pi-inbox" aria-hidden="true"></i>
+            {{ proposalStatusLabel() }}
+          </span>
+        }
       </div>
     </div>
 
-    @if (canEdit() || canPublish()) {
+    @if (canEdit() || canPublish() || canSubmitProposal()) {
       <div class="flex gap-2 justify-content-end">
         @if (canEdit()) {
           <p-button
@@ -41,6 +47,16 @@
             [loading]="publishing()"
             [disabled]="publishing()"
             (onClick)="publish.emit({ challengeId: challenge().id })"
+          />
+        }
+
+        @if (canSubmitProposal()) {
+          <p-button
+            icon="pi pi-send"
+            label="Submit"
+            [loading]="submittingProposal()"
+            [disabled]="submittingProposal()"
+            (onClick)="submitProposal.emit({ challengeId: challenge().id })"
           />
         }
       </div>

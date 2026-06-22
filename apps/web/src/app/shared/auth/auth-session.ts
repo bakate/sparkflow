@@ -11,6 +11,11 @@ type RealmAccessClaim = {
   readonly roles?: readonly string[];
 };
 
+export type AuthUser = ActorContext & {
+  readonly displayName: string;
+  readonly username: string;
+};
+
 @Injectable({ providedIn: 'root' })
 export class AuthSession {
   private readonly accessTokenState = signal<string | null>(null);
@@ -20,6 +25,11 @@ export class AuthSession {
     const accessToken = this.accessTokenState();
 
     return accessToken === null ? null : toActor({ accessToken });
+  });
+  readonly currentUser = computed(() => {
+    const accessToken = this.accessTokenState();
+
+    return accessToken === null ? null : toUser({ accessToken });
   });
 
   accessToken(): string | null {
@@ -54,6 +64,27 @@ const toActor = (input: { readonly accessToken: string }): ActorContext | null =
     userId,
     organizationId,
     role,
+  };
+};
+
+const toUser = (input: { readonly accessToken: string }): AuthUser | null => {
+  const payload = decodeAccessTokenPayload({ accessToken: input.accessToken });
+  const actor = payload === null ? null : toActor({ accessToken: input.accessToken });
+
+  if (payload === null || actor === null) {
+    return null;
+  }
+
+  const username =
+    readStringClaim({ name: 'preferred_username', payload }) ??
+    readStringClaim({ name: 'email', payload }) ??
+    actor.userId;
+  const displayName = readStringClaim({ name: 'name', payload }) ?? username;
+
+  return {
+    ...actor,
+    displayName,
+    username,
   };
 };
 

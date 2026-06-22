@@ -1,0 +1,45 @@
+@if (saving()) {
+  <div class="flex flex-column gap-3" aria-busy="true" aria-live="polite">
+    <div class="flex flex-column gap-2">
+      <p-skeleton width="6rem" height="1.25rem" />
+      <p-skeleton width="100%" height="8rem" />
+    </div>
+
+    <div class="flex justify-content-end gap-2 pt-2">
+      <p-skeleton width="5rem" height="2.25rem" />
+      <p-skeleton width="7rem" height="2.25rem" />
+    </div>
+  </div>
+} @else {
+  <form (submit)="submitProposal($event)" class="flex flex-column gap-3">
+    @if (errorMessage() !== null) {
+      <p class="form-alert" role="alert">
+        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+        <span>{{ errorMessage() }}</span>
+      </p>
+    }
+
+    <div class="flex flex-column gap-2">
+      <label for="proposal-summary" class="font-bold text-color">Summary</label>
+      <textarea
+        id="proposal-summary"
+        rows="5"
+        class="p-inputtext p-component w-full"
+        [formField]="proposalForm.summary"
+        [attr.aria-describedby]="shouldShowSummaryError() ? 'proposal-summary-error' : null"
+      ></textarea>
+
+      @if (shouldShowSummaryError()) {
+        <p id="proposal-summary-error" class="field-error" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ summaryErrorMessage() }}</span>
+        </p>
+      }
+    </div>
+
+    <div class="flex justify-content-end gap-2 pt-2">
+      <p-button label="Cancel" severity="secondary" type="button" (onClick)="onCancelForm()" />
+      <p-button icon="pi pi-send" label="Submit" type="submit" />
+    </div>
+  </form>
+}

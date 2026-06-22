@@ -13,6 +13,9 @@ export type Challenge = {
   readonly publishedAt: Date | null;
 };
 
+export const canCreateChallenge = (input: { readonly actor: ChallengeActor }): boolean =>
+  input.actor.role === 'company-admin';
+
 export const canPublishChallenge = (input: { readonly challenge: Challenge }): boolean =>
   input.challenge.status === 'draft';
 
@@ -22,3 +25,8 @@ export const canEditChallenge = (input: {
 }): boolean =>
   input.actor.role === 'company-admin' &&
   input.actor.organizationId === input.challenge.ownerOrganizationId;
+
+export const canSubmitChallengeProposal = (input: {
+  readonly actor: ChallengeActor;
+  readonly challenge: Challenge;
+}): boolean => input.actor.role === 'startup-member' && input.challenge.status === 'published';

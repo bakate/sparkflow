@@ -4,9 +4,17 @@
   >
     <div>
       <h2 id="challenges-title" class="m-0 text-2xl font-bold text-color">Challenges</h2>
-      <p class="m-0 text-color-secondary">
-        {{ store.draftCount() }} draft, {{ store.publishedCount() }} published
-      </p>
+      @if (usesStartupChallengeTabs()) {
+        <p class="m-0 text-color-secondary">
+          {{ publishedStartupChallengeCount() }} published,
+          {{ inProgressStartupChallengeCount() }} in progress,
+          {{ archivedStartupChallengeCount() }} archived
+        </p>
+      } @else {
+        <p class="m-0 text-color-secondary">
+          {{ store.draftCount() }} draft, {{ store.publishedCount() }} published
+        </p>
+      }
     </div>
 
     <div class="flex gap-2">
@@ -18,11 +26,13 @@
         [loading]="store.loading()"
         (onClick)="reloadChallenges()"
       />
-      <p-button
-        icon="pi pi-plus"
-        label="Create"
-        (onClick)="openChallengeFormDialog({ challengeId: null })"
-      />
+      @if (canCreateChallenge()) {
+        <p-button
+          icon="pi pi-plus"
+          label="Create"
+          (onClick)="openChallengeFormDialog({ challengeId: null })"
+        />
+      }
     </div>
   </div>
 
@@ -35,19 +45,48 @@
     </p>
   }
 
+  @if (usesStartupChallengeTabs()) {
+    <div class="flex flex-wrap gap-2" aria-label="Challenge filters">
+      <p-button
+        label="Published"
+        icon="pi pi-send"
+        [outlined]="activeChallengeTab() !== 'published'"
+        (onClick)="selectChallengeTab({ tab: 'published' })"
+      />
+      <p-button
+        label="In progress"
+        icon="pi pi-clock"
+        [outlined]="activeChallengeTab() !== 'in-progress'"
+        (onClick)="selectChallengeTab({ tab: 'in-progress' })"
+      />
+      <p-button
+        label="Archived"
+        icon="pi pi-archive"
+        [outlined]="activeChallengeTab() !== 'archived'"
+        (onClick)="selectChallengeTab({ tab: 'archived' })"
+      />
+    </div>
+  }
+
   <div class="flex flex-column gap-3" aria-label="Challenge list">
-    @if (store.loading()) {
+    @if (store.loading() || store.loadingMySubmissions()) {
       <p class="m-0 p-3 border-1 surface-border border-round surface-card">Loading challenges...</p>
-    } @else if (store.challenges().length === 0) {
+    } @else if (displayedChallenges().length === 0) {
       <p class="m-0 p-3 border-1 surface-border border-round surface-card">No challenges yet.</p>
     } @else {
-      @for (challenge of store.challenges(); track challenge.id) {
+      @for (challenge of displayedChallenges(); track challenge.id) {
         <challenge-card
           [challenge]="challenge"
           [currentActor]="currentActor()"
           [publishing]="store.isPublishing({ challengeId: challenge.id })"
+          [submittingProposal]="store.isSubmittingProposal({ challengeId: challenge.id })"
+          [proposalSubmitted]="store.hasSubmittedProposal({ challengeId: challenge.id })"
+          [proposalStatus]="
+            store.submissionForChallenge({ challengeId: challenge.id })?.status ?? null
+          "
           (edit)="openChallengeFormDialog($event)"
           (publish)="publishChallenge($event)"
+          (submitProposal)="openProposalDialog($event)"
         />
       }
     }
@@ -71,5 +110,26 @@
       (submitted)="submitChallengeForm($event)"
       (cancelled)="closeChallengeFormDialog()"
     />
+  </p-dialog>
+
+  <p-dialog
+    header="Submit proposal"
+    [modal]="true"
+    [blockScroll]="true"
+    [dismissableMask]="false"
+    [visible]="proposalDialogVisible()"
+    [style]="{ width: 'min(42rem, calc(100vw - 2rem))' }"
+    (visibleChange)="setProposalDialogVisible({ visible: $event })"
+  >
+    @if (selectedProposalChallengeId(); as selectedProposalChallengeId) {
+      <challenge-submission-form
+        [challengeId]="selectedProposalChallengeId"
+        [saving]="store.isSubmittingProposal({ challengeId: selectedProposalChallengeId })"
+        [errorMessage]="proposalDialogErrorMessage()"
+        [resetKey]="proposalFormResetKey()"
+        (submitted)="submitChallengeProposal($event)"
+        (cancelled)="closeProposalDialog()"
+      />
+    }
   </p-dialog>
 </section>

@@ -20,3 +20,4 @@ export const fail = <TError>(error: TError): Result<TError, never> => ({
 
 export type Branded<T, TBrand> = T & { readonly __brand: TBrand };
 export type ChallengeId = Branded<string, 'ChallengeId'>;
+export type SubmissionId = Branded<string, 'SubmissionId'>;

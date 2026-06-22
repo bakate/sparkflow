@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
 import { App } from './app';
 import { sparkFlowPrimeNgConfig } from './shell/ui/primeng.config';
 
@@ -10,7 +11,17 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [MessageService, providePrimeNG(sparkFlowPrimeNgConfig), provideRouter([])],
+      providers: [
+        MessageService,
+        providePrimeNG(sparkFlowPrimeNgConfig),
+        provideRouter([]),
+        {
+          provide: OAuthAuthenticator,
+          useValue: {
+            logout: () => undefined,
+          },
+        },
+      ],
     }).compileComponents();
   });
 

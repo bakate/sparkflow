@@ -1,24 +1,33 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { ChallengeDto } from '@sparkflow/contracts';
+import type { ChallengeDto, SubmissionDto } from '@sparkflow/contracts';
 import { firstValueFrom, timeout } from 'rxjs';
 
-import { fail, type ChallengeId, type Result, succeed } from '@shared/domain/result';
+import {
+  fail,
+  type ChallengeId,
+  type Result,
+  type SubmissionId,
+  succeed,
+} from '@shared/domain/result';
 import { WEB_API_CONFIG } from '@shared/infrastructure/web-api.config';
 import type {
   ChallengeFailure,
   ChallengeGateway,
   CreateChallengeCommand,
   PublishChallengeCommand,
+  SubmitChallengeProposalCommand,
   UpdateChallengeCommand,
 } from '../application/challenge-gateway';
 import type { Challenge } from '../domain/challenge';
+import type { Submission } from '../domain/submission';
 
 const challengeFailures = [
   'challenge-title-required',
   'challenge-description-required',
   'challenge-already-published',
   'challenge-not-found',
+  'submission-summary-required',
   'forbidden',
   'network-error',
   'unexpected-error',
@@ -37,6 +46,19 @@ export class HttpChallengeGateway implements ChallengeGateway {
           .pipe(timeout(5000)),
       );
       return succeed(challengeDtos.map((challengeDto) => toChallenge({ challengeDto })));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
+  async listMySubmissions(): Promise<Result<ChallengeFailure, readonly Submission[]>> {
+    try {
+      const submissionDtos = await firstValueFrom(
+        this.httpClient
+          .get<SubmissionDto[]>(this.buildUrl({ path: '/me/submissions' }))
+          .pipe(timeout(5000)),
+      );
+      return succeed(submissionDtos.map((submissionDto) => toSubmission({ submissionDto })));
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
     }
@@ -90,6 +112,22 @@ export class HttpChallengeGateway implements ChallengeGateway {
     }
   }
 
+  async submitChallengeProposal(
+    command: SubmitChallengeProposalCommand,
+  ): Promise<Result<ChallengeFailure, Submission>> {
+    try {
+      const submissionDto = await firstValueFrom(
+        this.httpClient.post<SubmissionDto>(
+          this.buildUrl({ path: `/challenges/${command.challengeId}/submissions` }),
+          { summary: command.summary },
+        ),
+      );
+      return succeed(toSubmission({ submissionDto }));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
   private buildUrl(input: { readonly path: string }): string {
     return `${this.webApiConfig.apiUrl}${input.path}`;
   }
@@ -104,6 +142,17 @@ const toChallenge = (input: { readonly challengeDto: ChallengeDto }): Challenge 
   createdAt: new Date(input.challengeDto.createdAt),
   publishedAt:
     input.challengeDto.publishedAt === null ? null : new Date(input.challengeDto.publishedAt),
+});
+
+const toSubmission = (input: { readonly submissionDto: SubmissionDto }): Submission => ({
+  id: input.submissionDto.id as SubmissionId,
+  challengeId: input.submissionDto.challengeId as ChallengeId,
+  startupOrganizationId: input.submissionDto.startupOrganizationId,
+  summary: input.submissionDto.summary,
+  status: input.submissionDto.status,
+  createdAt: new Date(input.submissionDto.createdAt),
+  decidedAt:
+    input.submissionDto.decidedAt === null ? null : new Date(input.submissionDto.decidedAt),
 });
 
 const toChallengeFailure = (input: { readonly error: unknown }): ChallengeFailure => {

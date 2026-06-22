@@ -1,23 +1,35 @@
 import { NgOptimizedImage } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Tag } from 'primeng/tag';
+import { AuthSession } from '@shared/auth/auth-session';
+import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
 
 @Component({
   selector: 'navbar',
-  imports: [NgOptimizedImage, RouterLink],
+  imports: [Button, NgOptimizedImage, RouterLink, Tag],
   template: `
-    <header class="p-3 mb-4 navbar-shadow border-bottom-1 ">
-      <div class="flex align-items-center justify-content-between gap-3 navbar-logo">
+    <header class="p-3 mb-4 navbar-shadow border-bottom-1">
+      <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-3">
         <a routerLink="/" class="flex gap-2 align-items-center navbar-logo">
           <img ngSrc="/logo.png" alt="sparkflow logo" width="40" height="40" />
-          <span class="mr-1 uppercase text-primary"> Sparkflow </span>
+          <span class="mr-1 uppercase text-primary">Sparkflow</span>
         </a>
 
-        <!-- <div>
-        <p class="m-0 mb-1 text-color-secondary text-sm font-bold uppercase">Sparkflow</p>
-        <h1 id="app-title" class="m-0 text-2xl font-bold">Open Innovation Platform</h1>
-      </div> -->
-        <!-- the navigation and user avatar will be there -->
+        @if (currentUser(); as user) {
+          <div
+            class="flex flex-column sm:flex-row sm:align-items-center gap-2 md:justify-content-end"
+          >
+            <p-tag [value]="roleLabel()" severity="info" />
+            <p-button
+              icon="pi pi-sign-out"
+              label="Logout"
+              severity="secondary"
+              (onClick)="logout()"
+            />
+          </div>
+        }
       </div>
     </header>
   `,
@@ -30,4 +42,18 @@ import { RouterLink } from '@angular/router';
     }
   `,
 })
-export class Navbar {}
+export class Navbar {
+  private readonly authSession = inject(AuthSession);
+  private readonly authenticator = inject(OAuthAuthenticator);
+
+  protected readonly currentUser = this.authSession.currentUser;
+  protected readonly roleLabel = computed(() => {
+    const user = this.currentUser();
+
+    return user === null ? '' : user.role.replaceAll('-', ' ');
+  });
+
+  protected logout(): void {
+    this.authenticator.logout();
+  }
+}

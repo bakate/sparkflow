@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { AuthSession } from '@shared/auth/auth-session';
 import { describe, expect, it } from 'vitest';
-import { fail, type ChallengeId, succeed } from '../../../shared/domain/result';
+import { fail, type ChallengeId, type SubmissionId, succeed } from '../../../shared/domain/result';
 import type { Challenge } from '../domain/challenge';
+import type { Submission } from '../domain/submission';
 import { CHALLENGE_GATEWAY, type ChallengeGateway } from './challenge-gateway';
 import { ChallengesStore } from './challenges-store';
 
@@ -11,9 +13,11 @@ describe('ChallengesStore', () => {
     const store = createStore({
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
+        listMySubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
       },
     });
 
@@ -27,9 +31,11 @@ describe('ChallengesStore', () => {
     const store = createStore({
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
+        listMySubmissions: async () => succeed([]),
         createChallenge: async () => succeed(createdChallenge),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
       },
     });
 
@@ -53,9 +59,11 @@ describe('ChallengesStore', () => {
     const store = createStore({
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
+        listMySubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => succeed(updatedChallenge),
         publishChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
       },
     });
 
@@ -74,13 +82,39 @@ describe('ChallengesStore', () => {
     const store = createStore({
       challengeGateway: {
         listChallenges: async () => fail('network-error'),
+        listMySubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
       },
     });
 
     await expect.poll(() => store.error()).toBe('network-error');
+  });
+
+  it('submits a proposal for a challenge', async () => {
+    const challenge = createChallenge({ id: 'challenge-1' });
+    const submission = createSubmission({ challengeId: challenge.id });
+    const store = createStore({
+      challengeGateway: {
+        listChallenges: async () => succeed([challenge]),
+        listMySubmissions: async () => succeed([]),
+        createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => fail('unexpected-error'),
+        publishChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => succeed(submission),
+      },
+    });
+
+    const result = await store.submitChallengeProposal({
+      challengeId: challenge.id,
+      summary: submission.summary,
+    });
+
+    expect(result).toEqual(succeed(submission));
+    expect(store.isSubmittingProposal({ challengeId: challenge.id })).toBe(false);
+    expect(store.hasSubmittedProposal({ challengeId: challenge.id })).toBe(true);
   });
 });
 
@@ -96,6 +130,8 @@ const createStore = (input: { readonly challengeGateway: ChallengeGateway }): Ch
     ],
   });
 
+  TestBed.inject(AuthSession).replaceAccessToken({ accessToken: createStartupAccessToken() });
+
   return TestBed.inject(ChallengesStore);
 };
 
@@ -108,3 +144,25 @@ const createChallenge = (input: { readonly id: string }): Challenge => ({
   createdAt: new Date('2026-06-21T10:00:00.000Z'),
   publishedAt: null,
 });
+
+const createSubmission = (input: { readonly challengeId: ChallengeId }): Submission => ({
+  id: 'submission-1' as SubmissionId,
+  challengeId: input.challengeId,
+  startupOrganizationId: 'org-startup',
+  summary: 'A serious implementation proposal.',
+  status: 'submitted',
+  createdAt: new Date('2026-06-22T10:00:00.000Z'),
+  decidedAt: null,
+});
+
+const createStartupAccessToken = (): string => {
+  const payload = {
+    sub: 'user-startup',
+    organization_id: 'org-startup',
+    realm_access: {
+      roles: ['startup-member'],
+    },
+  };
+
+  return `header.${btoa(JSON.stringify(payload))}.signature`;
+};
