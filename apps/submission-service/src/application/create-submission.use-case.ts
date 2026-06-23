@@ -44,7 +44,11 @@ export const createCreateSubmissionUseCase = (input: {
       now: input.clock.now(),
     });
 
-    await input.submissionRepository.save({ submission });
+    const saveResult = await input.submissionRepository.save({ submission });
+
+    if (!saveResult.ok) {
+      return fail(saveResult.error);
+    }
 
     const event: DomainEvent<SubmissionDto> = {
       eventId: input.idGenerator.generate(),

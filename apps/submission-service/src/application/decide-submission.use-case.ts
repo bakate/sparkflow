@@ -73,7 +73,11 @@ export const createDecideSubmissionUseCase = (input: {
     const now = input.clock.now();
     const decidedSubmission = decideSubmission({ decision: command.decision, now, submission });
 
-    await input.submissionRepository.save({ submission: decidedSubmission });
+    const saveResult = await input.submissionRepository.save({ submission: decidedSubmission });
+
+    if (!saveResult.ok) {
+      return fail(saveResult.error);
+    }
 
     const event: DomainEvent<SubmissionDto> = {
       eventId: input.idGenerator.generate(),

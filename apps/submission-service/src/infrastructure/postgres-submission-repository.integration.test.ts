@@ -188,8 +188,9 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
 
     await repository.save({ submission: selectedSubmission });
 
-    await expect(repository.save({ submission: secondSelectedSubmission })).rejects.toMatchObject({
-      code: "23505",
+    await expect(repository.save({ submission: secondSelectedSubmission })).resolves.toEqual({
+      ok: false,
+      error: "challenge-already-selected",
     });
   });
 });

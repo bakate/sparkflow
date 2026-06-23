@@ -1,6 +1,9 @@
 import { Pool } from "pg";
+import { fail, succeed } from "@sparkflow/result";
 import type { SubmissionRepository } from "../application/ports.ts";
 import type { Submission } from "../domain/submission.ts";
+
+const selectedSubmissionIndexName = "submissions_one_selected_per_challenge_idx";
 
 type SubmissionRow = {
   readonly id: string;
@@ -26,24 +29,34 @@ export const createPostgresSubmissionRepository = (input: {
   readonly pool: Pool;
 }): SubmissionRepository => ({
   save: async ({ submission }) => {
-    await input.pool.query(
-      `INSERT INTO submissions (
-        id, challenge_id, startup_organization_id, summary, status, created_at, decided_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (id) DO UPDATE SET
-        summary = EXCLUDED.summary,
-        status = EXCLUDED.status,
-        decided_at = EXCLUDED.decided_at`,
-      [
-        submission.id,
-        submission.challengeId,
-        submission.startupOrganizationId,
-        submission.summary,
-        submission.status,
-        submission.createdAt,
-        submission.decidedAt,
-      ],
-    );
+    try {
+      await input.pool.query(
+        `INSERT INTO submissions (
+          id, challenge_id, startup_organization_id, summary, status, created_at, decided_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (id) DO UPDATE SET
+          summary = EXCLUDED.summary,
+          status = EXCLUDED.status,
+          decided_at = EXCLUDED.decided_at`,
+        [
+          submission.id,
+          submission.challengeId,
+          submission.startupOrganizationId,
+          submission.summary,
+          submission.status,
+          submission.createdAt,
+          submission.decidedAt,
+        ],
+      );
+
+      return succeed(undefined);
+    } catch (error: unknown) {
+      if (isSelectedSubmissionUniquenessViolation({ error })) {
+        return fail("challenge-already-selected");
+      }
+
+      throw error;
+    }
   },
   findById: async ({ submissionId }) => {
     const result = await input.pool.query<SubmissionRow>(
@@ -102,4 +115,16 @@ export const ensureSubmissionSchema = async (input: { readonly pool: Pool }): Pr
     ON submissions (challenge_id)
     WHERE status = 'selected'
   `);
+};
+
+const isSelectedSubmissionUniquenessViolation = (input: { readonly error: unknown }): boolean => {
+  if (typeof input.error !== "object" || input.error === null) {
+    return false;
+  }
+
+  if (!("code" in input.error) || !("constraint" in input.error)) {
+    return false;
+  }
+
+  return input.error.code === "23505" && input.error.constraint === selectedSubmissionIndexName;
 };

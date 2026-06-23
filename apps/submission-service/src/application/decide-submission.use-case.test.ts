@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { eventNames, type DomainEvent, type SubmissionDto } from "@sparkflow/contracts";
+import { succeed } from "@sparkflow/result";
 import { companyAdminActor, startupMemberActor } from "@sparkflow/testing";
 import { describe, expect, it } from "vitest";
 import type { Submission } from "../domain/submission.ts";
@@ -33,10 +34,11 @@ const createInMemorySubmissionRepository = (
 
       if (submissionIndex === -1) {
         submissions.push(submission);
-        return;
+        return succeed(undefined);
       }
 
       submissions[submissionIndex] = submission;
+      return succeed(undefined);
     },
     findById: async ({ submissionId }) =>
       submissions.find((submission) => submission.id === submissionId) ?? null,

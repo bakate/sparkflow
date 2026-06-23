@@ -1,3 +1,4 @@
+import { succeed } from "@sparkflow/result";
 import { companyAdminActor, startupMemberActor } from "@sparkflow/testing";
 import { describe, expect, it } from "vitest";
 import type { Submission } from "../domain/submission.ts";
@@ -7,7 +8,7 @@ import type { SubmissionRepository } from "./ports.ts";
 const createInMemorySubmissionRepository = (input: {
   readonly submissions: readonly Submission[];
 }): SubmissionRepository => ({
-  save: async () => undefined,
+  save: async () => succeed(undefined),
   findById: async ({ submissionId }) =>
     input.submissions.find((submission) => submission.id === submissionId) ?? null,
   findByChallengeId: async ({ challengeId }) =>
