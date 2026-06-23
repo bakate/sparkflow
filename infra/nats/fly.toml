@@ -1,0 +1,14 @@
+app = "sparkflow-nats"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[mounts]
+  source = "sparkflow_nats"
+  destination = "/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "256mb"

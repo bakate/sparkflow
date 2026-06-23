@@ -1,4 +1,4 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, Injectable, Service, signal } from '@angular/core';
 import type { ActorContext, UserRole } from '@sparkflow/contracts';
 
 const authRoles = [
@@ -16,7 +16,7 @@ export type AuthUser = ActorContext & {
   readonly username: string;
 };
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class AuthSession {
   private readonly accessTokenState = signal<string | null>(null);
 

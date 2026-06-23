@@ -1,0 +1,12 @@
+[build]
+  command = "node apps/web/scripts/write-environment.mjs && pnpm --filter web build"
+  publish = "apps/web/dist/sparkflow/browser"
+
+[build.environment]
+  NODE_VERSION = "24.15.0"
+  PNPM_VERSION = "10.13.1"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
