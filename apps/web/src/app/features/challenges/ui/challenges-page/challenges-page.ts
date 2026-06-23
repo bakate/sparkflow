@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
-import type { ChallengeId, SubmissionId } from '@shared/domain/result';
+import type { ChallengeId } from '@shared/domain/result';
 import { AuthSession } from '@shared/auth/auth-session';
 import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
@@ -12,6 +12,7 @@ import { canCreateChallenge, type Challenge } from '../../domain/challenge';
 import type { Submission } from '../../domain/submission';
 import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gateway';
 import { ChallengeCard, type ChallengeCardState } from '../challenge-card/challenge-card';
+import { challengeErrorMessage } from '../challenge-error-message';
 import {
   ChallengeForm,
   type ChallengeFormSubmitted,
@@ -21,7 +22,6 @@ import {
   ChallengeSubmissionForm,
   type ChallengeSubmissionFormSubmitted,
 } from '../challenge-submission-form/challenge-submission-form';
-import { ChallengeSubmissionsReview } from '../challenge-submissions-review/challenge-submissions-review';
 import { ChallengeTabs, type ChallengeTabItem } from '../challenge-tabs/challenge-tabs';
 
 type StartupChallengeTab = 'assessed' | 'in-progress' | 'published';
@@ -30,15 +30,7 @@ type ChallengeTab = CompanyChallengeTab | StartupChallengeTab;
 
 @Component({
   selector: 'app-challenges-page',
-  imports: [
-    Button,
-    ChallengeCard,
-    ChallengeForm,
-    ChallengeSubmissionForm,
-    ChallengeSubmissionsReview,
-    ChallengeTabs,
-    Dialog,
-  ],
+  imports: [Button, ChallengeCard, ChallengeForm, ChallengeSubmissionForm, ChallengeTabs, Dialog],
   providers: [
     ChallengesStore,
     {
@@ -62,9 +54,6 @@ export class ChallengesPage {
   protected readonly selectedProposalChallengeId = signal<ChallengeId | null>(null);
   protected readonly proposalDialogError = signal<ChallengeFailure | null>(null);
   protected readonly proposalFormResetKey = signal(0);
-  protected readonly reviewDialogVisible = signal(false);
-  protected readonly selectedReviewChallengeId = signal<ChallengeId | null>(null);
-  protected readonly reviewDialogError = signal<ChallengeFailure | null>(null);
   protected readonly activeChallengeTab = signal<ChallengeTab>(
     readInitialChallengeTab({ value: this.route.snapshot.queryParamMap.get('tab') }),
   );
@@ -78,9 +67,6 @@ export class ChallengesPage {
   });
   protected readonly selectedChallenge = computed(() =>
     this.findChallenge({ challengeId: this.selectedChallengeId() }),
-  );
-  protected readonly selectedReviewChallenge = computed(() =>
-    this.findChallenge({ challengeId: this.selectedReviewChallengeId() }),
   );
   protected readonly usesStartupChallengeTabs = computed(
     () => this.currentActor()?.role === 'startup-member',
@@ -456,67 +442,8 @@ export class ChallengesPage {
     });
   }
 
-  protected async openReviewDialog(input: { readonly challengeId: ChallengeId }): Promise<void> {
-    this.selectedReviewChallengeId.set(input.challengeId);
-    this.reviewDialogError.set(null);
-    this.reviewDialogVisible.set(true);
-
-    const result = await this.store.loadChallengeSubmissions({ challengeId: input.challengeId });
-
-    if (!result.ok) {
-      this.reviewDialogError.set(result.error);
-    }
-  }
-
-  protected closeReviewDialog(): void {
-    this.reviewDialogError.set(null);
-    this.selectedReviewChallengeId.set(null);
-    this.reviewDialogVisible.set(false);
-  }
-
-  protected setReviewDialogVisible(input: { readonly visible: boolean }): void {
-    if (input.visible) {
-      this.reviewDialogVisible.set(true);
-      return;
-    }
-
-    this.closeReviewDialog();
-  }
-
-  protected async acceptSubmission(input: { readonly submissionId: SubmissionId }): Promise<void> {
-    const challengeId = this.selectedReviewChallengeId();
-
-    if (challengeId === null) {
-      return;
-    }
-
-    const result = await this.store.acceptSubmission({
-      challengeId,
-      submissionId: input.submissionId,
-    });
-
-    this.handleSubmissionDecisionResult({
-      result,
-      successSummary: 'Proposal accepted',
-    });
-  }
-
-  protected async rejectSubmission(input: { readonly submissionId: SubmissionId }): Promise<void> {
-    const challengeId = this.selectedReviewChallengeId();
-
-    if (challengeId === null) {
-      return;
-    }
-
-    const result = await this.store.rejectSubmission({
-      challengeId,
-      submissionId: input.submissionId,
-    });
-
-    this.handleSubmissionDecisionResult({
-      result,
-      successSummary: 'Proposal rejected',
-    });
+  protected openProposalsPage(input: { readonly challengeId: ChallengeId }): void {
+    void this.router.navigate(['/challenges', input.challengeId, 'proposals']);
   }
 
   protected publishChallenge(input: { readonly challengeId: ChallengeId }): void {
@@ -532,25 +459,19 @@ export class ChallengesPage {
   }
 
   protected errorMessage(error: ChallengeFailure | null): string {
-    return error === null ? '' : errorMessages[error];
+    return challengeErrorMessage({ error });
   }
 
   protected challengeFormDialogErrorMessage(): string | null {
     const error = this.challengeFormDialogError();
 
-    return error === null ? null : errorMessages[error];
+    return error === null ? null : challengeErrorMessage({ error });
   }
 
   protected proposalDialogErrorMessage(): string | null {
     const error = this.proposalDialogError();
 
-    return error === null ? null : errorMessages[error];
-  }
-
-  protected reviewDialogErrorMessage(): string | null {
-    const error = this.reviewDialogError();
-
-    return error === null ? null : errorMessages[error];
+    return error === null ? null : challengeErrorMessage({ error });
   }
 
   private resetChallengeForm(): void {
@@ -580,39 +501,7 @@ export class ChallengesPage {
 
     return this.store.challenges().find((challenge) => challenge.id === input.challengeId) ?? null;
   }
-
-  private handleSubmissionDecisionResult(input: {
-    readonly result: Awaited<ReturnType<ChallengesStore['acceptSubmission']>>;
-    readonly successSummary: string;
-  }): void {
-    if (!input.result.ok) {
-      this.reviewDialogError.set(input.result.error);
-      return;
-    }
-
-    this.reviewDialogError.set(null);
-    this.messageService.add({
-      severity: 'success',
-      summary: input.successSummary,
-      detail: `${input.result.value.startupOrganizationId} has been updated.`,
-    });
-  }
 }
-
-const errorMessages: Record<ChallengeFailure, string> = {
-  'challenge-title-required': 'Title is required.',
-  'challenge-description-required': 'Description is required.',
-  'challenge-already-archived': 'Challenge is already archived.',
-  'challenge-already-draft': 'Challenge is already a draft.',
-  'challenge-already-published': 'Challenge is already published.',
-  'challenge-not-found': 'Challenge was not found.',
-  'submission-not-found': 'Submission was not found.',
-  'submission-already-decided': 'Submission has already been decided.',
-  'submission-summary-required': 'Summary is required.',
-  forbidden: 'You are not allowed to perform this action.',
-  'network-error': 'API gateway is unreachable.',
-  'unexpected-error': 'Unexpected challenge error.',
-};
 
 const challengeTabs = ['archived', 'assessed', 'draft', 'in-progress', 'published'] as const;
 

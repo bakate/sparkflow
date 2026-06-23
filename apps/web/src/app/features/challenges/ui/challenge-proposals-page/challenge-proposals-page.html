@@ -1,0 +1,60 @@
+<section class="flex flex-column gap-4 py-4" aria-labelledby="challenge-proposals-title">
+  <div class="flex flex-column gap-3">
+    <a
+      class="inline-flex align-items-center gap-2 text-color-secondary no-underline"
+      routerLink="/challenges"
+    >
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>
+      Back to challenges
+    </a>
+
+    <div
+      class="flex flex-column lg:flex-row align-items-stretch lg:align-items-start justify-content-between gap-3"
+    >
+      <div class="flex flex-column gap-2">
+        <div class="flex align-items-center gap-3 flex-wrap">
+          <h2 id="challenge-proposals-title" class="m-0 text-2xl font-bold text-color">
+            {{ challengeTitle({ challenge: challenge() }) }}
+          </h2>
+          @if (challenge(); as selectedChallenge) {
+            <challenge-status-label [status]="selectedChallenge.status" />
+          }
+        </div>
+
+        @if (challenge(); as selectedChallenge) {
+          <p class="m-0 text-color-secondary line-height-3">{{ selectedChallenge.description }}</p>
+        } @else if (store.loading()) {
+          <p class="m-0 text-color-secondary">Loading challenge...</p>
+        } @else {
+          <p class="m-0 text-color-secondary">Challenge was not found.</p>
+        }
+      </div>
+
+      <div class="flex gap-2 flex-wrap">
+        <p-tag severity="info" [value]="pendingProposalCount() + ' pending'" />
+        <p-tag severity="success" [value]="acceptedProposalCount() + ' shortlisted'" />
+        <p-tag severity="danger" [value]="rejectedProposalCount() + ' rejected'" />
+      </div>
+    </div>
+  </div>
+
+  @if (store.error() !== null) {
+    <p
+      class="m-0 p-3 border-1 border-red-200 border-round bg-red-50 text-red-900 font-semibold"
+      role="alert"
+    >
+      {{ errorMessage({ error: store.error() }) }}
+    </p>
+  }
+
+  @if (challengeId(); as selectedChallengeId) {
+    <challenge-submissions-review
+      [submissions]="store.submissionsForChallenge({ challengeId: selectedChallengeId })"
+      [loading]="loadingSubmissions()"
+      [errorMessage]="null"
+      [decidingSubmissionIds]="store.decidingSubmissionIds()"
+      (accepted)="acceptSubmission($event)"
+      (rejected)="rejectSubmission($event)"
+    />
+  }
+</section>

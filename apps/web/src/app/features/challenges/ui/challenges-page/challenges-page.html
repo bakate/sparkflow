@@ -74,7 +74,7 @@
           (archive)="archiveChallenge($event)"
           (draft)="draftChallenge($event)"
           (publish)="publishChallenge($event)"
-          (reviewSubmissions)="openReviewDialog($event)"
+          (reviewSubmissions)="openProposalsPage($event)"
           (submitProposal)="openProposalDialog($event)"
         />
       }
@@ -118,27 +118,6 @@
         [resetKey]="proposalFormResetKey()"
         (submitted)="submitChallengeProposal($event)"
         (cancelled)="closeProposalDialog()"
-      />
-    }
-  </p-dialog>
-
-  <p-dialog
-    header="Review proposals"
-    [modal]="true"
-    [blockScroll]="true"
-    [dismissableMask]="false"
-    [visible]="reviewDialogVisible()"
-    [style]="{ width: 'min(54rem, calc(100vw - 2rem))' }"
-    (visibleChange)="setReviewDialogVisible({ visible: $event })"
-  >
-    @if (selectedReviewChallenge(); as selectedReviewChallenge) {
-      <challenge-submissions-review
-        [submissions]="store.submissionsForChallenge({ challengeId: selectedReviewChallenge.id })"
-        [loading]="store.isLoadingChallengeSubmissions({ challengeId: selectedReviewChallenge.id })"
-        [errorMessage]="reviewDialogErrorMessage()"
-        [decidingSubmissionIds]="store.decidingSubmissionIds()"
-        (accepted)="acceptSubmission($event)"
-        (rejected)="rejectSubmission($event)"
       />
     }
   </p-dialog>
