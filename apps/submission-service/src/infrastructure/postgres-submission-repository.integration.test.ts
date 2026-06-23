@@ -163,4 +163,33 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
       olderSubmission.id,
     ]);
   });
+
+  it("rejects more than one selected submission for the same challenge", async () => {
+    const repository = createPostgresSubmissionRepository({ pool });
+    const challengeId = faker.string.uuid();
+    const selectedSubmission: Submission = {
+      ...createSubmittedSubmission({
+        id: faker.string.uuid(),
+        challengeId,
+        createdAt: new Date("2026-06-16T09:00:00.000Z"),
+      }),
+      status: "selected",
+      decidedAt: new Date("2026-06-16T10:00:00.000Z"),
+    };
+    const secondSelectedSubmission: Submission = {
+      ...createSubmittedSubmission({
+        id: faker.string.uuid(),
+        challengeId,
+        createdAt: new Date("2026-06-16T11:00:00.000Z"),
+      }),
+      status: "selected",
+      decidedAt: new Date("2026-06-16T12:00:00.000Z"),
+    };
+
+    await repository.save({ submission: selectedSubmission });
+
+    await expect(repository.save({ submission: secondSelectedSubmission })).rejects.toMatchObject({
+      code: "23505",
+    });
+  });
 });

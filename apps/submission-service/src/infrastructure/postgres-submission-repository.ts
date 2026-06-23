@@ -97,4 +97,9 @@ export const ensureSubmissionSchema = async (input: { readonly pool: Pool }): Pr
     ADD CONSTRAINT submissions_status_check
     CHECK (status IN ('submitted', 'accepted', 'rejected', 'selected'))
   `);
+  await input.pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS submissions_one_selected_per_challenge_idx
+    ON submissions (challenge_id)
+    WHERE status = 'selected'
+  `);
 };
