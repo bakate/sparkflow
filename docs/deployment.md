@@ -180,14 +180,17 @@ pnpm --filter web add -D @netlify/angular-runtime
 Build command:
 
 ```sh
-node apps/web/scripts/write-environment.mjs && pnpm --filter web build
+node scripts/write-environment.mjs && pnpm build
 ```
 
 Publish directory:
 
 ```txt
-apps/web/dist/sparkflow/browser
+dist/sparkflow/browser
 ```
+
+Netlify must use `apps/web` as the build base. The Angular runtime validates the publish directory
+relative to that base.
 
 Required Netlify environment variables:
 

@@ -1,6 +1,7 @@
 [build]
-  command = "node apps/web/scripts/write-environment.mjs && pnpm --filter web build"
-  publish = "apps/web/dist/sparkflow/browser"
+  base = "apps/web"
+  command = "node scripts/write-environment.mjs && pnpm build"
+  publish = "dist/sparkflow/browser"
 
 [build.environment]
   NODE_VERSION = "24.15.0"

@@ -1,7 +1,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const environmentFilePath = resolve('apps/web/src/environments/environment.ts');
+const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+const webAppDirectory = resolve(scriptDirectory, '..');
+const environmentFilePath = resolve(webAppDirectory, 'src/environments/environment.ts');
 const netlifyBuild = process.env.NETLIFY === 'true';
 
 const config = {
