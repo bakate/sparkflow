@@ -171,6 +171,12 @@ fly secrets list --config apps/api-gateway/fly.toml
 
 Netlify uses `netlify.toml`.
 
+Install Netlify's Angular runtime in the web application before linking the repository:
+
+```sh
+pnpm --filter web add -D @netlify/angular-runtime
+```
+
 Build command:
 
 ```sh

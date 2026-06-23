@@ -359,6 +359,9 @@ importers:
       '@angular/compiler-cli':
         specifier: ^22.0.0
         version: 22.0.2(@angular/compiler@22.0.2)(typescript@6.0.3)
+      '@netlify/angular-runtime':
+        specifier: ^4.0.0
+        version: 4.0.0
       '@sparkflow/testing':
         specifier: workspace:*
         version: link:../../packages/testing
@@ -1610,6 +1613,18 @@ packages:
   '@napi-rs/nice@1.1.1':
     resolution: {integrity: sha512-xJIPs+bYuc9ASBl+cvGsKbGrJmS6fAKaSZCnT0lhahT5rhA2VVy9/EcIgd2JhtEuFOJNx7UHNn/qiTPTY4nrQw==}
     engines: {node: '>= 10'}
+
+  '@netlify/angular-runtime@4.0.0':
+    resolution: {integrity: sha512-VrFrzw0MbLWLCG853dJM5gHDg2uRMBWuedEb1DfLDNyja/dQnmQTMPE2ke9QTbebFA01T0aynM0aeU7DyinPOQ==}
+    engines: {node: ^22.22.0 || ^24.13.1 || >=26.0.0}
+
+  '@netlify/edge-functions@3.0.8':
+    resolution: {integrity: sha512-ml1oCDsRTTRmZS2nUj8XRD1b6+foEiZT3lPk7qQ4nv/jnxylHJ20ooPzPDH+cJmGjXFrMeR14/91W1o6D2ftBg==}
+    engines: {node: '>=18.0.0'}
+
+  '@netlify/types@2.8.0':
+    resolution: {integrity: sha512-8/g0Pt6y6wXj5Ia5eeYLiXhRfWeqZXGXpGFeCiiQdUOem+FPtXdA4+YdGxqzWc7D0AvptKSO01KGeeVWHSu8Kg==}
+    engines: {node: ^18.14.0 || >=20}
 
   '@npmcli/agent@4.0.2':
     resolution: {integrity: sha512-EUEuWAxnL07Sp5/iC/1X6Xj+XThUvnbei9zfRWZdEXa7lss9RTHMhAHBeg+MZ5To9s/gGaSI+UwZTPdYMvKSeg==}
@@ -4828,6 +4843,17 @@ snapshots:
       '@napi-rs/nice-win32-ia32-msvc': 1.1.1
       '@napi-rs/nice-win32-x64-msvc': 1.1.1
     optional: true
+
+  '@netlify/angular-runtime@4.0.0':
+    dependencies:
+      '@netlify/edge-functions': 3.0.8
+      semver: 7.8.4
+
+  '@netlify/edge-functions@3.0.8':
+    dependencies:
+      '@netlify/types': 2.8.0
+
+  '@netlify/types@2.8.0': {}
 
   '@npmcli/agent@4.0.2':
     dependencies:
