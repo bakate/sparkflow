@@ -15,6 +15,7 @@
     "test:integration:backend": "pnpm test:integration:backend:ts && pnpm test:integration:evaluation",
     "test:integration:backend:ts": "CHALLENGE_SERVICE_TEST_DATABASE_URL=postgres://sparkflow:sparkflow@localhost:5432/sparkflow_challenge CHALLENGE_SERVICE_TEST_NATS_URL=nats://localhost:4222 SUBMISSION_SERVICE_TEST_DATABASE_URL=postgres://sparkflow:sparkflow@localhost:5432/sparkflow_submission SUBMISSION_SERVICE_TEST_NATS_URL=nats://localhost:4222 NOTIFICATION_SERVICE_TEST_DATABASE_URL=postgres://sparkflow:sparkflow@localhost:5432/sparkflow_notification NOTIFICATION_SERVICE_TEST_NATS_URL=nats://localhost:4222 pnpm --recursive --filter \"./apps/challenge-service\" --filter \"./apps/submission-service\" --filter \"./apps/notification-service\" test:integration",
     "test:integration:evaluation": "cd apps/evaluation-service && EVALUATION_SERVICE_TEST_DATABASE_URL=postgres://sparkflow:sparkflow@localhost:5432/sparkflow_evaluation EVALUATION_SERVICE_TEST_NATS_URL=nats://localhost:4222 uv run pytest",
+    "smoke:proposal-workflow": "bash infra/scripts/smoke-proposal-workflow.sh",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
     "db:reset:evaluation": "sh infra/scripts/reset-postgres-databases.sh evaluation",
