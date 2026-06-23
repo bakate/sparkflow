@@ -105,8 +105,27 @@ For a first deployment, use either:
 Whichever option is chosen, update the `sparkflow-web` Keycloak client with the deployed frontend
 origin:
 
-- redirect URI: `https://<netlify-site>.netlify.app/*`
+- root URL: `https://<netlify-site>.netlify.app`
+- home URL: `https://<netlify-site>.netlify.app`
+- valid redirect URI: `https://<netlify-site>.netlify.app/*`
+- valid post logout redirect URI: `https://<netlify-site>.netlify.app/*`
 - web origin: `https://<netlify-site>.netlify.app`
+
+Do not use `http://` for the Netlify URL. Netlify serves the production frontend over HTTPS.
+
+For a demo environment, the Keycloak login page can display the seeded test accounts. In the
+`sparkflow` realm, open `Realm settings` and set `HTML Display name` to something like:
+
+```html
+Sparkflow<br />
+<small>
+  Demo accounts: company-admin@sparkflow.local, startup-member@sparkflow.local,
+  reviewer@sparkflow.local
+</small>
+```
+
+Only do this for a demo or staging environment. Publicly displaying test accounts is not acceptable
+for a production environment.
 
 Then set the gateway secrets:
 

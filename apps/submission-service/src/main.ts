@@ -45,5 +45,5 @@ const server = await buildSubmissionHttpServer({
   listSubmissionsUseCase: createListSubmissionsUseCase({ submissionRepository }),
 });
 
-await server.listen({ host: "0.0.0.0", port });
+await server.listen({ host: "::", port });
 logger.info("submission-service started", { port });

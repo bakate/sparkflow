@@ -8,5 +8,5 @@ const server = await buildIdentityHttpServer({
   listUsersUseCase: createListUsersUseCase(),
 });
 
-await server.listen({ host: "0.0.0.0", port });
+await server.listen({ host: "::", port });
 logger.info("identity-service started", { port });

@@ -36,5 +36,5 @@ const server = await buildNotificationHttpServer({
   listNotificationsUseCase: createListNotificationsUseCase({ notificationRepository }),
 });
 
-await server.listen({ host: "0.0.0.0", port });
+await server.listen({ host: "::", port });
 logger.info("notification-service started", { port });
