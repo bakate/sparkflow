@@ -15,7 +15,7 @@ type Severity = 'contrast' | 'danger' | 'info' | 'secondary' | 'success';
 const STATUS_CONFIG: Record<ChallengeStatusLabelValue, { label: string; severity: Severity }> = {
   assessed: { label: 'Assessed', severity: 'info' },
   archived: { label: 'Archived', severity: 'contrast' },
-  accepted: { label: 'Accepted', severity: 'success' },
+  accepted: { label: 'Shortlisted', severity: 'success' },
   open: { label: 'Open', severity: 'success' },
   rejected: { label: 'Rejected', severity: 'danger' },
   'under-review': { label: 'Under review', severity: 'info' },

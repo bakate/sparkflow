@@ -34,7 +34,7 @@ export class ChallengeSubmissionsReview {
   protected statusLabel(input: { readonly status: SubmissionStatus }): string {
     const labels: Record<SubmissionStatus, string> = {
       submitted: 'Pending',
-      accepted: 'Accepted',
+      accepted: 'Shortlisted',
       rejected: 'Rejected',
     };
 

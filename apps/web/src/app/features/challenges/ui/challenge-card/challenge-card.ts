@@ -172,7 +172,7 @@ export class ChallengeCard {
     const status = this.state().proposalStatus;
 
     if (status === 'accepted') {
-      return 'Proposal accepted';
+      return 'Proposal shortlisted';
     }
 
     if (status === 'rejected') {
