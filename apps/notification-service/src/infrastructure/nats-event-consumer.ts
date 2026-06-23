@@ -18,6 +18,7 @@ const consumedEventNames = [
   eventNames.evaluationSubmitted,
   eventNames.submissionAccepted,
   eventNames.submissionRejected,
+  eventNames.submissionSelected,
 ] as const;
 
 export type NatsEventConsumer = {

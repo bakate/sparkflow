@@ -121,6 +121,10 @@ const createWorkflowServer = async (input: {
         return Response.json({ id: input.submissionId, status: "accepted" });
       }
 
+      if (url.endsWith(`/submissions/${input.submissionId}/select`)) {
+        return Response.json({ id: input.submissionId, status: "selected" });
+      }
+
       if (url.endsWith("/notifications")) {
         return Response.json([{ eventId: faker.string.uuid(), title: "Submission accepted" }]);
       }
@@ -487,6 +491,13 @@ describe("buildApiGatewayServer", () => {
       },
     });
     await server.inject({
+      method: "POST",
+      url: `/challenges/${challengeId}/submissions/${submissionId}/select`,
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+    await server.inject({
       method: "GET",
       url: "/notifications",
       headers: { authorization: authorizationHeader, "x-organization-id": "org-startup" },
@@ -505,6 +516,8 @@ describe("buildApiGatewayServer", () => {
       `POST http://evaluation-service/submissions/${submissionId}/evaluations`,
       `GET http://challenge-service/challenges/${challengeId}`,
       `POST http://submission-service/submissions/${submissionId}/accept`,
+      `GET http://challenge-service/challenges/${challengeId}`,
+      `POST http://submission-service/submissions/${submissionId}/select`,
       "GET http://notification-service/notifications",
     ]);
     expect(readJsonBody({ request: readCapturedRequest({ requests, index: 0 }) })).toEqual({

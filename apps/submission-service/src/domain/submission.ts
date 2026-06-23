@@ -13,6 +13,7 @@ export type Submission = {
 export type SubmissionError =
   | "submission-summary-required"
   | "submission-already-decided"
+  | "submission-not-shortlisted"
   | "submission-not-found";
 
 export const createSubmission = (input: {
@@ -46,6 +47,15 @@ export const rejectSubmission = (input: {
 }): Submission => ({
   ...input.submission,
   status: "rejected",
+  decidedAt: input.now,
+});
+
+export const selectSubmission = (input: {
+  readonly submission: Submission;
+  readonly now: Date;
+}): Submission => ({
+  ...input.submission,
+  status: "selected",
   decidedAt: input.now,
 });
 

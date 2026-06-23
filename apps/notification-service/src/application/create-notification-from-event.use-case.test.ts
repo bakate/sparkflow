@@ -116,6 +116,12 @@ describe("CreateNotificationFromEventUseCase", () => {
       title: "Submission rejected",
       message: "Submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 is now rejected.",
     },
+    {
+      fileName: "submission-selected-event.json",
+      eventName: "submission.selected",
+      title: "Submission selected",
+      message: "Submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 is now selected.",
+    },
   ] as const)(
     "creates a notification from $eventName fixture",
     async ({ eventName, fileName, message, title }) => {

@@ -13,6 +13,7 @@ export const eventNames = {
   evaluationSubmitted: "evaluation.submitted",
   submissionAccepted: "submission.accepted",
   submissionRejected: "submission.rejected",
+  submissionSelected: "submission.selected",
   notificationCreated: "notification.created",
 } as const;
 
@@ -39,7 +40,7 @@ export type ChallengeDto = {
   readonly publishedAt: string | null;
 };
 
-export type SubmissionStatus = "submitted" | "accepted" | "rejected";
+export type SubmissionStatus = "submitted" | "accepted" | "rejected" | "selected";
 
 export type SubmissionDto = {
   readonly id: string;

@@ -99,5 +99,26 @@ export const buildSubmissionHttpServer = async (input: {
     },
   );
 
+  server.post<{ Params: { readonly submissionId: string } }>(
+    "/submissions/:submissionId/select",
+    async (request, reply) => {
+      const result = await input.decideSubmissionUseCase.execute({
+        actor: readActor({ headers: request.headers }),
+        submissionId: request.params.submissionId,
+        decision: "select",
+        correlationId: readCorrelationId({ headers: request.headers }),
+      });
+
+      if (!result.ok) {
+        const statusCode = result.error === "submission-not-found" ? 404 : 400;
+        return reply
+          .code(result.error === "forbidden" ? 403 : statusCode)
+          .send({ error: result.error });
+      }
+
+      return reply.send(result.value);
+    },
+  );
+
   return server;
 };

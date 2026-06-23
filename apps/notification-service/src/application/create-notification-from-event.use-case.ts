@@ -38,6 +38,7 @@ const buildNotificationText = (
   if (
     (event.eventName === eventNames.submissionAccepted ||
       event.eventName === eventNames.submissionRejected ||
+      event.eventName === eventNames.submissionSelected ||
       event.eventName === eventNames.submissionCreated) &&
     isSubmissionPayload(event.payload)
   ) {

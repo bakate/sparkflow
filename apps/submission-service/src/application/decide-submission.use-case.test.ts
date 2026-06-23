@@ -122,6 +122,41 @@ describe("DecideSubmissionUseCase", () => {
     expect(eventPublisher.events[0]?.eventName).toBe(eventNames.submissionRejected);
   });
 
+  it("selects a shortlisted submission and emits submission.selected", async () => {
+    const submission: Submission = {
+      ...createSubmittedSubmission(),
+      status: "accepted",
+      decidedAt: fixedDecidedAt,
+    };
+    const submissionRepository = createInMemorySubmissionRepository([submission]);
+    const eventPublisher = createInMemoryEventPublisher();
+    const useCase = createDecideSubmissionUseCase({
+      submissionRepository,
+      clock: fixedClock,
+      eventPublisher,
+      idGenerator: fixedIdGenerator,
+    });
+
+    const result = await useCase.execute({
+      actor: companyAdminActor,
+      submissionId: submission.id,
+      decision: "select",
+      correlationId: "correlation-id",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(submissionRepository.submissions[0]?.status).toBe("selected");
+    expect(eventPublisher.events[0]).toMatchObject({
+      eventName: eventNames.submissionSelected,
+      occurredAt: "2026-06-16T10:00:00.000Z",
+      payload: {
+        id: submission.id,
+        status: "selected",
+        decidedAt: "2026-06-16T10:00:00.000Z",
+      },
+    });
+  });
+
   it("rejects decisions from non company admins", async () => {
     const submission = createSubmittedSubmission();
     const eventPublisher = createInMemoryEventPublisher();
@@ -165,6 +200,27 @@ describe("DecideSubmissionUseCase", () => {
     });
 
     expect(result).toEqual({ ok: false, error: "submission-already-decided" });
+    expect(eventPublisher.events).toHaveLength(0);
+  });
+
+  it("rejects final selection before shortlisting", async () => {
+    const submission = createSubmittedSubmission();
+    const eventPublisher = createInMemoryEventPublisher();
+    const useCase = createDecideSubmissionUseCase({
+      submissionRepository: createInMemorySubmissionRepository([submission]),
+      clock: fixedClock,
+      eventPublisher,
+      idGenerator: fixedIdGenerator,
+    });
+
+    const result = await useCase.execute({
+      actor: companyAdminActor,
+      submissionId: submission.id,
+      decision: "select",
+      correlationId: "correlation-id",
+    });
+
+    expect(result).toEqual({ ok: false, error: "submission-not-shortlisted" });
     expect(eventPublisher.events).toHaveLength(0);
   });
 });

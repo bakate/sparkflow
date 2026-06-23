@@ -459,6 +459,35 @@ export const buildApiGatewayServer = async (input: {
     },
   );
 
+  server.post<{ Params: { readonly challengeId: string; readonly submissionId: string } }>(
+    "/challenges/:challengeId/submissions/:submissionId/select",
+    async (request, reply) => {
+      const actor = await authenticate(request.headers);
+      if (actor === null) {
+        return reply.code(401).send({ error: "unauthorized" });
+      }
+
+      const guardResponse = await requireOwnedChallenge({
+        actor,
+        challengeId: request.params.challengeId,
+        headers: request.headers,
+      });
+
+      if (guardResponse !== null) {
+        return reply.code(guardResponse.statusCode).send(guardResponse.body);
+      }
+
+      const response = await proxy({
+        actor,
+        url: `${input.serviceUrls.submissionServiceUrl}/submissions/${request.params.submissionId}/select`,
+        method: "POST",
+        headers: request.headers,
+      });
+
+      return reply.code(response.statusCode).send(response.body);
+    },
+  );
+
   server.get("/notifications", async (request, reply) => {
     const actor = await authenticate(request.headers);
     if (actor === null) {

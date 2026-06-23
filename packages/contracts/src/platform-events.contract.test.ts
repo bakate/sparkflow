@@ -73,7 +73,7 @@ const parseChallengePublishedEvent = (value: unknown): DomainEvent<ChallengeDto>
 };
 
 const isSubmissionStatus = (value: unknown): value is SubmissionDto["status"] =>
-  value === "submitted" || value === "accepted" || value === "rejected";
+  value === "submitted" || value === "accepted" || value === "rejected" || value === "selected";
 
 const parseSubmissionEvent = (input: {
   readonly value: unknown;
@@ -133,6 +133,12 @@ describe("platform event contracts", () => {
       eventName: eventNames.submissionRejected,
       status: "rejected",
       decidedAt: "2026-06-16T11:00:00.000Z",
+    },
+    {
+      fileName: "submission-selected-event.json",
+      eventName: eventNames.submissionSelected,
+      status: "selected",
+      decidedAt: "2026-06-16T12:00:00.000Z",
     },
   ] as const)(
     "keeps $eventName compatible with TypeScript contracts",

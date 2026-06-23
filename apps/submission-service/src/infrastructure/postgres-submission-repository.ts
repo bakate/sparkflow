@@ -7,7 +7,7 @@ type SubmissionRow = {
   readonly challenge_id: string;
   readonly startup_organization_id: string;
   readonly summary: string;
-  readonly status: "submitted" | "accepted" | "rejected";
+  readonly status: "submitted" | "accepted" | "rejected" | "selected";
   readonly created_at: Date;
   readonly decided_at: Date | null;
 };
@@ -83,9 +83,18 @@ export const ensureSubmissionSchema = async (input: { readonly pool: Pool }): Pr
       challenge_id uuid NOT NULL,
       startup_organization_id text NOT NULL,
       summary text NOT NULL,
-      status text NOT NULL CHECK (status IN ('submitted', 'accepted', 'rejected')),
+      status text NOT NULL CHECK (status IN ('submitted', 'accepted', 'rejected', 'selected')),
       created_at timestamptz NOT NULL,
       decided_at timestamptz NULL
     )
+  `);
+  await input.pool.query(`
+    ALTER TABLE submissions
+    DROP CONSTRAINT IF EXISTS submissions_status_check
+  `);
+  await input.pool.query(`
+    ALTER TABLE submissions
+    ADD CONSTRAINT submissions_status_check
+    CHECK (status IN ('submitted', 'accepted', 'rejected', 'selected'))
   `);
 };

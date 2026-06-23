@@ -35,6 +35,12 @@ const rejectedSubmissionDto: SubmissionDto = {
   decidedAt: "2026-06-16T11:00:00.000Z",
 };
 
+const selectedSubmissionDto: SubmissionDto = {
+  ...submissionDto,
+  status: "selected",
+  decidedAt: "2026-06-16T12:00:00.000Z",
+};
+
 const openServers: { readonly close: () => Promise<void> }[] = [];
 
 const readRecordedCommand = <TCommand>(input: {
@@ -78,9 +84,15 @@ const createRecordingDecideSubmissionUseCase = (input?: {
         return input.result;
       }
 
-      return command.decision === "accept"
-        ? succeed(acceptedSubmissionDto)
-        : succeed(rejectedSubmissionDto);
+      if (command.decision === "accept") {
+        return succeed(acceptedSubmissionDto);
+      }
+
+      if (command.decision === "reject") {
+        return succeed(rejectedSubmissionDto);
+      }
+
+      return succeed(selectedSubmissionDto);
     },
   };
 };
@@ -324,6 +336,37 @@ describe("buildSubmissionHttpServer", () => {
       submissionId: "submission-1",
       decision: "reject",
       correlationId: "correlation-2",
+    });
+  });
+
+  it("maps POST /submissions/:submissionId/select to a select decision", async () => {
+    const decideSubmissionUseCase = createRecordingDecideSubmissionUseCase();
+    const server = await createServer({ decideSubmissionUseCase });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/submissions/submission-1/select",
+      headers: {
+        "x-correlation-id": "correlation-3",
+        "x-user-id": "company-user",
+        "x-organization-id": "org-company",
+        "x-role": "company-admin",
+      },
+    });
+
+    const command = readRecordedCommand({ commands: decideSubmissionUseCase.commands });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(selectedSubmissionDto);
+    expect(command).toEqual({
+      actor: {
+        userId: "company-user",
+        organizationId: "org-company",
+        role: "company-admin",
+      },
+      submissionId: "submission-1",
+      decision: "select",
+      correlationId: "correlation-3",
     });
   });
 
