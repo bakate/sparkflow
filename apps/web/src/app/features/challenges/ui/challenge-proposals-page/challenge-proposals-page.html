@@ -33,6 +33,7 @@
       <div class="flex gap-2 flex-wrap">
         <p-tag severity="info" [value]="pendingProposalCount() + ' pending'" />
         <p-tag severity="success" [value]="acceptedProposalCount() + ' shortlisted'" />
+        <p-tag severity="success" [value]="selectedProposalCount() + ' selected'" />
         <p-tag severity="danger" [value]="rejectedProposalCount() + ' rejected'" />
       </div>
     </div>
@@ -55,6 +56,7 @@
       [decidingSubmissionIds]="store.decidingSubmissionIds()"
       (accepted)="acceptSubmission($event)"
       (rejected)="rejectSubmission($event)"
+      (selected)="selectSubmission($event)"
     />
   }
 </section>

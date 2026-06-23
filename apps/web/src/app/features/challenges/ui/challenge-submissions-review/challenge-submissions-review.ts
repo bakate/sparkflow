@@ -18,9 +18,14 @@ export class ChallengeSubmissionsReview {
   readonly decidingSubmissionIds = input<readonly string[]>([]);
   readonly accepted = output<{ readonly submissionId: SubmissionId }>();
   readonly rejected = output<{ readonly submissionId: SubmissionId }>();
+  readonly selected = output<{ readonly submissionId: SubmissionId }>();
 
   protected canDecide(input: { readonly submission: Submission }): boolean {
     return input.submission.status === 'submitted';
+  }
+
+  protected canSelect(input: { readonly submission: Submission }): boolean {
+    return input.submission.status === 'accepted';
   }
 
   protected isDeciding(input: { readonly submissionId: SubmissionId }): boolean {
@@ -36,6 +41,7 @@ export class ChallengeSubmissionsReview {
       submitted: 'Pending',
       accepted: 'Shortlisted',
       rejected: 'Rejected',
+      selected: 'Selected',
     };
 
     return labels[input.status];
@@ -44,7 +50,7 @@ export class ChallengeSubmissionsReview {
   protected statusSeverity(input: {
     readonly status: SubmissionStatus;
   }): 'danger' | 'info' | 'success' {
-    if (input.status === 'accepted') {
+    if (input.status === 'accepted' || input.status === 'selected') {
       return 'success';
     }
 

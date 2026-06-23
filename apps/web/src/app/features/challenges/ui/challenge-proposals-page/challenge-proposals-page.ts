@@ -45,6 +45,9 @@ export class ChallengeProposalsPage {
   protected readonly rejectedProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'rejected').length,
   );
+  protected readonly selectedProposalCount = computed(
+    () => this.submissions().filter((submission) => submission.status === 'selected').length,
+  );
   protected readonly loadingSubmissions = computed(() => {
     const challengeId = this.challengeId();
 
@@ -82,6 +85,14 @@ export class ChallengeProposalsPage {
     });
   }
 
+  protected async selectSubmission(input: { readonly submissionId: SubmissionId }): Promise<void> {
+    await this.decideSubmission({
+      submissionId: input.submissionId,
+      decision: 'select',
+      successSummary: 'Final startup selected',
+    });
+  }
+
   protected errorMessage(input: { readonly error: ChallengeFailure | null }): string | null {
     return input.error === null ? null : challengeErrorMessage({ error: input.error });
   }
@@ -106,7 +117,7 @@ export class ChallengeProposalsPage {
 
   private async decideSubmission(input: {
     readonly submissionId: SubmissionId;
-    readonly decision: 'accept' | 'reject';
+    readonly decision: 'accept' | 'reject' | 'select';
     readonly successSummary: string;
   }): Promise<void> {
     const challengeId = this.challengeId();
@@ -115,10 +126,11 @@ export class ChallengeProposalsPage {
       return;
     }
 
-    const result =
-      input.decision === 'accept'
-        ? await this.store.acceptSubmission({ challengeId, submissionId: input.submissionId })
-        : await this.store.rejectSubmission({ challengeId, submissionId: input.submissionId });
+    const result = await this.runSubmissionDecision({
+      challengeId,
+      decision: input.decision,
+      submissionId: input.submissionId,
+    });
 
     if (!result.ok) {
       return;
@@ -128,6 +140,31 @@ export class ChallengeProposalsPage {
       severity: 'success',
       summary: input.successSummary,
       detail: `${result.value.startupOrganizationId} has been updated.`,
+    });
+  }
+
+  private runSubmissionDecision(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionId: SubmissionId;
+    readonly decision: 'accept' | 'reject' | 'select';
+  }) {
+    if (input.decision === 'accept') {
+      return this.store.acceptSubmission({
+        challengeId: input.challengeId,
+        submissionId: input.submissionId,
+      });
+    }
+
+    if (input.decision === 'reject') {
+      return this.store.rejectSubmission({
+        challengeId: input.challengeId,
+        submissionId: input.submissionId,
+      });
+    }
+
+    return this.store.selectSubmission({
+      challengeId: input.challengeId,
+      submissionId: input.submissionId,
     });
   }
 }

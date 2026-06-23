@@ -129,7 +129,11 @@ export class ChallengesPage {
 
       const submission = this.store.submissionForChallenge({ challengeId: challenge.id });
 
-      return submission?.status === 'accepted' || submission?.status === 'rejected';
+      return (
+        submission?.status === 'accepted' ||
+        submission?.status === 'rejected' ||
+        submission?.status === 'selected'
+      );
     });
   });
   protected readonly challengeCards = computed<readonly ChallengeCardViewModel[]>(() =>
@@ -171,7 +175,11 @@ export class ChallengesPage {
 
         const submission = this.store.submissionForChallenge({ challengeId: challenge.id });
 
-        return submission?.status === 'accepted' || submission?.status === 'rejected';
+        return (
+          submission?.status === 'accepted' ||
+          submission?.status === 'rejected' ||
+          submission?.status === 'selected'
+        );
       }).length,
   );
   protected readonly draftCompanyChallengeCount = computed(
@@ -309,7 +317,11 @@ export class ChallengesPage {
       return this.store.hasAssessedSubmissionForChallenge({ challengeId: input.challengeId });
     }
 
-    return input.submission?.status === 'accepted' || input.submission?.status === 'rejected';
+    return (
+      input.submission?.status === 'accepted' ||
+      input.submission?.status === 'rejected' ||
+      input.submission?.status === 'selected'
+    );
   }
 
   protected proposalCountForChallenge(input: { readonly challengeId: ChallengeId }): number {

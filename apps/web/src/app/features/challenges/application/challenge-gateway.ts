@@ -12,6 +12,7 @@ export type ChallengeFailure =
   | 'challenge-not-found'
   | 'submission-not-found'
   | 'submission-already-decided'
+  | 'submission-not-shortlisted'
   | 'submission-summary-required'
   | 'forbidden'
   | 'network-error'
@@ -82,6 +83,9 @@ export type ChallengeGateway = {
     command: DecideSubmissionCommand,
   ) => Promise<Result<ChallengeFailure, Submission>>;
   readonly rejectSubmission: (
+    command: DecideSubmissionCommand,
+  ) => Promise<Result<ChallengeFailure, Submission>>;
+  readonly selectSubmission: (
     command: DecideSubmissionCommand,
   ) => Promise<Result<ChallengeFailure, Submission>>;
 };

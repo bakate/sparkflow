@@ -9,6 +9,7 @@ const errorMessages: Record<ChallengeFailure, string> = {
   'challenge-not-found': 'Challenge was not found.',
   'submission-not-found': 'Submission was not found.',
   'submission-already-decided': 'Submission has already been decided.',
+  'submission-not-shortlisted': 'Submission must be shortlisted before final selection.',
   'submission-summary-required': 'Summary is required.',
   forbidden: 'You are not allowed to perform this action.',
   'network-error': 'API gateway is unreachable.',

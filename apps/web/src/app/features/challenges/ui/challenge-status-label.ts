@@ -8,6 +8,7 @@ export type ChallengeStatusLabelValue =
   | 'assessed'
   | 'open'
   | 'rejected'
+  | 'selected'
   | 'under-review';
 
 type Severity = 'contrast' | 'danger' | 'info' | 'secondary' | 'success';
@@ -18,6 +19,7 @@ const STATUS_CONFIG: Record<ChallengeStatusLabelValue, { label: string; severity
   accepted: { label: 'Shortlisted', severity: 'success' },
   open: { label: 'Open', severity: 'success' },
   rejected: { label: 'Rejected', severity: 'danger' },
+  selected: { label: 'Selected', severity: 'success' },
   'under-review': { label: 'Under review', severity: 'info' },
   published: { label: 'Published', severity: 'success' },
   draft: { label: 'Draft', severity: 'secondary' },

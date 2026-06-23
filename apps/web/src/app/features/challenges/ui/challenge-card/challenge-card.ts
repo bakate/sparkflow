@@ -67,7 +67,11 @@ export class ChallengeCard {
       return 'archived';
     }
 
-    if (proposalStatus === 'accepted' || proposalStatus === 'rejected') {
+    if (
+      proposalStatus === 'accepted' ||
+      proposalStatus === 'rejected' ||
+      proposalStatus === 'selected'
+    ) {
       return proposalStatus;
     }
 
@@ -177,6 +181,10 @@ export class ChallengeCard {
 
     if (status === 'rejected') {
       return 'Proposal rejected';
+    }
+
+    if (status === 'selected') {
+      return 'Proposal selected';
     }
 
     return 'Proposal submitted';

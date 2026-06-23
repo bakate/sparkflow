@@ -55,25 +55,36 @@
             </div>
           </div>
 
-          @if (canDecide({ submission })) {
+          @if (canDecide({ submission }) || canSelect({ submission })) {
             <div class="flex gap-2 justify-content-end">
-              <p-button
-                icon="pi pi-times"
-                label="Reject"
-                severity="danger"
-                [outlined]="true"
-                [loading]="isDeciding({ submissionId: submission.id })"
-                [disabled]="isDeciding({ submissionId: submission.id })"
-                (onClick)="rejected.emit({ submissionId: submission.id })"
-              />
-              <p-button
-                icon="pi pi-check"
-                label="Shortlist"
-                severity="success"
-                [loading]="isDeciding({ submissionId: submission.id })"
-                [disabled]="isDeciding({ submissionId: submission.id })"
-                (onClick)="accepted.emit({ submissionId: submission.id })"
-              />
+              @if (canDecide({ submission })) {
+                <p-button
+                  icon="pi pi-times"
+                  label="Reject"
+                  severity="danger"
+                  [outlined]="true"
+                  [loading]="isDeciding({ submissionId: submission.id })"
+                  [disabled]="isDeciding({ submissionId: submission.id })"
+                  (onClick)="rejected.emit({ submissionId: submission.id })"
+                />
+                <p-button
+                  icon="pi pi-check"
+                  label="Shortlist"
+                  severity="success"
+                  [loading]="isDeciding({ submissionId: submission.id })"
+                  [disabled]="isDeciding({ submissionId: submission.id })"
+                  (onClick)="accepted.emit({ submissionId: submission.id })"
+                />
+              } @else {
+                <p-button
+                  icon="pi pi-star"
+                  label="Select final"
+                  severity="success"
+                  [loading]="isDeciding({ submissionId: submission.id })"
+                  [disabled]="isDeciding({ submissionId: submission.id })"
+                  (onClick)="selected.emit({ submissionId: submission.id })"
+                />
+              }
             </div>
           }
         </div>

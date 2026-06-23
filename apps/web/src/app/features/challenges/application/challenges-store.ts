@@ -286,6 +286,17 @@ export class ChallengesStore {
     });
   }
 
+  async selectSubmission(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionId: SubmissionId;
+  }): Promise<Result<ChallengeFailure, Submission>> {
+    return this.decideSubmission({
+      challengeId: input.challengeId,
+      submissionId: input.submissionId,
+      decision: 'select',
+    });
+  }
+
   isPublishing(input: { readonly challengeId: string }): boolean {
     return this.publishingIds().includes(input.challengeId);
   }
@@ -319,7 +330,10 @@ export class ChallengesStore {
 
   hasAssessedSubmissionForChallenge(input: { readonly challengeId: string }): boolean {
     return this.submissionsForChallenge({ challengeId: input.challengeId }).some(
-      (submission) => submission.status === 'accepted' || submission.status === 'rejected',
+      (submission) =>
+        submission.status === 'accepted' ||
+        submission.status === 'rejected' ||
+        submission.status === 'selected',
     );
   }
 
@@ -370,7 +384,7 @@ export class ChallengesStore {
   private async decideSubmission(input: {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
-    readonly decision: 'accept' | 'reject';
+    readonly decision: 'accept' | 'reject' | 'select';
   }): Promise<Result<ChallengeFailure, Submission>> {
     this.decidingSubmissionIdsState.update((submissionIds) => [
       ...submissionIds,
@@ -393,16 +407,22 @@ export class ChallengesStore {
   private runSubmissionDecision(input: {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
-    readonly decision: 'accept' | 'reject';
+    readonly decision: 'accept' | 'reject' | 'select';
   }): Promise<Result<ChallengeFailure, Submission>> {
     const command: DecideSubmissionCommand = {
       challengeId: input.challengeId,
       submissionId: input.submissionId,
     };
 
-    return input.decision === 'accept'
-      ? this.challengeGateway.acceptSubmission(command)
-      : this.challengeGateway.rejectSubmission(command);
+    if (input.decision === 'accept') {
+      return this.challengeGateway.acceptSubmission(command);
+    }
+
+    if (input.decision === 'reject') {
+      return this.challengeGateway.rejectSubmission(command);
+    }
+
+    return this.challengeGateway.selectSubmission(command);
   }
 
   private replaceSubmission(input: {

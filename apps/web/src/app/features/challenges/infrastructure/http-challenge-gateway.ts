@@ -35,6 +35,7 @@ const challengeFailures = [
   'challenge-not-found',
   'submission-not-found',
   'submission-already-decided',
+  'submission-not-shortlisted',
   'submission-summary-required',
   'forbidden',
   'network-error',
@@ -205,6 +206,16 @@ export class HttpChallengeGateway implements ChallengeGateway {
     });
   }
 
+  async selectSubmission(
+    command: DecideSubmissionCommand,
+  ): Promise<Result<ChallengeFailure, Submission>> {
+    return this.decideSubmission({
+      challengeId: command.challengeId,
+      submissionId: command.submissionId,
+      decision: 'select',
+    });
+  }
+
   private buildUrl(input: { readonly path: string }): string {
     return `${this.webApiConfig.apiUrl}${input.path}`;
   }
@@ -212,7 +223,7 @@ export class HttpChallengeGateway implements ChallengeGateway {
   private async decideSubmission(input: {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
-    readonly decision: 'accept' | 'reject';
+    readonly decision: 'accept' | 'reject' | 'select';
   }): Promise<Result<ChallengeFailure, Submission>> {
     try {
       const submissionDto = await firstValueFrom(
