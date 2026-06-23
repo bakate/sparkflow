@@ -21,6 +21,15 @@ const consumedEventNames = [
   eventNames.submissionSelected,
 ] as const;
 
+const createConsumerConfig = (input: { readonly consumerName: string }) => ({
+  durable_name: input.consumerName,
+  name: input.consumerName,
+  ack_policy: AckPolicy.Explicit,
+  deliver_policy: DeliverPolicy.All,
+  filter_subjects: [...consumedEventNames],
+  max_ack_pending: 32,
+});
+
 export type NatsEventConsumer = {
   readonly close: () => Promise<void>;
 };
@@ -43,19 +52,36 @@ const ensureConsumer = async (input: {
   readonly consumerName: string;
 }): Promise<void> => {
   const jetStreamManager = await input.connection.jetstreamManager();
+  const consumerConfig = createConsumerConfig({ consumerName: input.consumerName });
 
   try {
-    await jetStreamManager.consumers.add(streamName, {
-      durable_name: input.consumerName,
-      name: input.consumerName,
-      ack_policy: AckPolicy.Explicit,
-      deliver_policy: DeliverPolicy.All,
-      filter_subjects: [...consumedEventNames],
-      max_ack_pending: 32,
-    });
+    await jetStreamManager.consumers.add(streamName, consumerConfig);
   } catch {
-    await jetStreamManager.consumers.info(streamName, input.consumerName);
+    const consumerInfo = await jetStreamManager.consumers.info(streamName, input.consumerName);
+
+    if (!hasExpectedFilterSubjects({ actualSubjects: consumerInfo.config.filter_subjects })) {
+      await jetStreamManager.consumers.update(streamName, input.consumerName, consumerConfig);
+    }
   }
+};
+
+const hasExpectedFilterSubjects = (input: {
+  readonly actualSubjects: readonly string[] | undefined;
+}): boolean => {
+  if (input.actualSubjects === undefined) {
+    return false;
+  }
+
+  const expectedSubjects = [...consumedEventNames].sort();
+  const actualSubjects = [...input.actualSubjects].sort();
+
+  if (actualSubjects.length !== expectedSubjects.length) {
+    return false;
+  }
+
+  return actualSubjects.every(
+    (actualSubject, subjectIndex) => actualSubject === expectedSubjects[subjectIndex],
+  );
 };
 
 const consumeMessages = async (input: {
