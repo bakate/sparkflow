@@ -223,4 +223,40 @@ describe("DecideSubmissionUseCase", () => {
     expect(result).toEqual({ ok: false, error: "submission-not-shortlisted" });
     expect(eventPublisher.events).toHaveLength(0);
   });
+
+  it("rejects final selection when another proposal is already selected", async () => {
+    const challengeId = faker.string.uuid();
+    const shortlistedSubmission: Submission = {
+      ...createSubmittedSubmission(),
+      challengeId,
+      status: "accepted",
+      decidedAt: fixedDecidedAt,
+    };
+    const selectedSubmission: Submission = {
+      ...createSubmittedSubmission(),
+      challengeId,
+      status: "selected",
+      decidedAt: fixedDecidedAt,
+    };
+    const eventPublisher = createInMemoryEventPublisher();
+    const useCase = createDecideSubmissionUseCase({
+      submissionRepository: createInMemorySubmissionRepository([
+        shortlistedSubmission,
+        selectedSubmission,
+      ]),
+      clock: fixedClock,
+      eventPublisher,
+      idGenerator: fixedIdGenerator,
+    });
+
+    const result = await useCase.execute({
+      actor: companyAdminActor,
+      submissionId: shortlistedSubmission.id,
+      decision: "select",
+      correlationId: "correlation-id",
+    });
+
+    expect(result).toEqual({ ok: false, error: "challenge-already-selected" });
+    expect(eventPublisher.events).toHaveLength(0);
+  });
 });

@@ -25,7 +25,11 @@ export class ChallengeSubmissionsReview {
   }
 
   protected canSelect(input: { readonly submission: Submission }): boolean {
-    return input.submission.status === 'accepted';
+    return input.submission.status === 'accepted' && !this.hasSelectedSubmission();
+  }
+
+  private hasSelectedSubmission(): boolean {
+    return this.submissions().some((submission) => submission.status === 'selected');
   }
 
   protected isDeciding(input: { readonly submissionId: SubmissionId }): boolean {

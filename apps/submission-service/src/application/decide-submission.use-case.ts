@@ -53,6 +53,19 @@ export const createDecideSubmissionUseCase = (input: {
       return fail("submission-not-shortlisted");
     }
 
+    if (command.decision === "select") {
+      const challengeSubmissions = await input.submissionRepository.findByChallengeId({
+        challengeId: submission.challengeId,
+      });
+      const alreadySelected = challengeSubmissions.some(
+        (candidate) => candidate.id !== submission.id && candidate.status === "selected",
+      );
+
+      if (alreadySelected) {
+        return fail("challenge-already-selected");
+      }
+    }
+
     if (command.decision !== "select" && submission.status !== "submitted") {
       return fail("submission-already-decided");
     }

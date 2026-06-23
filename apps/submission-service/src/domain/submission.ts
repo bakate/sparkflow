@@ -13,6 +13,7 @@ export type Submission = {
 export type SubmissionError =
   | "submission-summary-required"
   | "submission-already-decided"
+  | "challenge-already-selected"
   | "submission-not-shortlisted"
   | "submission-not-found";
 

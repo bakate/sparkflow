@@ -7,6 +7,7 @@ const errorMessages: Record<ChallengeFailure, string> = {
   'challenge-already-draft': 'Challenge is already a draft.',
   'challenge-already-published': 'Challenge is already published.',
   'challenge-not-found': 'Challenge was not found.',
+  'challenge-already-selected': 'A final startup has already been selected.',
   'submission-not-found': 'Submission was not found.',
   'submission-already-decided': 'Submission has already been decided.',
   'submission-not-shortlisted': 'Submission must be shortlisted before final selection.',

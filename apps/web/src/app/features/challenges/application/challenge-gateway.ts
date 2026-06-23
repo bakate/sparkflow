@@ -10,6 +10,7 @@ export type ChallengeFailure =
   | 'challenge-already-draft'
   | 'challenge-already-published'
   | 'challenge-not-found'
+  | 'challenge-already-selected'
   | 'submission-not-found'
   | 'submission-already-decided'
   | 'submission-not-shortlisted'
