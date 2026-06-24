@@ -76,8 +76,12 @@ export class ChallengeSubmissionsReview {
   protected statusSeverity(input: {
     readonly status: SubmissionStatus;
   }): 'danger' | 'info' | 'secondary' | 'success' {
-    if (input.status === 'accepted' || input.status === 'selected') {
+    if (input.status === 'selected') {
       return 'success';
+    }
+
+    if (input.status === 'accepted') {
+      return 'info';
     }
 
     if (input.status === 'not-selected') {

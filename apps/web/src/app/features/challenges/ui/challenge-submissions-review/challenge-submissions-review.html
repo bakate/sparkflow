@@ -38,7 +38,7 @@
                 [value]="statusLabel({ status: submission.status })"
               />
               @if (submission.status === 'selected') {
-                <p-tag severity="success" value="Final selection" />
+                <p-tag severity="contrast" value="Final selection" />
               }
               @if (isClosedByFinalSelection({ submission })) {
                 <p-tag severity="secondary" value="Closed" />

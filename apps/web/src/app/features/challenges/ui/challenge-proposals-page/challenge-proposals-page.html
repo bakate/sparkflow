@@ -33,7 +33,7 @@
       <div class="flex gap-2 flex-wrap">
         <p-tag severity="secondary" [value]="totalProposalCount() + ' total'" />
         <p-tag severity="info" [value]="pendingProposalCount() + ' pending'" />
-        <p-tag severity="success" [value]="acceptedProposalCount() + ' shortlisted'" />
+        <p-tag severity="info" [value]="acceptedProposalCount() + ' shortlisted'" />
         <p-tag severity="success" [value]="selectedProposalCount() + ' selected'" />
         <p-tag severity="secondary" [value]="notSelectedProposalCount() + ' not selected'" />
         <p-tag severity="danger" [value]="rejectedProposalCount() + ' rejected'" />
@@ -64,7 +64,7 @@
             </p>
           </div>
         </div>
-        <p-tag severity="success" value="Decisions locked" />
+        <p-tag severity="secondary" value="Decisions locked" />
       </div>
     }
 
