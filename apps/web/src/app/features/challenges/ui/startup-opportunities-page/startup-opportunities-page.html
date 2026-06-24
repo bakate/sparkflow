@@ -85,6 +85,15 @@
       </p>
     } @else {
       <p-dataview [value]="dataViewOpportunities()" layout="list" [emptyMessage]="emptyMessage()">
+        <ng-template #emptymessage>
+          <app-empty-state
+            [title]="emptyTitle()"
+            [description]="emptyMessage()"
+            icon="pi pi-briefcase"
+            [centered]="true"
+          />
+        </ng-template>
+
         <ng-template #list let-opportunityItems>
           <div class="flex flex-column gap-3">
             @for (opportunity of opportunityItems; track opportunity.submissionId) {

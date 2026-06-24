@@ -6,6 +6,7 @@ import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import type { ChallengeId } from '@shared/domain/result';
 import { AuthSession } from '@shared/auth/auth-session';
+import { EmptyState } from '@shared/ui/empty-state';
 import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import { canCreateChallenge, type Challenge } from '../../domain/challenge';
@@ -30,7 +31,15 @@ type ChallengeTab = CompanyChallengeTab | StartupChallengeTab;
 
 @Component({
   selector: 'app-challenges-page',
-  imports: [Button, ChallengeCard, ChallengeForm, ChallengeSubmissionForm, ChallengeTabs, Dialog],
+  imports: [
+    Button,
+    ChallengeCard,
+    ChallengeForm,
+    ChallengeSubmissionForm,
+    ChallengeTabs,
+    Dialog,
+    EmptyState,
+  ],
   providers: [
     ChallengesStore,
     {
@@ -225,6 +234,48 @@ export class ChallengesPage {
     this.store.reloadChallenges();
   }
 
+  protected challengeEmptyTitle(): string {
+    if (this.usesStartupChallengeTabs()) {
+      return 'No open challenges';
+    }
+
+    if (!this.usesCompanyChallengeTabs()) {
+      return 'No challenges yet';
+    }
+
+    const labels: Record<CompanyChallengeTab, string> = {
+      archived: 'No archived challenges',
+      assessed: 'No assessed challenges',
+      draft: 'No draft challenges',
+      published: 'No published challenges',
+    };
+
+    return labels[this.activeCompanyChallengeTab()];
+  }
+
+  protected challengeEmptyDescription(): string {
+    if (this.usesStartupChallengeTabs()) {
+      return 'Published challenges that still need a proposal will appear here.';
+    }
+
+    if (!this.usesCompanyChallengeTabs()) {
+      return 'Create the first challenge to start collecting startup proposals.';
+    }
+
+    const descriptions: Record<CompanyChallengeTab, string> = {
+      archived: 'Archived challenges stay available here for audit and reference.',
+      assessed: 'Completed selections will appear here once a final startup is selected.',
+      draft: 'Draft challenges appear here before they are published to startups.',
+      published: 'Published challenges appear here while startups can submit proposals.',
+    };
+
+    return descriptions[this.activeCompanyChallengeTab()];
+  }
+
+  protected challengeEmptyActionLabel(): string | null {
+    return this.canCreateChallenge() ? 'Create challenge' : null;
+  }
+
   protected selectChallengeTab(input: { readonly tab: ChallengeTab }): void {
     this.activeChallengeTab.set(input.tab);
     void this.router.navigate(['/challenges'], {
@@ -232,6 +283,21 @@ export class ChallengesPage {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
+  }
+
+  private activeCompanyChallengeTab(): CompanyChallengeTab {
+    const activeTab = this.activeChallengeTab();
+
+    if (
+      activeTab === 'archived' ||
+      activeTab === 'assessed' ||
+      activeTab === 'draft' ||
+      activeTab === 'published'
+    ) {
+      return activeTab;
+    }
+
+    return 'published';
   }
 
   private isAllowedActiveChallengeTab(input: { readonly tab: ChallengeTab }): boolean {

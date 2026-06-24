@@ -1,14 +1,4 @@
 <div class="relative mb-3">
-  @if (state().pendingProposalCount > 0) {
-    <p-badge
-      class="absolute z-1"
-      styleClass="shadow-1"
-      severity="danger"
-      [value]="state().pendingProposalCount"
-      [style]="{ top: '-0.5rem', right: '-0.5rem' }"
-    />
-  }
-
   <p-card class="h-full">
     <article
       class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
@@ -51,12 +41,20 @@
             <p-splitbutton
               appendTo="body"
               [icon]="primaryCompanyActionIcon()"
-              [label]="primaryCompanyActionLabel()"
               [model]="companyActionMenuItems()"
               severity="secondary"
               [disabled]="isCompanyActionPending()"
               (onClick)="runPrimaryCompanyAction()"
-            />
+            >
+              <ng-template #content>
+                <span class="flex items-center font-bold">
+                  <span class="mr-2">{{ primaryCompanyActionLabel() }}</span>
+                  @if (state().pendingProposalCount > 0) {
+                    <p-badge [value]="state().pendingProposalCount" severity="danger" />
+                  }
+                </span>
+              </ng-template>
+            </p-splitbutton>
           }
 
           @if (canSubmitProposal()) {

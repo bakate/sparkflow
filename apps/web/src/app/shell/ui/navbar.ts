@@ -7,6 +7,7 @@ import { Popover } from 'primeng/popover';
 import { Tag } from 'primeng/tag';
 import { AuthSession } from '@shared/auth/auth-session';
 import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
+import { EmptyState } from '@shared/ui/empty-state';
 import { NOTIFICATION_GATEWAY } from '@features/notifications/application/notification-gateway';
 import { NotificationsStore } from '@features/notifications/application/notifications-store';
 import type { Notification } from '@features/notifications/domain/notification';
@@ -16,6 +17,7 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
   selector: 'navbar',
   imports: [
     Button,
+    EmptyState,
     NgOptimizedImage,
     OverlayBadgeModule,
     Popover,
@@ -144,7 +146,14 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                     @if (notificationsStore.error() !== null) {
                       <p class="m-0 py-3 text-red-700">Notifications unavailable.</p>
                     } @else if (notificationsStore.latestNotifications().length === 0) {
-                      <p class="m-0 py-3 text-color-secondary">No notifications yet.</p>
+                      <div class="py-3">
+                        <empty-state
+                          title="No notifications"
+                          description="Proposal updates and decision results will appear here."
+                          icon="pi pi-bell"
+                          [compact]="true"
+                        />
+                      </div>
                     } @else {
                       @for (
                         notification of notificationsStore.latestNotifications();

@@ -6,6 +6,7 @@ import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
+import { EmptyState } from '@shared/ui/empty-state';
 import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import type { Challenge } from '../../domain/challenge';
@@ -17,7 +18,15 @@ import type { Submission, SubmissionDecisionAudit } from '../../domain/submissio
 
 @Component({
   selector: 'app-challenge-proposals-page',
-  imports: [Button, ChallengeStatusLabel, ChallengeSubmissionsReview, Dialog, RouterLink, Tag],
+  imports: [
+    Button,
+    ChallengeStatusLabel,
+    ChallengeSubmissionsReview,
+    Dialog,
+    EmptyState,
+    RouterLink,
+    Tag,
+  ],
   providers: [
     ChallengesStore,
     {

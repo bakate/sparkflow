@@ -26,7 +26,12 @@
         } @else if (store.loading()) {
           <p class="m-0 text-color-secondary">Loading challenge...</p>
         } @else {
-          <p class="m-0 text-color-secondary">Challenge was not found.</p>
+          <app-empty-state
+            title="Challenge not found"
+            description="Go back to challenges and open an available review."
+            icon="pi pi-search"
+            [compact]="true"
+          />
         }
       </div>
 
@@ -104,7 +109,12 @@
           (selected)="selectSubmission($event)"
         />
       } @else {
-        <p class="m-0 text-color-secondary">No final startup selected yet.</p>
+        <app-empty-state
+          title="No final startup selected"
+          description="Shortlist a proposal first, then select the startup that should move forward."
+          icon="pi pi-star"
+          [compact]="true"
+        />
       }
     </section>
 
@@ -156,9 +166,12 @@
       </div>
 
       @if (decidedSubmissions().length === 0) {
-        <div class="p-3 border-1 surface-border border-round surface-card text-color-secondary">
-          No proposal decisions recorded yet.
-        </div>
+        <app-empty-state
+          title="No decision history"
+          description="Shortlist, reject, or select a proposal to start the audit trail."
+          icon="pi pi-history"
+          [compact]="true"
+        />
       } @else {
         <div class="flex flex-column gap-2">
           @for (submission of decidedSubmissions(); track submission.id) {

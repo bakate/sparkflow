@@ -5,11 +5,12 @@ import { DataViewModule } from 'primeng/dataview';
 import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import type { SubmissionId } from '@shared/domain/result';
+import { EmptyState } from '@shared/ui/empty-state';
 import type { Submission } from '../../domain/submission';
 
 @Component({
   selector: 'challenge-submissions-review',
-  imports: [Button, DataViewModule, Skeleton, Tag],
+  imports: [Button, DataViewModule, EmptyState, Skeleton, Tag],
   templateUrl: './challenge-submissions-review.html',
 })
 export class ChallengeSubmissionsReview {

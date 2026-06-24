@@ -20,6 +20,15 @@
     }
   } @else {
     <p-dataview [value]="dataViewSubmissions()" layout="list" [emptyMessage]="emptyMessage()">
+      <ng-template #emptymessage>
+        <app-empty-state
+          title="No proposals here"
+          [description]="emptyMessage()"
+          icon="pi pi-inbox"
+          [centered]="true"
+        />
+      </ng-template>
+
       <ng-template #list let-submissionItems>
         <div class="flex flex-column gap-3">
           @for (submission of submissionItems; track submission.id) {

@@ -5,6 +5,7 @@ import { Button } from 'primeng/button';
 import { DataViewModule } from 'primeng/dataview';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
+import { EmptyState } from '@shared/ui/empty-state';
 import { CHALLENGE_GATEWAY, type ChallengeOpportunity } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import type { Submission, SubmissionDecisionAudit } from '../../domain/submission';
@@ -13,7 +14,7 @@ import { challengeErrorMessage } from '../challenge-error-message';
 
 @Component({
   selector: 'app-startup-opportunities-page',
-  imports: [Button, DataViewModule, RouterLink, Tag],
+  imports: [Button, DataViewModule, EmptyState, RouterLink, Tag],
   providers: [
     ChallengesStore,
     {
@@ -124,6 +125,18 @@ export class StartupOpportunitiesPage {
     }
 
     return emptyMessageForFilter({ filter: this.activeFilter() });
+  }
+
+  protected emptyTitle(): string {
+    if (this.store.myOpportunities().length === 0) {
+      return 'No opportunities yet';
+    }
+
+    if (this.focusedSubmissionId() !== null) {
+      return 'Opportunity unavailable';
+    }
+
+    return 'No results for this filter';
   }
 
   protected errorMessage(): string | null {
