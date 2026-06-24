@@ -1,5 +1,5 @@
 import { succeed } from "@sparkflow/result";
-import { companyAdminActor, startupMemberActor } from "@sparkflow/testing";
+import { companyAdminActor, reviewerActor, startupMemberActor } from "@sparkflow/testing";
 import { describe, expect, it } from "vitest";
 import type { Submission, SubmissionDecisionAudit } from "../domain/submission.ts";
 import { createListSubmissionDecisionAuditsUseCase } from "./list-submission-decision-audits.use-case.ts";
@@ -9,11 +9,13 @@ const fixedDecidedAt = new Date("2026-06-16T10:00:00.000Z");
 
 const createInMemorySubmissionRepository = (input: {
   readonly audits: readonly SubmissionDecisionAudit[];
+  readonly submissions?: readonly Submission[];
 }): SubmissionRepository => ({
   save: async () => succeed(undefined),
   saveMany: async () => succeed(undefined),
   saveDecision: async () => succeed(undefined),
-  findById: async () => null,
+  findById: async ({ submissionId }) =>
+    input.submissions?.find((submission) => submission.id === submissionId) ?? null,
   findByChallengeId: async () => [],
   findByStartupOrganizationId: async () => [],
   findDecisionAuditsBySubmissionId: async ({ submissionId }) =>
@@ -52,13 +54,53 @@ describe("ListSubmissionDecisionAuditsUseCase", () => {
     });
   });
 
-  it("rejects non company admins", async () => {
+  it("lists decision audits for the startup that owns the submission", async () => {
+    const submission = createSubmission({ submissionId: "submission-1" });
+    const audit = createAudit({ submissionId: submission.id });
+    const useCase = createListSubmissionDecisionAuditsUseCase({
+      submissionRepository: createInMemorySubmissionRepository({
+        audits: [audit],
+        submissions: [submission],
+      }),
+    });
+
+    const result = await useCase.execute({
+      actor: startupMemberActor,
+      submissionId: submission.id,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.value : []).toHaveLength(1);
+  });
+
+  it("rejects startup members for submissions owned by another organization", async () => {
+    const useCase = createListSubmissionDecisionAuditsUseCase({
+      submissionRepository: createInMemorySubmissionRepository({
+        audits: [],
+        submissions: [
+          {
+            ...createSubmission({ submissionId: "submission-1" }),
+            startupOrganizationId: "org-other-startup",
+          },
+        ],
+      }),
+    });
+
+    const result = await useCase.execute({
+      actor: startupMemberActor,
+      submissionId: "submission-1",
+    });
+
+    expect(result).toEqual({ ok: false, error: "forbidden" });
+  });
+
+  it("rejects reviewers", async () => {
     const useCase = createListSubmissionDecisionAuditsUseCase({
       submissionRepository: createInMemorySubmissionRepository({ audits: [] }),
     });
 
     const result = await useCase.execute({
-      actor: startupMemberActor,
+      actor: reviewerActor,
       submissionId: "submission-1",
     });
 

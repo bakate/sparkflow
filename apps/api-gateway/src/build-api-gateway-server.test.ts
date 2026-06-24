@@ -418,6 +418,38 @@ describe("buildApiGatewayServer", () => {
     expect(headers.get("x-user-email")).toBe("company-admin@sparkflow.test");
   });
 
+  it("routes startup submission decision audit listing to the submission service", async () => {
+    const requests: CapturedRequest[] = [];
+    const server = await buildApiGatewayServer({
+      accessTokenVerifier: createAccessTokenVerifier({ actor: startupMemberActor }),
+      serviceUrls,
+      idGenerator: { generate: () => "generated-correlation-id" },
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+
+        return Response.json([{ id: "audit-1" }]);
+      },
+    });
+    openServers.push(server);
+
+    await server.inject({
+      method: "GET",
+      url: "/challenges/challenge-1/submissions/submission-1/decision-audits",
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+
+    const auditRequest = readCapturedRequest({ requests });
+    const headers = readForwardedHeaders({ request: auditRequest });
+
+    expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+      "GET http://submission-service/submissions/submission-1/decision-audits",
+    ]);
+    expect(headers.get("x-user-id")).toBe("user-startup");
+    expect(headers.get("x-role")).toBe("startup-member");
+  });
+
   it("rejects submission decision audit listing for challenges owned by another company", async () => {
     const requests: CapturedRequest[] = [];
     const server = await buildApiGatewayServer({

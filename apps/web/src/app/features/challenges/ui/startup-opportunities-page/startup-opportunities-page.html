@@ -1,0 +1,122 @@
+<section class="flex flex-column gap-4 py-4" aria-labelledby="startup-opportunities-title">
+  <div
+    class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
+  >
+    <div class="flex flex-column gap-1">
+      <h2 id="startup-opportunities-title" class="m-0 text-2xl font-bold text-color">
+        My opportunities
+      </h2>
+      <p class="m-0 text-color-secondary">
+        {{ submittedCount() }} under review, {{ shortlistedCount() }} shortlisted,
+        {{ selectedCount() }} selected, {{ closedCount() }} closed
+      </p>
+    </div>
+
+    <div class="flex gap-2 flex-wrap">
+      <p-button
+        icon="pi pi-send"
+        label="Marketplace"
+        severity="secondary"
+        routerLink="/challenges"
+      />
+      <p-button
+        icon="pi pi-refresh"
+        label="Refresh"
+        severity="secondary"
+        [disabled]="store.loadingMySubmissions()"
+        [loading]="store.loadingMySubmissions()"
+        (onClick)="reloadOpportunities()"
+      />
+    </div>
+  </div>
+
+  @if (errorMessage(); as errorMessage) {
+    <p
+      class="m-0 p-3 border-1 border-red-200 border-round bg-red-50 text-red-900 font-semibold"
+      role="alert"
+    >
+      {{ errorMessage }}
+    </p>
+  }
+
+  <div class="flex gap-2 flex-wrap" aria-label="Opportunity status counters">
+    <p-tag severity="info" [value]="submittedCount() + ' under review'" />
+    <p-tag severity="info" [value]="shortlistedCount() + ' shortlisted'" />
+    <p-tag severity="success" [value]="selectedCount() + ' selected'" />
+    <p-tag severity="secondary" [value]="closedCount() + ' closed'" />
+  </div>
+
+  <div class="flex flex-column gap-3" aria-label="Opportunity list">
+    @if (store.loadingMySubmissions()) {
+      <p class="m-0 p-3 border-1 surface-border border-round surface-card">
+        Loading opportunities...
+      </p>
+    } @else if (opportunities().length === 0) {
+      <div class="p-3 border-1 surface-border border-round surface-card">
+        <p class="m-0 text-color-secondary">No submitted opportunities yet.</p>
+      </div>
+    } @else {
+      @for (opportunity of opportunities(); track opportunity.submissionId) {
+        <p-card>
+          <article class="flex flex-column gap-3">
+            <div
+              class="flex flex-column md:flex-row md:align-items-start justify-content-between gap-3"
+            >
+              <div class="flex flex-column gap-2 min-w-0">
+                <div class="flex align-items-center gap-2 flex-wrap">
+                  <h3 class="m-0 text-xl font-bold text-color">{{ opportunity.challengeTitle }}</h3>
+                  <p-tag
+                    [severity]="statusSeverity({ status: opportunity.status })"
+                    [value]="opportunity.statusLabel"
+                  />
+                </div>
+                <p class="m-0 text-color-secondary line-height-3">
+                  {{ opportunity.challengeDescription }}
+                </p>
+              </div>
+
+              @if (opportunity.status === 'selected') {
+                <p-tag severity="success" value="Final selection" />
+              } @else if (opportunity.status === 'not-selected') {
+                <p-tag severity="secondary" value="Selection closed" />
+              }
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <p class="m-0 font-semibold text-color">Your proposal</p>
+              <p class="m-0 text-color-secondary line-height-3">{{ opportunity.summary }}</p>
+            </div>
+
+            <div class="flex flex-column sm:flex-row gap-3 text-color-secondary text-sm">
+              <span class="inline-flex align-items-center gap-2">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                {{ opportunity.companyOrganizationId }}
+              </span>
+              <span class="inline-flex align-items-center gap-2">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                Submitted {{ formatDate({ date: opportunity.submittedAt }) }}
+              </span>
+              @if (opportunity.decidedAt !== null) {
+                <span class="inline-flex align-items-center gap-2">
+                  <i class="pi pi-check-circle" aria-hidden="true"></i>
+                  Decided {{ formatDate({ date: opportunity.decidedAt }) }}
+                </span>
+              }
+            </div>
+
+            @if (opportunity.isLoadingFeedback) {
+              <p-tag severity="secondary" value="Loading feedback" />
+            } @else if (opportunity.feedback !== null) {
+              <div class="p-3 border-1 surface-border border-round bg-gray-50">
+                <p class="m-0 font-semibold text-color">Decision feedback</p>
+                <p class="m-0 mt-2 text-color-secondary line-height-3">
+                  {{ opportunity.feedback }}
+                </p>
+              </div>
+            }
+          </article>
+        </p-card>
+      }
+    }
+  </div>
+</section>

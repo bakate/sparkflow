@@ -3,11 +3,12 @@
     class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
   >
     <div>
-      <h2 id="challenges-title" class="m-0 text-2xl font-bold text-color">Challenges</h2>
+      <h2 id="challenges-title" class="m-0 text-2xl font-bold text-color">
+        {{ usesStartupChallengeTabs() ? 'Marketplace' : 'Challenges' }}
+      </h2>
       @if (usesStartupChallengeTabs()) {
         <p class="m-0 text-color-secondary">
-          {{ openStartupChallengeCount() }} open, {{ underReviewStartupChallengeCount() }} under
-          review, {{ assessedStartupChallengeCount() }} assessed
+          {{ openStartupChallengeCount() }} open challenges available
         </p>
       } @else if (usesCompanyChallengeTabs()) {
         <p class="m-0 text-color-secondary">
@@ -51,7 +52,7 @@
     </p>
   }
 
-  @if (usesStartupChallengeTabs() || usesCompanyChallengeTabs()) {
+  @if (usesCompanyChallengeTabs()) {
     <challenge-tabs
       [activeTab]="activeChallengeTab()"
       [tabs]="challengeTabs()"

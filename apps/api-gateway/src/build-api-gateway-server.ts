@@ -511,14 +511,18 @@ export const buildApiGatewayServer = async (input: {
         return reply.code(401).send({ error: "unauthorized" });
       }
 
-      const guardResponse = await requireOwnedChallenge({
-        actor,
-        challengeId: request.params.challengeId,
-        headers: request.headers,
-      });
+      if (actor.role === "company-admin") {
+        const guardResponse = await requireOwnedChallenge({
+          actor,
+          challengeId: request.params.challengeId,
+          headers: request.headers,
+        });
 
-      if (guardResponse !== null) {
-        return reply.code(guardResponse.statusCode).send(guardResponse.body);
+        if (guardResponse !== null) {
+          return reply.code(guardResponse.statusCode).send(guardResponse.body);
+        }
+      } else if (actor.role !== "startup-member") {
+        return reply.code(403).send({ error: "forbidden" });
       }
 
       const response = await proxy({

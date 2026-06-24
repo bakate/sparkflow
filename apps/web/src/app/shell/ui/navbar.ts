@@ -1,6 +1,6 @@
 import { NgOptimizedImage } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 import { AuthSession } from '@shared/auth/auth-session';
@@ -8,14 +8,45 @@ import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
 
 @Component({
   selector: 'navbar',
-  imports: [Button, NgOptimizedImage, RouterLink, Tag],
+  imports: [Button, NgOptimizedImage, RouterLink, RouterLinkActive, Tag],
   template: `
     <header class="p-3 mb-4 navbar-shadow border-bottom-1">
       <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-3">
-        <a routerLink="/" class="flex gap-2 align-items-center navbar-logo">
-          <img ngSrc="/logo.png" alt="sparkflow logo" width="40" height="40" />
-          <span class="mr-1 uppercase text-primary">Sparkflow</span>
-        </a>
+        <div class="flex flex-column sm:flex-row sm:align-items-center gap-3">
+          <a routerLink="/" class="flex gap-2 align-items-center navbar-logo">
+            <img ngSrc="/logo.png" alt="sparkflow logo" width="40" height="40" />
+            <span class="mr-1 uppercase text-primary">Sparkflow</span>
+          </a>
+
+          @if (currentUser(); as user) {
+            <nav class="flex align-items-center gap-2" aria-label="Primary navigation">
+              @if (user.role === 'startup-member') {
+                <a
+                  routerLink="/challenges"
+                  routerLinkActive="navbar-link-active"
+                  class="navbar-link"
+                >
+                  Marketplace
+                </a>
+                <a
+                  routerLink="/opportunities"
+                  routerLinkActive="navbar-link-active"
+                  class="navbar-link"
+                >
+                  My opportunities
+                </a>
+              } @else if (user.role === 'company-admin') {
+                <a
+                  routerLink="/challenges"
+                  routerLinkActive="navbar-link-active"
+                  class="navbar-link"
+                >
+                  Challenges
+                </a>
+              }
+            </nav>
+          }
+        </div>
 
         @if (currentUser(); as user) {
           <div
@@ -39,6 +70,16 @@ import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
       color: inherit;
       font-size: 1.5rem;
       font-weight: 600;
+    }
+
+    .navbar-link {
+      color: var(--p-text-muted-color);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .navbar-link-active {
+      color: var(--p-primary-color);
     }
   `,
 })

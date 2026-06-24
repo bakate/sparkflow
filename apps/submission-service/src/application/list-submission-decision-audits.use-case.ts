@@ -18,8 +18,21 @@ export const createListSubmissionDecisionAuditsUseCase = (input: {
   readonly submissionRepository: SubmissionRepository;
 }): ListSubmissionDecisionAuditsUseCase => ({
   execute: async (command) => {
-    if (command.actor.role !== "company-admin") {
+    if (command.actor.role === "reviewer") {
       return fail("forbidden");
+    }
+
+    if (command.actor.role === "startup-member") {
+      const submission = await input.submissionRepository.findById({
+        submissionId: command.submissionId,
+      });
+
+      if (
+        submission === null ||
+        submission.startupOrganizationId !== command.actor.organizationId
+      ) {
+        return fail("forbidden");
+      }
     }
 
     const audits = await input.submissionRepository.findDecisionAuditsBySubmissionId({

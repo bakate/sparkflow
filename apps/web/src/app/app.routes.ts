@@ -1,7 +1,16 @@
 import { Routes } from '@angular/router';
 import { companyAdminGuard } from '@shared/auth/company-admin.guard';
+import { startupMemberGuard } from '@shared/auth/startup-member.guard';
 
 export const routes: Routes = [
+  {
+    path: 'opportunities',
+    canActivate: [startupMemberGuard],
+    loadComponent: () =>
+      import('./features/challenges/ui/startup-opportunities-page/startup-opportunities-page').then(
+        (module) => module.StartupOpportunitiesPage,
+      ),
+  },
   {
     path: 'challenges/:challengeId/proposals',
     canActivate: [companyAdminGuard],

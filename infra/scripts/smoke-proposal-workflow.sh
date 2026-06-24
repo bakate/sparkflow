@@ -276,6 +276,23 @@ fi
 
 printf 'PASS selected proposal audit count=%s\n' "$selected_audit_count"
 
+http_status="$(request GET "$api_url/challenges/$challenge_id/submissions/$proposal_one_id/decision-audits" "$startup_token")"
+assert_status "$http_status" 200 "list selected proposal decision audits as startup"
+startup_selected_audit_count="$(
+  jq '[.[] | select(.previousStatus == "accepted" and .newStatus == "selected")] | length' "$body_file"
+)"
+startup_selected_audit_reason_count="$(
+  jq --arg reason "$selection_reason" '[.[] | select(.previousStatus == "accepted" and .newStatus == "selected" and .reason == $reason)] | length' "$body_file"
+)"
+
+if [[ "$startup_selected_audit_count" != "1" || "$startup_selected_audit_reason_count" != "1" ]]; then
+  printf 'FAIL expected startup-readable selected audit count=1 with reason, got count=%s reason_count=%s\n' "$startup_selected_audit_count" "$startup_selected_audit_reason_count" >&2
+  jq . "$body_file"
+  exit 1
+fi
+
+printf 'PASS startup selected proposal audit count=%s\n' "$startup_selected_audit_count"
+
 http_status="$(request GET "$api_url/challenges/$challenge_id/submissions/$proposal_two_id/decision-audits" "$company_token")"
 assert_status "$http_status" 200 "list not-selected proposal decision audits"
 not_selected_audit_count="$(

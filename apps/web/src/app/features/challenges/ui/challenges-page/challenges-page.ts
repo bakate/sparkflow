@@ -98,35 +98,11 @@ export class ChallengesPage {
       return challenges;
     }
 
-    const opportunityChallenges = this.store.myOpportunityChallenges();
-
-    if (selectedTab === 'published') {
-      return challenges.filter(
-        (challenge) =>
-          challenge.status === 'published' &&
-          this.store.submissionForChallenge({ challengeId: challenge.id }) === null,
-      );
-    }
-
-    if (selectedTab === 'in-progress') {
-      return opportunityChallenges.filter(
-        (challenge) =>
-          challenge.status === 'published' &&
-          this.store.submissionForChallenge({ challengeId: challenge.id })?.status === 'submitted',
-      );
-    }
-
-    return opportunityChallenges.filter((challenge) => {
-      const submission = this.store.submissionForChallenge({ challengeId: challenge.id });
-
-      return (
-        challenge.status === 'selection-completed' ||
-        submission?.status === 'accepted' ||
-        submission?.status === 'rejected' ||
-        submission?.status === 'selected' ||
-        submission?.status === 'not-selected'
-      );
-    });
+    return challenges.filter(
+      (challenge) =>
+        challenge.status === 'published' &&
+        this.store.submissionForChallenge({ challengeId: challenge.id }) === null,
+    );
   });
   protected readonly challengeCards = computed<readonly ChallengeCardViewModel[]>(() =>
     this.displayedChallenges().map((challenge) => ({
@@ -135,7 +111,7 @@ export class ChallengesPage {
     })),
   );
   protected readonly challengeTabs = computed<readonly ChallengeTabItem[]>(() =>
-    this.usesCompanyChallengeTabs() ? companyChallengeTabs : startupChallengeTabs,
+    this.usesCompanyChallengeTabs() ? companyChallengeTabs : [],
   );
   protected readonly openStartupChallengeCount = computed(
     () =>
