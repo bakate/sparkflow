@@ -31,6 +31,7 @@
       </div>
 
       <div class="flex gap-2 flex-wrap">
+        <p-tag severity="secondary" [value]="totalProposalCount() + ' total'" />
         <p-tag severity="info" [value]="pendingProposalCount() + ' pending'" />
         <p-tag severity="success" [value]="acceptedProposalCount() + ' shortlisted'" />
         <p-tag severity="success" [value]="selectedProposalCount() + ' selected'" />
@@ -50,12 +51,29 @@
   }
 
   @if (challengeId(); as selectedChallengeId) {
+    @if (finalSelectionLocked()) {
+      <div
+        class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-3 p-3 border-1 border-green-200 border-round bg-green-50 text-green-900"
+      >
+        <div class="flex align-items-start gap-3">
+          <i class="pi pi-lock mt-1" aria-hidden="true"></i>
+          <div class="flex flex-column gap-1">
+            <p class="m-0 font-bold">Selection completed</p>
+            <p class="m-0 line-height-3">
+              Proposal decisions are closed. This review is now read-only.
+            </p>
+          </div>
+        </div>
+        <p-tag severity="success" value="Decisions locked" />
+      </div>
+    }
+
     <section
       class="flex flex-column gap-3 p-3 border-2 border-round"
-      [class.border-green-500]="hasFinalSelection()"
-      [class.bg-green-50]="hasFinalSelection()"
-      [class.surface-card]="!hasFinalSelection()"
-      [class.surface-border]="!hasFinalSelection()"
+      [class.border-green-500]="finalSelectionLocked()"
+      [class.bg-green-50]="finalSelectionLocked()"
+      [class.surface-card]="!finalSelectionLocked()"
+      [class.surface-border]="!finalSelectionLocked()"
       aria-labelledby="final-selection-title"
     >
       <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-2">
@@ -78,6 +96,7 @@
           [submissions]="selectedSubmissions()"
           [loading]="false"
           [errorMessage]="null"
+          emptyMessage="No final startup selected yet."
           [decidingSubmissionIds]="store.decidingSubmissionIds()"
           [finalSelectionLocked]="finalSelectionLocked()"
           (accepted)="acceptSubmission($event)"
@@ -89,15 +108,36 @@
       }
     </section>
 
-    <challenge-submissions-review
-      [submissions]="remainingSubmissions()"
-      [loading]="loadingSubmissions()"
-      [errorMessage]="null"
-      [decidingSubmissionIds]="store.decidingSubmissionIds()"
-      [finalSelectionLocked]="finalSelectionLocked()"
-      (accepted)="acceptSubmission($event)"
-      (rejected)="rejectSubmission($event)"
-      (selected)="selectSubmission($event)"
-    />
+    <section class="flex flex-column gap-3" aria-labelledby="proposal-pipeline-title">
+      <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-2">
+        <div class="flex align-items-center gap-2">
+          <i class="pi pi-list-check text-color-secondary" aria-hidden="true"></i>
+          <h3 id="proposal-pipeline-title" class="m-0 text-lg font-bold text-color">
+            Proposal pipeline
+          </h3>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+          @if (finalSelectionLocked()) {
+            <p-tag severity="secondary" value="Read-only" />
+          } @else {
+            <p-tag severity="info" [value]="activeDecisionCount() + ' active decisions'" />
+          }
+          <p-tag severity="secondary" [value]="remainingProposalCount() + ' proposals'" />
+        </div>
+      </div>
+
+      <challenge-submissions-review
+        [submissions]="remainingSubmissions()"
+        [loading]="loadingSubmissions()"
+        [errorMessage]="null"
+        emptyMessage="No other proposals to review."
+        [decidingSubmissionIds]="store.decidingSubmissionIds()"
+        [finalSelectionLocked]="finalSelectionLocked()"
+        (accepted)="acceptSubmission($event)"
+        (rejected)="rejectSubmission($event)"
+        (selected)="selectSubmission($event)"
+      />
+    </section>
   }
 </section>

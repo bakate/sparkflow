@@ -16,6 +16,7 @@ export class ChallengeSubmissionsReview {
   readonly loading = input(false);
   readonly errorMessage = input<string | null>(null);
   readonly decidingSubmissionIds = input<readonly string[]>([]);
+  readonly emptyMessage = input('No proposals submitted yet.');
   readonly finalSelectionLocked = input(false);
   readonly accepted = output<{ readonly submissionId: SubmissionId }>();
   readonly rejected = output<{ readonly submissionId: SubmissionId }>();

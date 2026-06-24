@@ -20,7 +20,7 @@
     }
   } @else if (submissions().length === 0) {
     <p class="m-0 p-3 border-1 surface-border border-round surface-card">
-      No proposals submitted yet.
+      {{ emptyMessage() }}
     </p>
   } @else {
     @for (submission of submissions(); track submission.id) {

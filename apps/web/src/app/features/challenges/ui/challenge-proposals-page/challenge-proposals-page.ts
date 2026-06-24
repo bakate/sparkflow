@@ -40,6 +40,7 @@ export class ChallengeProposalsPage {
   protected readonly pendingProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'submitted').length,
   );
+  protected readonly totalProposalCount = computed(() => this.submissions().length);
   protected readonly acceptedProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'accepted').length,
   );
@@ -56,6 +57,9 @@ export class ChallengeProposalsPage {
   protected readonly finalSelectionLocked = computed(
     () => this.hasFinalSelection() || this.challenge()?.status === 'selection-completed',
   );
+  protected readonly activeDecisionCount = computed(
+    () => this.pendingProposalCount() + this.acceptedProposalCount(),
+  );
   protected readonly remainingSubmissions = computed(() =>
     this.submissions()
       .filter((submission) => submission.status !== 'selected')
@@ -65,6 +69,7 @@ export class ChallengeProposalsPage {
           this.submissionSortRank({ submission: rightSubmission }),
       ),
   );
+  protected readonly remainingProposalCount = computed(() => this.remainingSubmissions().length);
   protected readonly notSelectedProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'not-selected').length,
   );
