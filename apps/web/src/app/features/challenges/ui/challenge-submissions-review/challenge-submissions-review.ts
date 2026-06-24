@@ -16,16 +16,21 @@ export class ChallengeSubmissionsReview {
   readonly loading = input(false);
   readonly errorMessage = input<string | null>(null);
   readonly decidingSubmissionIds = input<readonly string[]>([]);
+  readonly finalSelectionLocked = input(false);
   readonly accepted = output<{ readonly submissionId: SubmissionId }>();
   readonly rejected = output<{ readonly submissionId: SubmissionId }>();
   readonly selected = output<{ readonly submissionId: SubmissionId }>();
 
   protected canDecide(input: { readonly submission: Submission }): boolean {
-    return input.submission.status === 'submitted';
+    return !this.finalSelectionLocked() && input.submission.status === 'submitted';
   }
 
   protected canSelect(input: { readonly submission: Submission }): boolean {
-    return input.submission.status === 'accepted' && !this.hasSelectedSubmission();
+    return (
+      !this.finalSelectionLocked() &&
+      input.submission.status === 'accepted' &&
+      !this.hasSelectedSubmission()
+    );
   }
 
   private hasSelectedSubmission(): boolean {
@@ -38,6 +43,21 @@ export class ChallengeSubmissionsReview {
 
   protected formatDate(input: { readonly date: Date }): string {
     return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(input.date);
+  }
+
+  protected proposalCardClass(input: { readonly status: SubmissionStatus }): string {
+    if (input.status === 'selected') {
+      return 'p-3 border-2 border-green-500 border-round surface-card shadow-1';
+    }
+
+    return 'p-3 border-1 surface-border border-round surface-card';
+  }
+
+  protected isClosedByFinalSelection(input: { readonly submission: Submission }): boolean {
+    return (
+      this.finalSelectionLocked() &&
+      (input.submission.status === 'submitted' || input.submission.status === 'accepted')
+    );
   }
 
   protected statusLabel(input: { readonly status: SubmissionStatus }): string {

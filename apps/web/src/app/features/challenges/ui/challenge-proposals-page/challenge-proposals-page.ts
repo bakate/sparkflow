@@ -11,6 +11,7 @@ import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gatewa
 import { challengeErrorMessage } from '../challenge-error-message';
 import { ChallengeStatusLabel } from '../challenge-status-label';
 import { ChallengeSubmissionsReview } from '../challenge-submissions-review/challenge-submissions-review';
+import type { Submission } from '../../domain/submission';
 
 @Component({
   selector: 'app-challenge-proposals-page',
@@ -47,6 +48,19 @@ export class ChallengeProposalsPage {
   );
   protected readonly selectedProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'selected').length,
+  );
+  protected readonly selectedSubmissions = computed(() =>
+    this.submissions().filter((submission) => submission.status === 'selected'),
+  );
+  protected readonly hasFinalSelection = computed(() => this.selectedSubmissions().length > 0);
+  protected readonly remainingSubmissions = computed(() =>
+    this.submissions()
+      .filter((submission) => submission.status !== 'selected')
+      .sort(
+        (leftSubmission, rightSubmission) =>
+          this.submissionSortRank({ submission: leftSubmission }) -
+          this.submissionSortRank({ submission: rightSubmission }),
+      ),
   );
   protected readonly notSelectedProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'not-selected').length,
@@ -116,6 +130,18 @@ export class ChallengeProposalsPage {
     }
 
     return this.store.challenges().find((challenge) => challenge.id === challengeId) ?? null;
+  }
+
+  private submissionSortRank(input: { readonly submission: Submission }): number {
+    const ranks: Record<Submission['status'], number> = {
+      accepted: 1,
+      submitted: 2,
+      'not-selected': 3,
+      rejected: 4,
+      selected: 0,
+    };
+
+    return ranks[input.submission.status];
   }
 
   private async decideSubmission(input: {

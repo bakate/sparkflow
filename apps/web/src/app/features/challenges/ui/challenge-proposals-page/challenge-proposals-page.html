@@ -50,11 +50,51 @@
   }
 
   @if (challengeId(); as selectedChallengeId) {
+    <section
+      class="flex flex-column gap-3 p-3 border-2 border-round"
+      [class.border-green-500]="hasFinalSelection()"
+      [class.bg-green-50]="hasFinalSelection()"
+      [class.surface-card]="!hasFinalSelection()"
+      [class.surface-border]="!hasFinalSelection()"
+      aria-labelledby="final-selection-title"
+    >
+      <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-2">
+        <div class="flex align-items-center gap-2">
+          <i class="pi pi-star-fill text-green-600" aria-hidden="true"></i>
+          <h3 id="final-selection-title" class="m-0 text-lg font-bold text-color">
+            Final selection
+          </h3>
+        </div>
+
+        @if (hasFinalSelection()) {
+          <p-tag severity="success" value="Final startup selected" />
+        } @else {
+          <p-tag severity="secondary" value="No final selection" />
+        }
+      </div>
+
+      @if (hasFinalSelection()) {
+        <challenge-submissions-review
+          [submissions]="selectedSubmissions()"
+          [loading]="false"
+          [errorMessage]="null"
+          [decidingSubmissionIds]="store.decidingSubmissionIds()"
+          [finalSelectionLocked]="true"
+          (accepted)="acceptSubmission($event)"
+          (rejected)="rejectSubmission($event)"
+          (selected)="selectSubmission($event)"
+        />
+      } @else {
+        <p class="m-0 text-color-secondary">No final startup selected yet.</p>
+      }
+    </section>
+
     <challenge-submissions-review
-      [submissions]="store.submissionsForChallenge({ challengeId: selectedChallengeId })"
+      [submissions]="remainingSubmissions()"
       [loading]="loadingSubmissions()"
       [errorMessage]="null"
       [decidingSubmissionIds]="store.decidingSubmissionIds()"
+      [finalSelectionLocked]="hasFinalSelection()"
       (accepted)="acceptSubmission($event)"
       (rejected)="rejectSubmission($event)"
       (selected)="selectSubmission($event)"

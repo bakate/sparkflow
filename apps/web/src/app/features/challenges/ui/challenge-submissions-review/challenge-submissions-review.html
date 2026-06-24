@@ -24,7 +24,7 @@
     </p>
   } @else {
     @for (submission of submissions(); track submission.id) {
-      <article class="p-3 border-1 surface-border border-round surface-card">
+      <article [class]="proposalCardClass({ status: submission.status })">
         <div
           class="flex flex-column md:flex-row align-items-stretch md:align-items-start justify-content-between gap-3"
         >
@@ -37,6 +37,12 @@
                 [severity]="statusSeverity({ status: submission.status })"
                 [value]="statusLabel({ status: submission.status })"
               />
+              @if (submission.status === 'selected') {
+                <p-tag severity="success" value="Final selection" />
+              }
+              @if (isClosedByFinalSelection({ submission })) {
+                <p-tag severity="secondary" value="Closed" />
+              }
             </div>
 
             <p class="m-0 text-color-secondary line-height-3">{{ submission.summary }}</p>
