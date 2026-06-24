@@ -22,11 +22,13 @@ const companyAdminActor: ActorContext = {
   organizationId: "org-company",
   role: "company-admin",
   userId: "user-company-admin",
+  userEmail: "company-admin@sparkflow.test",
 };
 const startupMemberActor: ActorContext = {
   organizationId: "org-startup",
   role: "startup-member",
   userId: "user-startup",
+  userEmail: "startup@sparkflow.test",
 };
 const authorizationHeader = "Bearer valid-token";
 
@@ -215,6 +217,7 @@ describe("buildApiGatewayServer", () => {
     expect(headers.get("content-type")).toBeNull();
     expect(headers.get("x-correlation-id")).toBe("generated-correlation-id");
     expect(headers.get("x-user-id")).toBe("user-company-admin");
+    expect(headers.get("x-user-email")).toBe("company-admin@sparkflow.test");
     expect(headers.get("x-organization-id")).toBe("org-company");
     expect(headers.get("x-role")).toBe("company-admin");
   });
@@ -371,6 +374,26 @@ describe("buildApiGatewayServer", () => {
         recommendation: "accept",
       }),
     );
+  });
+
+  it("routes submission decision audit listing to the submission service", async () => {
+    const { requests, server } = await createServerWithCapturedRequests();
+
+    await server.inject({
+      method: "GET",
+      url: "/submissions/submission-1/decision-audits",
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+
+    const request = readCapturedRequest({ requests });
+    const headers = readForwardedHeaders({ request });
+
+    expect(request.url).toBe("http://submission-service/submissions/submission-1/decision-audits");
+    expect(request.init.method).toBe("GET");
+    expect(headers.get("x-user-id")).toBe("user-company-admin");
+    expect(headers.get("x-user-email")).toBe("company-admin@sparkflow.test");
   });
 
   it("builds startup opportunities from my submissions and challenge details", async () => {

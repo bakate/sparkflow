@@ -256,6 +256,35 @@ if [[ "$selected_count" != "1" || "$accepted_count" != "0" || "$not_selected_cou
 fi
 
 printf 'PASS statuses selected=%s accepted=%s not-selected=%s\n' "$selected_count" "$accepted_count" "$not_selected_count"
+
+http_status="$(request GET "$api_url/submissions/$proposal_one_id/decision-audits" "$company_token")"
+assert_status "$http_status" 200 "list selected proposal decision audits"
+selected_audit_count="$(
+  jq '[.[] | select(.previousStatus == "accepted" and .newStatus == "selected")] | length' "$body_file"
+)"
+
+if [[ "$selected_audit_count" != "1" ]]; then
+  printf 'FAIL expected selected audit count=1, got %s\n' "$selected_audit_count" >&2
+  jq . "$body_file"
+  exit 1
+fi
+
+printf 'PASS selected proposal audit count=%s\n' "$selected_audit_count"
+
+http_status="$(request GET "$api_url/submissions/$proposal_two_id/decision-audits" "$company_token")"
+assert_status "$http_status" 200 "list not-selected proposal decision audits"
+not_selected_audit_count="$(
+  jq '[.[] | select(.previousStatus == "accepted" and .newStatus == "not-selected")] | length' "$body_file"
+)"
+
+if [[ "$not_selected_audit_count" != "1" ]]; then
+  printf 'FAIL expected not-selected audit count=1, got %s\n' "$not_selected_audit_count" >&2
+  jq . "$body_file"
+  exit 1
+fi
+
+printf 'PASS not-selected proposal audit count=%s\n' "$not_selected_audit_count"
+
 http_status="$(request GET "$api_url/challenges" "$startup_token")"
 assert_status "$http_status" 200 "list startup marketplace after final selection"
 startup_completed_count="$(

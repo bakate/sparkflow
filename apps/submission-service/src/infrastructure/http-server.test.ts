@@ -1,4 +1,4 @@
-import type { ActorContext, SubmissionDto } from "@sparkflow/contracts";
+import type { ActorContext, SubmissionDecisionAuditDto, SubmissionDto } from "@sparkflow/contracts";
 import { fail, succeed } from "@sparkflow/result";
 import { afterEach, describe, expect, it } from "vitest";
 import type {
@@ -10,6 +10,7 @@ import type {
   DecideSubmissionUseCase,
 } from "../application/decide-submission.use-case.js";
 import type { ListMySubmissionsUseCase } from "../application/list-my-submissions.use-case.js";
+import type { ListSubmissionDecisionAuditsUseCase } from "../application/list-submission-decision-audits.use-case.js";
 import type { ListSubmissionsUseCase } from "../application/list-submissions.use-case.js";
 import { buildSubmissionHttpServer } from "./http-server.js";
 
@@ -39,6 +40,20 @@ const selectedSubmissionDto: SubmissionDto = {
   ...submissionDto,
   status: "selected",
   decidedAt: "2026-06-16T12:00:00.000Z",
+};
+
+const submissionDecisionAuditDto: SubmissionDecisionAuditDto = {
+  id: "audit-1",
+  submissionId: "submission-1",
+  challengeId: "challenge-1",
+  decidedByUserId: "company-user",
+  decidedByUserEmail: "company-admin@sparkflow.test",
+  decidedByOrganizationId: "org-company",
+  decidedByRole: "company-admin",
+  previousStatus: "submitted",
+  newStatus: "accepted",
+  decidedAt: "2026-06-16T11:00:00.000Z",
+  reason: null,
 };
 
 const openServers: { readonly close: () => Promise<void> }[] = [];
@@ -129,9 +144,26 @@ const createRecordingListMySubmissionsUseCase = (input: {
   };
 };
 
+const createRecordingListSubmissionDecisionAuditsUseCase = (input: {
+  readonly result: Awaited<ReturnType<ListSubmissionDecisionAuditsUseCase["execute"]>>;
+}): ListSubmissionDecisionAuditsUseCase & {
+  readonly commands: { readonly actor: ActorContext; readonly submissionId: string }[];
+} => {
+  const commands: { readonly actor: ActorContext; readonly submissionId: string }[] = [];
+
+  return {
+    commands,
+    execute: async (command) => {
+      commands.push(command);
+      return input.result;
+    },
+  };
+};
+
 const createServer = async (input?: {
   readonly createSubmissionUseCase?: CreateSubmissionUseCase;
   readonly decideSubmissionUseCase?: DecideSubmissionUseCase;
+  readonly listSubmissionDecisionAuditsUseCase?: ListSubmissionDecisionAuditsUseCase;
   readonly listMySubmissionsUseCase?: ListMySubmissionsUseCase;
   readonly listSubmissionsUseCase?: ListSubmissionsUseCase;
 }) => {
@@ -140,6 +172,9 @@ const createServer = async (input?: {
       input?.createSubmissionUseCase ?? createRecordingCreateSubmissionUseCase(),
     decideSubmissionUseCase:
       input?.decideSubmissionUseCase ?? createRecordingDecideSubmissionUseCase(),
+    listSubmissionDecisionAuditsUseCase:
+      input?.listSubmissionDecisionAuditsUseCase ??
+      createRecordingListSubmissionDecisionAuditsUseCase({ result: succeed([]) }),
     listMySubmissionsUseCase:
       input?.listMySubmissionsUseCase ??
       createRecordingListMySubmissionsUseCase({ result: succeed([]) }),
@@ -171,6 +206,7 @@ describe("buildSubmissionHttpServer", () => {
       url: "/me/submissions",
       headers: {
         "x-user-id": "startup-user",
+        "x-user-email": "startup@sparkflow.test",
         "x-organization-id": "org-startup",
         "x-role": "startup-member",
       },
@@ -183,6 +219,7 @@ describe("buildSubmissionHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "startup-user",
+        userEmail: "startup@sparkflow.test",
         organizationId: "org-startup",
         role: "startup-member",
       },
@@ -223,6 +260,56 @@ describe("buildSubmissionHttpServer", () => {
     expect(command).toEqual({ challengeId: "challenge-1" });
   });
 
+  it("lists decision audits for a submission through the audit use case", async () => {
+    const listSubmissionDecisionAuditsUseCase = createRecordingListSubmissionDecisionAuditsUseCase({
+      result: succeed([submissionDecisionAuditDto]),
+    });
+    const server = await createServer({ listSubmissionDecisionAuditsUseCase });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/submissions/submission-1/decision-audits",
+      headers: {
+        "x-user-id": "company-user",
+        "x-user-email": "company-admin@sparkflow.test",
+        "x-organization-id": "org-company",
+        "x-role": "company-admin",
+      },
+    });
+
+    const command = readRecordedCommand({
+      commands: listSubmissionDecisionAuditsUseCase.commands,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([submissionDecisionAuditDto]);
+    expect(command).toEqual({
+      actor: {
+        userId: "company-user",
+        userEmail: "company-admin@sparkflow.test",
+        organizationId: "org-company",
+        role: "company-admin",
+      },
+      submissionId: "submission-1",
+    });
+  });
+
+  it("maps decision audit failures to 403", async () => {
+    const server = await createServer({
+      listSubmissionDecisionAuditsUseCase: createRecordingListSubmissionDecisionAuditsUseCase({
+        result: fail("forbidden"),
+      }),
+    });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/submissions/submission-1/decision-audits",
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "forbidden" });
+  });
+
   it("maps POST /challenges/:challengeId/submissions to the create submission use case", async () => {
     const createSubmissionUseCase = createRecordingCreateSubmissionUseCase();
     const server = await createServer({ createSubmissionUseCase });
@@ -233,6 +320,7 @@ describe("buildSubmissionHttpServer", () => {
       headers: {
         "x-correlation-id": "correlation-1",
         "x-user-id": "startup-user",
+        "x-user-email": "startup@sparkflow.test",
         "x-organization-id": "org-startup",
         "x-role": "startup-member",
       },
@@ -244,6 +332,7 @@ describe("buildSubmissionHttpServer", () => {
     const command = readRecordedCommand({ commands: createSubmissionUseCase.commands });
     const actor: ActorContext = {
       userId: "startup-user",
+      userEmail: "startup@sparkflow.test",
       organizationId: "org-startup",
       role: "startup-member",
     };
@@ -287,6 +376,7 @@ describe("buildSubmissionHttpServer", () => {
       headers: {
         "x-correlation-id": "correlation-1",
         "x-user-id": "company-user",
+        "x-user-email": "company-admin@sparkflow.test",
         "x-organization-id": "org-company",
         "x-role": "company-admin",
       },
@@ -299,6 +389,7 @@ describe("buildSubmissionHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "company-user",
+        userEmail: "company-admin@sparkflow.test",
         organizationId: "org-company",
         role: "company-admin",
       },
@@ -318,6 +409,7 @@ describe("buildSubmissionHttpServer", () => {
       headers: {
         "x-correlation-id": "correlation-2",
         "x-user-id": "company-user",
+        "x-user-email": "company-admin@sparkflow.test",
         "x-organization-id": "org-company",
         "x-role": "company-admin",
       },
@@ -330,6 +422,7 @@ describe("buildSubmissionHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "company-user",
+        userEmail: "company-admin@sparkflow.test",
         organizationId: "org-company",
         role: "company-admin",
       },
@@ -349,6 +442,7 @@ describe("buildSubmissionHttpServer", () => {
       headers: {
         "x-correlation-id": "correlation-3",
         "x-user-id": "company-user",
+        "x-user-email": "company-admin@sparkflow.test",
         "x-organization-id": "org-company",
         "x-role": "company-admin",
       },
@@ -361,6 +455,7 @@ describe("buildSubmissionHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "company-user",
+        userEmail: "company-admin@sparkflow.test",
         organizationId: "org-company",
         role: "company-admin",
       },

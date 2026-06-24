@@ -9,6 +9,10 @@ export const readActor = (input: { readonly headers: HttpHeaders }): ActorContex
     headers: input.headers,
     name: "x-user-id",
   }),
+  userEmail: readOptionalHeaderValue({
+    headers: input.headers,
+    name: "x-user-email",
+  }),
   organizationId: readHeaderValue({
     fallback: "unknown-organization",
     headers: input.headers,
@@ -40,4 +44,17 @@ const readHeaderValue = (input: {
   }
 
   return value ?? input.fallback;
+};
+
+const readOptionalHeaderValue = (input: {
+  readonly headers: HttpHeaders;
+  readonly name: string;
+}): string | null => {
+  const value = input.headers[input.name];
+
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
 };

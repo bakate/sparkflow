@@ -4,6 +4,7 @@ import Fastify from "fastify";
 import type { CreateSubmissionUseCase } from "../application/create-submission.use-case.ts";
 import type { DecideSubmissionUseCase } from "../application/decide-submission.use-case.ts";
 import type { ListMySubmissionsUseCase } from "../application/list-my-submissions.use-case.ts";
+import type { ListSubmissionDecisionAuditsUseCase } from "../application/list-submission-decision-audits.use-case.ts";
 import type { ListSubmissionsUseCase } from "../application/list-submissions.use-case.ts";
 
 type CreateSubmissionBody = {
@@ -13,6 +14,7 @@ type CreateSubmissionBody = {
 export const buildSubmissionHttpServer = async (input: {
   readonly createSubmissionUseCase: CreateSubmissionUseCase;
   readonly decideSubmissionUseCase: DecideSubmissionUseCase;
+  readonly listSubmissionDecisionAuditsUseCase: ListSubmissionDecisionAuditsUseCase;
   readonly listMySubmissionsUseCase: ListMySubmissionsUseCase;
   readonly listSubmissionsUseCase: ListSubmissionsUseCase;
 }) => {
@@ -37,6 +39,22 @@ export const buildSubmissionHttpServer = async (input: {
     "/challenges/:challengeId/submissions",
     async (request) =>
       input.listSubmissionsUseCase.execute({ challengeId: request.params.challengeId }),
+  );
+
+  server.get<{ Params: { readonly submissionId: string } }>(
+    "/submissions/:submissionId/decision-audits",
+    async (request, reply) => {
+      const result = await input.listSubmissionDecisionAuditsUseCase.execute({
+        actor: readActor({ headers: request.headers }),
+        submissionId: request.params.submissionId,
+      });
+
+      if (!result.ok) {
+        return reply.code(403).send({ error: result.error });
+      }
+
+      return reply.send(result.value);
+    },
   );
 
   server.post<{ Params: { readonly challengeId: string }; Body: CreateSubmissionBody }>(

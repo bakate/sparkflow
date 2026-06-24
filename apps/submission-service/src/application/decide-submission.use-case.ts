@@ -7,6 +7,7 @@ import {
 import { fail, succeed, type Result } from "@sparkflow/result";
 import {
   acceptSubmission,
+  createSubmissionDecisionAudit,
   markSubmissionNotSelected,
   rejectSubmission,
   selectSubmission,
@@ -85,13 +86,37 @@ export const createDecideSubmissionUseCase = (input: {
             )
             .map((candidate) => markSubmissionNotSelected({ submission: candidate, now }))
         : [];
+    const decisionAudit = createSubmissionDecisionAudit({
+      id: input.idGenerator.generate(),
+      actor: command.actor,
+      previousSubmission: submission,
+      decidedSubmission,
+      decidedAt: now,
+    });
+    const notSelectedAudits = notSelectedSubmissions.flatMap((notSelectedSubmission) => {
+      const previousSubmission = challengeSubmissions.find(
+        (candidate) => candidate.id === notSelectedSubmission.id,
+      );
 
-    const saveResult =
-      command.decision === "select"
-        ? await input.submissionRepository.saveMany({
-            submissions: [decidedSubmission, ...notSelectedSubmissions],
-          })
-        : await input.submissionRepository.save({ submission: decidedSubmission });
+      if (previousSubmission === undefined) {
+        return [];
+      }
+
+      return [
+        createSubmissionDecisionAudit({
+          id: input.idGenerator.generate(),
+          actor: command.actor,
+          previousSubmission,
+          decidedSubmission: notSelectedSubmission,
+          decidedAt: now,
+        }),
+      ];
+    });
+
+    const saveResult = await input.submissionRepository.saveDecision({
+      submissions: [decidedSubmission, ...notSelectedSubmissions],
+      audits: [decisionAudit, ...notSelectedAudits],
+    });
 
     if (!saveResult.ok) {
       return fail(saveResult.error);

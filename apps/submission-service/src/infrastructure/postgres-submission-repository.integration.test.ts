@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Submission } from "../domain/submission.ts";
+import type { Submission, SubmissionDecisionAudit } from "../domain/submission.ts";
 import {
   createPostgresSubmissionRepository,
   ensureSubmissionSchema,
@@ -41,7 +41,7 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
   beforeEach(async () => {
     pool = new Pool({ connectionString: requireTestDatabaseUrl() });
     await ensureSubmissionSchema({ pool });
-    await pool.query("TRUNCATE TABLE submissions");
+    await pool.query("TRUNCATE TABLE submission_decision_audits, submissions");
   });
 
   afterEach(async () => {
@@ -128,6 +128,49 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
       "not-selected",
       "selected",
     ]);
+  });
+
+  it("saves decision audits with submission decisions", async () => {
+    const repository = createPostgresSubmissionRepository({ pool });
+    const challengeId = faker.string.uuid();
+    const submission = createSubmittedSubmission({
+      id: faker.string.uuid(),
+      challengeId,
+      createdAt: new Date("2026-06-16T09:00:00.000Z"),
+    });
+    const acceptedSubmission: Submission = {
+      ...submission,
+      status: "accepted",
+      decidedAt: new Date("2026-06-16T10:00:00.000Z"),
+    };
+    const audit: SubmissionDecisionAudit = {
+      id: faker.string.uuid(),
+      submissionId: submission.id,
+      challengeId,
+      decidedByUserId: "user-company-admin",
+      decidedByUserEmail: "company-admin@sparkflow.test",
+      decidedByOrganizationId: "org-company",
+      decidedByRole: "company-admin",
+      previousStatus: "submitted",
+      newStatus: "accepted",
+      decidedAt: new Date("2026-06-16T10:00:00.000Z"),
+      reason: null,
+    };
+
+    await repository.save({ submission });
+    const result = await repository.saveDecision({
+      submissions: [acceptedSubmission],
+      audits: [audit],
+    });
+
+    const foundSubmission = await repository.findById({ submissionId: submission.id });
+    const audits = await repository.findDecisionAuditsBySubmissionId({
+      submissionId: submission.id,
+    });
+
+    expect(result).toEqual({ ok: true, value: undefined });
+    expect(foundSubmission?.status).toBe("accepted");
+    expect(audits).toEqual([audit]);
   });
 
   it("lists submissions for one challenge from newest to oldest", async () => {

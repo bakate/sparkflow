@@ -75,6 +75,10 @@ const toActor = (input: {
     organizationId,
     role,
     userId: input.payload.sub,
+    userEmail: readStringClaim({
+      name: "email",
+      payload: input.payload,
+    }),
   };
 };
 

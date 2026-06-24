@@ -3,6 +3,7 @@ export type UserRole = (typeof roles)[number];
 
 export type ActorContext = {
   readonly userId: string;
+  readonly userEmail?: string | null;
   readonly organizationId: string;
   readonly role: UserRole;
 };
@@ -50,6 +51,20 @@ export type SubmissionDto = {
   readonly status: SubmissionStatus;
   readonly createdAt: string;
   readonly decidedAt: string | null;
+};
+
+export type SubmissionDecisionAuditDto = {
+  readonly id: string;
+  readonly submissionId: string;
+  readonly challengeId: string;
+  readonly decidedByUserId: string;
+  readonly decidedByUserEmail: string | null;
+  readonly decidedByOrganizationId: string;
+  readonly decidedByRole: UserRole;
+  readonly previousStatus: SubmissionStatus;
+  readonly newStatus: SubmissionStatus;
+  readonly decidedAt: string;
+  readonly reason: string | null;
 };
 
 export type ChallengeOpportunityDto = {

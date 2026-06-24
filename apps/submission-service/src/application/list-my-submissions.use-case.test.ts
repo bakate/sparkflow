@@ -10,6 +10,7 @@ const createInMemorySubmissionRepository = (input: {
 }): SubmissionRepository => ({
   save: async () => succeed(undefined),
   saveMany: async () => succeed(undefined),
+  saveDecision: async () => succeed(undefined),
   findById: async ({ submissionId }) =>
     input.submissions.find((submission) => submission.id === submissionId) ?? null,
   findByChallengeId: async ({ challengeId }) =>
@@ -18,6 +19,7 @@ const createInMemorySubmissionRepository = (input: {
     input.submissions.filter(
       (submission) => submission.startupOrganizationId === startupOrganizationId,
     ),
+  findDecisionAuditsBySubmissionId: async () => [],
 });
 
 describe("ListMySubmissionsUseCase", () => {

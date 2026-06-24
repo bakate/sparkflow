@@ -3,7 +3,7 @@ import { eventNames, type DomainEvent, type SubmissionDto } from "@sparkflow/con
 import { succeed } from "@sparkflow/result";
 import { companyAdminActor, startupMemberActor } from "@sparkflow/testing";
 import { describe, expect, it } from "vitest";
-import type { Submission } from "../domain/submission.ts";
+import type { Submission, SubmissionDecisionAudit } from "../domain/submission.ts";
 import { createDecideSubmissionUseCase } from "./decide-submission.use-case.ts";
 import type { Clock, EventPublisher, IdGenerator, SubmissionRepository } from "./ports.ts";
 
@@ -24,11 +24,14 @@ const createInMemorySubmissionRepository = (
   initialSubmissions: readonly Submission[],
 ): SubmissionRepository & {
   readonly submissions: Submission[];
+  readonly audits: SubmissionDecisionAudit[];
 } => {
   const submissions = [...initialSubmissions];
+  const audits: SubmissionDecisionAudit[] = [];
 
   return {
     submissions,
+    audits,
     save: async ({ submission }) => {
       const submissionIndex = submissions.findIndex((candidate) => candidate.id === submission.id);
 
@@ -56,6 +59,23 @@ const createInMemorySubmissionRepository = (
 
       return succeed(undefined);
     },
+    saveDecision: async ({ submissions: nextSubmissions, audits: nextAudits }) => {
+      for (const submission of nextSubmissions) {
+        const submissionIndex = submissions.findIndex(
+          (candidate) => candidate.id === submission.id,
+        );
+
+        if (submissionIndex === -1) {
+          submissions.push(submission);
+          continue;
+        }
+
+        submissions[submissionIndex] = submission;
+      }
+
+      audits.push(...nextAudits);
+      return succeed(undefined);
+    },
     findById: async ({ submissionId }) =>
       submissions.find((submission) => submission.id === submissionId) ?? null,
     findByChallengeId: async ({ challengeId }) =>
@@ -64,6 +84,8 @@ const createInMemorySubmissionRepository = (
       submissions.filter(
         (submission) => submission.startupOrganizationId === startupOrganizationId,
       ),
+    findDecisionAuditsBySubmissionId: async ({ submissionId }) =>
+      audits.filter((audit) => audit.submissionId === submissionId),
   };
 };
 
@@ -108,6 +130,18 @@ describe("DecideSubmissionUseCase", () => {
 
     expect(result.ok).toBe(true);
     expect(submissionRepository.submissions[0]?.status).toBe("accepted");
+    expect(submissionRepository.audits[0]).toMatchObject({
+      submissionId: submission.id,
+      challengeId: submission.challengeId,
+      decidedByUserId: companyAdminActor.userId,
+      decidedByUserEmail: companyAdminActor.userEmail,
+      decidedByOrganizationId: companyAdminActor.organizationId,
+      decidedByRole: "company-admin",
+      previousStatus: "submitted",
+      newStatus: "accepted",
+      decidedAt: fixedDecidedAt,
+      reason: null,
+    });
     expect(eventPublisher.events[0]).toMatchObject({
       eventName: eventNames.submissionAccepted,
       occurredAt: "2026-06-16T10:00:00.000Z",
@@ -231,6 +265,27 @@ describe("DecideSubmissionUseCase", () => {
       { id: notSelectedSubmission.id, status: "not-selected" },
       { id: pendingSubmission.id, status: "submitted" },
       { id: rejectedSubmission.id, status: "rejected" },
+    ]);
+    expect(
+      submissionRepository.audits.map((audit) => ({
+        submissionId: audit.submissionId,
+        previousStatus: audit.previousStatus,
+        newStatus: audit.newStatus,
+        decidedByUserId: audit.decidedByUserId,
+      })),
+    ).toEqual([
+      {
+        submissionId: selectedSubmission.id,
+        previousStatus: "accepted",
+        newStatus: "selected",
+        decidedByUserId: companyAdminActor.userId,
+      },
+      {
+        submissionId: notSelectedSubmission.id,
+        previousStatus: "accepted",
+        newStatus: "not-selected",
+        decidedByUserId: companyAdminActor.userId,
+      },
     ]);
     expect(eventPublisher.events).toHaveLength(1);
     expect(eventPublisher.events[0]?.eventName).toBe(eventNames.submissionSelected);

@@ -216,6 +216,7 @@ describe("buildChallengeHttpServer", () => {
     expect(listChallengesUseCase.actors).toEqual([
       {
         userId: "company-user",
+        userEmail: null,
         organizationId: "org-company",
         role: "company-admin",
       },
@@ -271,6 +272,7 @@ describe("buildChallengeHttpServer", () => {
     const command = readRecordedCommand({ commands: createChallengeUseCase.commands });
     const actor: ActorContext = {
       userId: "company-user",
+      userEmail: null,
       organizationId: "org-company",
       role: "company-admin",
     };
@@ -329,6 +331,7 @@ describe("buildChallengeHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "company-user",
+        userEmail: null,
         organizationId: "org-company",
         role: "company-admin",
       },
@@ -380,6 +383,7 @@ describe("buildChallengeHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "company-user",
+        userEmail: null,
         organizationId: "org-company",
         role: "company-admin",
       },
@@ -409,6 +413,7 @@ describe("buildChallengeHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "company-user",
+        userEmail: null,
         organizationId: "org-company",
         role: "company-admin",
       },
@@ -437,6 +442,7 @@ describe("buildChallengeHttpServer", () => {
     expect(command).toEqual({
       actor: {
         userId: "company-user",
+        userEmail: null,
         organizationId: "org-company",
         role: "company-admin",
       },

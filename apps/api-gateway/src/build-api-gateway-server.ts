@@ -44,6 +44,9 @@ const createForwardHeaders = (input: {
     String(input.headers["x-correlation-id"] ?? input.idGenerator.generate()),
   );
   headers.set("x-user-id", input.actor.userId);
+  if (input.actor.userEmail !== undefined && input.actor.userEmail !== null) {
+    headers.set("x-user-email", input.actor.userEmail);
+  }
   headers.set("x-organization-id", input.actor.organizationId);
   headers.set("x-role", input.actor.role);
 
@@ -493,6 +496,25 @@ export const buildApiGatewayServer = async (input: {
         method: "POST",
         headers: request.headers,
         body: request.body,
+      });
+
+      return reply.code(response.statusCode).send(response.body);
+    },
+  );
+
+  server.get<{ Params: { readonly submissionId: string } }>(
+    "/submissions/:submissionId/decision-audits",
+    async (request, reply) => {
+      const actor = await authenticate(request.headers);
+      if (actor === null) {
+        return reply.code(401).send({ error: "unauthorized" });
+      }
+
+      const response = await proxy({
+        actor,
+        url: `${input.serviceUrls.submissionServiceUrl}/submissions/${request.params.submissionId}/decision-audits`,
+        method: "GET",
+        headers: request.headers,
       });
 
       return reply.code(response.statusCode).send(response.body);

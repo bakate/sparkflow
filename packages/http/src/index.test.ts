@@ -7,6 +7,7 @@ describe("HTTP header readers", () => {
       headers: {
         "x-organization-id": "org-company",
         "x-role": "company-admin",
+        "x-user-email": "company-admin@sparkflow.test",
         "x-user-id": "user-company-admin",
       },
     });
@@ -14,6 +15,7 @@ describe("HTTP header readers", () => {
     expect(actor).toEqual({
       organizationId: "org-company",
       role: "company-admin",
+      userEmail: "company-admin@sparkflow.test",
       userId: "user-company-admin",
     });
   });
@@ -24,6 +26,7 @@ describe("HTTP header readers", () => {
     expect(actor).toEqual({
       organizationId: "unknown-organization",
       role: "startup-member",
+      userEmail: null,
       userId: "anonymous",
     });
   });

@@ -22,6 +22,10 @@ const createInMemorySubmissionRepository = (): SubmissionRepository & {
       submissions.push(...nextSubmissions);
       return succeed(undefined);
     },
+    saveDecision: async ({ submissions: nextSubmissions }) => {
+      submissions.push(...nextSubmissions);
+      return succeed(undefined);
+    },
     findById: async ({ submissionId }) =>
       submissions.find((submission) => submission.id === submissionId) ?? null,
     findByChallengeId: async ({ challengeId }) =>
@@ -30,6 +34,7 @@ const createInMemorySubmissionRepository = (): SubmissionRepository & {
       submissions.filter(
         (submission) => submission.startupOrganizationId === startupOrganizationId,
       ),
+    findDecisionAuditsBySubmissionId: async () => [],
   };
 };
 

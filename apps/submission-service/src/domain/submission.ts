@@ -1,4 +1,9 @@
-import type { SubmissionDto, SubmissionStatus } from "@sparkflow/contracts";
+import type {
+  ActorContext,
+  SubmissionDecisionAuditDto,
+  SubmissionDto,
+  SubmissionStatus,
+} from "@sparkflow/contracts";
 
 export type Submission = {
   readonly id: string;
@@ -16,6 +21,20 @@ export type SubmissionError =
   | "challenge-already-selected"
   | "submission-not-shortlisted"
   | "submission-not-found";
+
+export type SubmissionDecisionAudit = {
+  readonly id: string;
+  readonly submissionId: string;
+  readonly challengeId: string;
+  readonly decidedByUserId: string;
+  readonly decidedByUserEmail: string | null;
+  readonly decidedByOrganizationId: string;
+  readonly decidedByRole: ActorContext["role"];
+  readonly previousStatus: SubmissionStatus;
+  readonly newStatus: SubmissionStatus;
+  readonly decidedAt: Date;
+  readonly reason: string | null;
+};
 
 export const createSubmission = (input: {
   readonly id: string;
@@ -77,4 +96,41 @@ export const toSubmissionDto = (submission: Submission): SubmissionDto => ({
   status: submission.status,
   createdAt: submission.createdAt.toISOString(),
   decidedAt: submission.decidedAt?.toISOString() ?? null,
+});
+
+export const createSubmissionDecisionAudit = (input: {
+  readonly id: string;
+  readonly actor: ActorContext;
+  readonly previousSubmission: Submission;
+  readonly decidedSubmission: Submission;
+  readonly decidedAt: Date;
+  readonly reason?: string | null;
+}): SubmissionDecisionAudit => ({
+  id: input.id,
+  submissionId: input.decidedSubmission.id,
+  challengeId: input.decidedSubmission.challengeId,
+  decidedByUserId: input.actor.userId,
+  decidedByUserEmail: input.actor.userEmail ?? null,
+  decidedByOrganizationId: input.actor.organizationId,
+  decidedByRole: input.actor.role,
+  previousStatus: input.previousSubmission.status,
+  newStatus: input.decidedSubmission.status,
+  decidedAt: input.decidedAt,
+  reason: input.reason ?? null,
+});
+
+export const toSubmissionDecisionAuditDto = (
+  audit: SubmissionDecisionAudit,
+): SubmissionDecisionAuditDto => ({
+  id: audit.id,
+  submissionId: audit.submissionId,
+  challengeId: audit.challengeId,
+  decidedByUserId: audit.decidedByUserId,
+  decidedByUserEmail: audit.decidedByUserEmail,
+  decidedByOrganizationId: audit.decidedByOrganizationId,
+  decidedByRole: audit.decidedByRole,
+  previousStatus: audit.previousStatus,
+  newStatus: audit.newStatus,
+  decidedAt: audit.decidedAt.toISOString(),
+  reason: audit.reason,
 });

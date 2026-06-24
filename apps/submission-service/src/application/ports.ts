@@ -1,6 +1,6 @@
 import type { DomainEvent, SubmissionDto } from "@sparkflow/contracts";
 import type { Result } from "@sparkflow/result";
-import type { Submission } from "../domain/submission.ts";
+import type { Submission, SubmissionDecisionAudit } from "../domain/submission.ts";
 
 export type SubmissionPersistenceError = "challenge-already-selected";
 
@@ -11,6 +11,10 @@ export type SubmissionRepository = {
   readonly saveMany: (input: {
     readonly submissions: readonly Submission[];
   }) => Promise<Result<SubmissionPersistenceError, void>>;
+  readonly saveDecision: (input: {
+    readonly submissions: readonly Submission[];
+    readonly audits: readonly SubmissionDecisionAudit[];
+  }) => Promise<Result<SubmissionPersistenceError, void>>;
   readonly findById: (input: { readonly submissionId: string }) => Promise<Submission | null>;
   readonly findByChallengeId: (input: {
     readonly challengeId: string;
@@ -18,6 +22,9 @@ export type SubmissionRepository = {
   readonly findByStartupOrganizationId: (input: {
     readonly startupOrganizationId: string;
   }) => Promise<readonly Submission[]>;
+  readonly findDecisionAuditsBySubmissionId: (input: {
+    readonly submissionId: string;
+  }) => Promise<readonly SubmissionDecisionAudit[]>;
 };
 
 export type EventPublisher = {
