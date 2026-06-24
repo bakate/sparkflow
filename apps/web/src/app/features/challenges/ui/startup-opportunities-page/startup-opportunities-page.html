@@ -47,6 +47,22 @@
     <p-tag severity="secondary" [value]="opportunitySummary().closed + ' closed'" />
   </div>
 
+  @if (focusedSubmissionId() !== null) {
+    <div
+      class="flex flex-column sm:flex-row sm:align-items-center justify-content-between gap-3 p-3 border-1 border-blue-200 border-round bg-blue-50"
+    >
+      <p class="m-0 font-semibold text-blue-900">
+        Showing the opportunity opened from notification.
+      </p>
+      <p-button
+        label="Show all opportunities"
+        icon="pi pi-list"
+        severity="secondary"
+        (onClick)="clearFocusedOpportunity()"
+      />
+    </div>
+  }
+
   <div class="flex gap-2 flex-wrap" aria-label="Opportunity filters">
     @for (filter of opportunityFilters(); track filter.value) {
       <button

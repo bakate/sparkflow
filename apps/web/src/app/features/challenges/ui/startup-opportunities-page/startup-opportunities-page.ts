@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
@@ -24,7 +25,12 @@ import { challengeErrorMessage } from '../challenge-error-message';
 })
 export class StartupOpportunitiesPage {
   protected readonly store = inject(ChallengesStore);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   protected readonly activeFilter = signal<OpportunityFilter>('all');
+  protected readonly focusedSubmissionId = signal<SubmissionId | null>(
+    toSubmissionId({ value: this.route.snapshot.queryParamMap.get('submissionId') }),
+  );
   protected readonly opportunities = computed<readonly OpportunityViewModel[]>(() =>
     this.store
       .myOpportunities()
@@ -50,12 +56,11 @@ export class StartupOpportunitiesPage {
     summarizeOpportunities({ opportunities: this.opportunities() }),
   );
   protected readonly filteredOpportunities = computed<readonly OpportunityViewModel[]>(() =>
-    this.opportunities().filter((opportunity) =>
-      opportunityMatchesFilter({
-        opportunity,
-        filter: this.activeFilter(),
-      }),
-    ),
+    filterVisibleOpportunities({
+      focusedSubmissionId: this.focusedSubmissionId(),
+      filter: this.activeFilter(),
+      opportunities: this.opportunities(),
+    }),
   );
   protected readonly opportunityFilters = computed<readonly OpportunityFilterViewModel[]>(() =>
     opportunityFilterOptions.map((filterOption) => ({
@@ -71,6 +76,10 @@ export class StartupOpportunitiesPage {
   );
 
   constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((queryParamMap) => {
+      this.focusedSubmissionId.set(toSubmissionId({ value: queryParamMap.get('submissionId') }));
+    });
+
     effect(() => {
       const auditLoadRequests = decisionAuditLoadRequestsForOpportunities({
         opportunities: this.store.myOpportunities(),
@@ -89,11 +98,28 @@ export class StartupOpportunitiesPage {
 
   protected selectFilter(input: { readonly filter: OpportunityFilter }): void {
     this.activeFilter.set(input.filter);
+    this.clearFocusedOpportunity();
+  }
+
+  protected clearFocusedOpportunity(): void {
+    if (this.focusedSubmissionId() === null) {
+      return;
+    }
+
+    void this.router.navigate(['/opportunities'], {
+      queryParams: { submissionId: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   protected emptyMessage(): string {
     if (this.store.myOpportunities().length === 0) {
       return 'No submitted opportunities yet.';
+    }
+
+    if (this.focusedSubmissionId() !== null) {
+      return 'This linked opportunity is not available for your startup.';
     }
 
     return emptyMessageForFilter({ filter: this.activeFilter() });
@@ -179,6 +205,11 @@ type DecisionAuditLoadRequest = {
   readonly challengeId: ChallengeId;
   readonly submissionId: SubmissionId;
 };
+
+const toSubmissionId = (input: { readonly value: string | null }): SubmissionId | null =>
+  input.value === null || input.value.trim().length === 0
+    ? null
+    : (input.value.trim() as SubmissionId);
 
 const opportunityFilterOptions: readonly OpportunityFilterOption[] = [
   { label: 'All', value: 'all' },
@@ -290,6 +321,25 @@ const opportunityMatchesFilter = (input: {
     input.opportunity.status === 'not-selected' ||
     input.opportunity.status === 'rejected' ||
     input.opportunity.status === 'selected'
+  );
+};
+
+const filterVisibleOpportunities = (input: {
+  readonly focusedSubmissionId: SubmissionId | null;
+  readonly filter: OpportunityFilter;
+  readonly opportunities: readonly OpportunityViewModel[];
+}): readonly OpportunityViewModel[] => {
+  if (input.focusedSubmissionId !== null) {
+    return input.opportunities.filter(
+      (opportunity) => opportunity.submissionId === input.focusedSubmissionId,
+    );
+  }
+
+  return input.opportunities.filter((opportunity) =>
+    opportunityMatchesFilter({
+      opportunity,
+      filter: input.filter,
+    }),
   );
 };
 
