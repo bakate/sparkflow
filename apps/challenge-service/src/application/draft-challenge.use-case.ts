@@ -41,6 +41,10 @@ export const createDraftChallengeUseCase = (input: {
       return fail("challenge-already-archived");
     }
 
+    if (challenge.status === "selection-completed") {
+      return fail("challenge-selection-completed");
+    }
+
     const draftedChallenge = draftChallenge({ challenge });
     await input.challengeRepository.save({ challenge: draftedChallenge });
 

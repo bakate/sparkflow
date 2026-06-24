@@ -10,6 +10,8 @@ user_password="${USER_PASSWORD:-sparkflow}"
 body_file="${SMOKE_BODY_FILE:-/tmp/sparkflow-smoke-response.json}"
 notification_retry_count="${SMOKE_NOTIFICATION_RETRY_COUNT:-10}"
 notification_retry_delay="${SMOKE_NOTIFICATION_RETRY_DELAY:-1}"
+challenge_status_retry_count="${SMOKE_CHALLENGE_STATUS_RETRY_COUNT:-10}"
+challenge_status_retry_delay="${SMOKE_CHALLENGE_STATUS_RETRY_DELAY:-1}"
 
 require_command() {
   local command_name="$1"
@@ -105,6 +107,37 @@ wait_for_selected_notification() {
   exit 1
 }
 
+wait_for_selection_completed_challenge() {
+  local company_token="$1"
+  local challenge_id="$2"
+  local attempt_number=1
+
+  while [[ "$attempt_number" -le "$challenge_status_retry_count" ]]; do
+    local http_status
+    http_status="$(request GET "$api_url/challenges" "$company_token")"
+    assert_status "$http_status" 200 "list company challenges after final selection"
+
+    local challenge_status
+    challenge_status="$(
+      jq -r --arg challenge_id "$challenge_id" \
+        '.[] | select(.id == $challenge_id) | .status' \
+        "$body_file"
+    )"
+
+    if [[ "$challenge_status" == "selection-completed" ]]; then
+      printf 'PASS challenge status=%s\n' "$challenge_status"
+      return
+    fi
+
+    sleep "$challenge_status_retry_delay"
+    attempt_number="$((attempt_number + 1))"
+  done
+
+  printf 'FAIL expected challenge=%s status=selection-completed\n' "$challenge_id" >&2
+  jq . "$body_file" 2>/dev/null || cat "$body_file" >&2
+  exit 1
+}
+
 require_command curl
 require_command jq
 
@@ -189,5 +222,6 @@ if [[ "$selected_count" != "1" || "$accepted_count" != "0" || "$not_selected_cou
 fi
 
 printf 'PASS statuses selected=%s accepted=%s not-selected=%s\n' "$selected_count" "$accepted_count" "$not_selected_count"
+wait_for_selection_completed_challenge "$company_token" "$challenge_id"
 wait_for_selected_notification "$startup_token" "$proposal_one_id"
 printf 'SMOKE_OK challenge_id=%s proposal_one=%s proposal_two=%s\n' "$challenge_id" "$proposal_one_id" "$proposal_two_id"

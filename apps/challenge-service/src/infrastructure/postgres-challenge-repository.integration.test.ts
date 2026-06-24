@@ -89,6 +89,24 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresChallengeRepository integra
     expect(foundChallenge?.publishedAt?.toISOString()).toBe("2026-06-16T10:00:00.000Z");
   });
 
+  it("saves a selection completed challenge", async () => {
+    const repository = createPostgresChallengeRepository({ pool });
+    const challenge: Challenge = {
+      ...createDraftChallenge({
+        id: faker.string.uuid(),
+        createdAt: new Date("2026-06-16T09:00:00.000Z"),
+      }),
+      status: "selection-completed",
+      publishedAt: new Date("2026-06-16T10:00:00.000Z"),
+    };
+
+    await repository.save({ challenge });
+
+    const foundChallenge = await repository.findById({ challengeId: challenge.id });
+
+    expect(foundChallenge?.status).toBe("selection-completed");
+  });
+
   it("lists challenges from newest to oldest", async () => {
     const repository = createPostgresChallengeRepository({ pool });
     const olderChallenge = createDraftChallenge({

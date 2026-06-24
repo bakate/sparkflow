@@ -23,6 +23,7 @@ const STATUS_CONFIG: Record<ChallengeStatusLabelValue, { label: string; severity
   rejected: { label: 'Rejected', severity: 'danger' },
   selected: { label: 'Selected', severity: 'success' },
   'under-review': { label: 'Under review', severity: 'info' },
+  'selection-completed': { label: 'Selection completed', severity: 'success' },
   published: { label: 'Published', severity: 'success' },
   draft: { label: 'Draft', severity: 'secondary' },
 };

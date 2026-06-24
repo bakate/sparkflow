@@ -32,6 +32,7 @@ const challengeFailures = [
   'challenge-already-archived',
   'challenge-already-draft',
   'challenge-already-published',
+  'challenge-selection-completed',
   'challenge-not-found',
   'challenge-already-selected',
   'submission-not-found',

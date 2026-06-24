@@ -42,7 +42,8 @@ export type ChallengeError =
   | "challenge-description-required"
   | "challenge-already-archived"
   | "challenge-already-draft"
-  | "challenge-already-published";
+  | "challenge-already-published"
+  | "challenge-selection-completed";
 
 export const createChallenge = (input: CreateChallengeInput): Challenge => ({
   id: input.id,
@@ -63,6 +64,13 @@ export const publishChallenge = (input: PublishChallengeInput): Challenge => ({
 export const archiveChallenge = (input: ArchiveChallengeInput): Challenge => ({
   ...input.challenge,
   status: "archived",
+});
+
+export const completeChallengeSelection = (input: {
+  readonly challenge: Challenge;
+}): Challenge => ({
+  ...input.challenge,
+  status: "selection-completed",
 });
 
 export const draftChallenge = (input: DraftChallengeInput): Challenge => ({

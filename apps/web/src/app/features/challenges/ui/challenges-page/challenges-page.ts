@@ -88,18 +88,10 @@ export class ChallengesPage {
       }
 
       if (selectedTab === 'assessed') {
-        return challenges.filter(
-          (challenge) =>
-            challenge.status !== 'archived' &&
-            this.store.hasAssessedSubmissionForChallenge({ challengeId: challenge.id }),
-        );
+        return challenges.filter((challenge) => challenge.status === 'selection-completed');
       }
 
-      return challenges.filter(
-        (challenge) =>
-          challenge.status === 'published' &&
-          !this.store.hasAssessedSubmissionForChallenge({ challengeId: challenge.id }),
-      );
+      return challenges.filter((challenge) => challenge.status === 'published');
     }
 
     if (!this.usesStartupChallengeTabs()) {
@@ -123,7 +115,7 @@ export class ChallengesPage {
     }
 
     return challenges.filter((challenge) => {
-      if (challenge.status !== 'published') {
+      if (challenge.status !== 'published' && challenge.status !== 'selection-completed') {
         return false;
       }
 
@@ -170,7 +162,7 @@ export class ChallengesPage {
   protected readonly assessedStartupChallengeCount = computed(
     () =>
       this.store.challenges().filter((challenge) => {
-        if (challenge.status !== 'published') {
+        if (challenge.status !== 'published' && challenge.status !== 'selection-completed') {
           return false;
         }
 
@@ -191,24 +183,12 @@ export class ChallengesPage {
     () => this.store.challenges().filter((challenge) => challenge.status === 'archived').length,
   );
   protected readonly publishedCompanyChallengeCount = computed(
-    () =>
-      this.store
-        .challenges()
-        .filter(
-          (challenge) =>
-            challenge.status === 'published' &&
-            !this.store.hasAssessedSubmissionForChallenge({ challengeId: challenge.id }),
-        ).length,
+    () => this.store.challenges().filter((challenge) => challenge.status === 'published').length,
   );
   protected readonly assessedCompanyChallengeCount = computed(
     () =>
-      this.store
-        .challenges()
-        .filter(
-          (challenge) =>
-            challenge.status !== 'archived' &&
-            this.store.hasAssessedSubmissionForChallenge({ challengeId: challenge.id }),
-        ).length,
+      this.store.challenges().filter((challenge) => challenge.status === 'selection-completed')
+        .length,
   );
   protected readonly challengeFormValue = computed<ChallengeFormValue>(() => {
     const challenge = this.selectedChallenge();
@@ -235,6 +215,10 @@ export class ChallengesPage {
     effect(() => {
       const activeTab = this.activeChallengeTab();
 
+      if (this.currentActor() === null) {
+        return;
+      }
+
       if (this.isAllowedActiveChallengeTab({ tab: activeTab })) {
         return;
       }
@@ -251,7 +235,12 @@ export class ChallengesPage {
 
       const publishedChallengeIds = this.store
         .challenges()
-        .filter((challenge) => challenge.status === 'published' || challenge.status === 'archived')
+        .filter(
+          (challenge) =>
+            challenge.status === 'published' ||
+            challenge.status === 'selection-completed' ||
+            challenge.status === 'archived',
+        )
         .map((challenge) => challenge.id);
 
       queueMicrotask(() => {
@@ -316,7 +305,12 @@ export class ChallengesPage {
     readonly submission: Submission | null;
   }): boolean {
     if (this.usesCompanyChallengeTabs()) {
-      return this.store.hasAssessedSubmissionForChallenge({ challengeId: input.challengeId });
+      return this.store
+        .challenges()
+        .some(
+          (challenge) =>
+            challenge.id === input.challengeId && challenge.status === 'selection-completed',
+        );
     }
 
     return (

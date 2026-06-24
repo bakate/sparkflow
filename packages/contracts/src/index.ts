@@ -28,7 +28,7 @@ export type DomainEvent<TPayload = unknown> = {
   readonly payload: TPayload;
 };
 
-export type ChallengeStatus = "archived" | "draft" | "published";
+export type ChallengeStatus = "archived" | "draft" | "published" | "selection-completed";
 
 export type ChallengeDto = {
   readonly id: string;

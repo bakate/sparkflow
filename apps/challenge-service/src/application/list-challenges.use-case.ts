@@ -16,7 +16,7 @@ export const createListChallengesUseCase = (input: {
         return challenge.ownerOrganizationId === actor.organizationId;
       }
 
-      return challenge.status === "published";
+      return challenge.status === "published" || challenge.status === "selection-completed";
     });
 
     return visibleChallenges.map(toChallengeDto);

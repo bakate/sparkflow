@@ -50,6 +50,10 @@ export const createPublishChallengeUseCase = (input: {
       return fail("challenge-already-archived");
     }
 
+    if (challenge.status === "selection-completed") {
+      return fail("challenge-selection-completed");
+    }
+
     const now = input.clock.now();
     const publishedChallenge = publishChallenge({ challenge, now });
     await input.challengeRepository.save({ challenge: publishedChallenge });

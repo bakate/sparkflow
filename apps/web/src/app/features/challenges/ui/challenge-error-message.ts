@@ -6,6 +6,7 @@ const errorMessages: Record<ChallengeFailure, string> = {
   'challenge-already-archived': 'Challenge is already archived.',
   'challenge-already-draft': 'Challenge is already a draft.',
   'challenge-already-published': 'Challenge is already published.',
+  'challenge-selection-completed': 'Challenge selection is already completed.',
   'challenge-not-found': 'Challenge was not found.',
   'challenge-already-selected': 'A final startup has already been selected.',
   'submission-not-found': 'Submission was not found.',

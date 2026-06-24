@@ -132,4 +132,28 @@ describe("PublishChallengeUseCase", () => {
     expect(result).toEqual({ ok: false, error: "forbidden" });
     expect(eventPublisher.events).toHaveLength(0);
   });
+
+  it("rejects publishing a challenge with a completed selection", async () => {
+    const completedChallenge: Challenge = {
+      ...draftChallenge,
+      status: "selection-completed",
+      publishedAt: fixedPublishedAt,
+    };
+    const eventPublisher = createInMemoryEventPublisher();
+    const useCase = createPublishChallengeUseCase({
+      challengeRepository: createInMemoryChallengeRepository([completedChallenge]),
+      clock: fixedClock,
+      eventPublisher,
+      idGenerator: fixedIdGenerator,
+    });
+
+    const result = await useCase.execute({
+      actor: companyAdminActor,
+      challengeId: completedChallenge.id,
+      correlationId: "correlation-id",
+    });
+
+    expect(result).toEqual({ ok: false, error: "challenge-selection-completed" });
+    expect(eventPublisher.events).toHaveLength(0);
+  });
 });

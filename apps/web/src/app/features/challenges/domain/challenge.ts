@@ -28,7 +28,7 @@ export const canArchiveChallenge = (input: {
 }): boolean =>
   input.actor.role === 'company-admin' &&
   input.actor.organizationId === input.challenge.ownerOrganizationId &&
-  input.challenge.status === 'published';
+  (input.challenge.status === 'published' || input.challenge.status === 'selection-completed');
 
 export const canEditChallenge = (input: {
   readonly actor: ChallengeActor;
@@ -48,4 +48,6 @@ export const canReviewChallengeSubmissions = (input: {
 }): boolean =>
   input.actor.role === 'company-admin' &&
   input.actor.organizationId === input.challenge.ownerOrganizationId &&
-  (input.challenge.status === 'published' || input.challenge.status === 'archived');
+  (input.challenge.status === 'published' ||
+    input.challenge.status === 'selection-completed' ||
+    input.challenge.status === 'archived');

@@ -3,6 +3,7 @@ import { logger } from "@sparkflow/logger";
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createArchiveChallengeUseCase } from "./application/archive-challenge.use-case.ts";
+import { createCompleteSelectionUseCase } from "./application/complete-selection.use-case.ts";
 import { createCreateChallengeUseCase } from "./application/create-challenge.use-case.ts";
 import { createDraftChallengeUseCase } from "./application/draft-challenge.use-case.ts";
 import { createGetChallengeUseCase } from "./application/get-challenge.use-case.ts";
@@ -10,6 +11,7 @@ import { createListChallengesUseCase } from "./application/list-challenges.use-c
 import { createPublishChallengeUseCase } from "./application/publish-challenge.use-case.ts";
 import { createUpdateChallengeUseCase } from "./application/update-challenge.use-case.ts";
 import { buildChallengeHttpServer } from "./infrastructure/http-server.ts";
+import { startNatsEventConsumer } from "./infrastructure/nats-event-consumer.ts";
 import { createNatsEventPublisher } from "./infrastructure/nats-event-publisher.ts";
 import {
   createPostgresChallengeRepository,
@@ -28,6 +30,10 @@ await ensureChallengeSchema({ pool });
 
 const challengeRepository = createPostgresChallengeRepository({ pool });
 const eventPublisher = await createNatsEventPublisher({ natsUrl });
+await startNatsEventConsumer({
+  natsUrl,
+  completeSelectionUseCase: createCompleteSelectionUseCase({ challengeRepository }),
+});
 const clock = { now: () => new Date() } as const;
 const idGenerator = { generate: () => randomUUID() } as const;
 

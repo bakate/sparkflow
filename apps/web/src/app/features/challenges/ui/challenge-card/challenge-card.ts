@@ -84,6 +84,10 @@ export class ChallengeCard {
       return 'open';
     }
 
+    if (this.challenge().status === 'selection-completed') {
+      return 'selection-completed';
+    }
+
     return this.state().assessed ? 'assessed' : this.challenge().status;
   }
 
