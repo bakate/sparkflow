@@ -376,24 +376,79 @@ describe("buildApiGatewayServer", () => {
     );
   });
 
-  it("routes submission decision audit listing to the submission service", async () => {
-    const { requests, server } = await createServerWithCapturedRequests();
+  it("routes owned submission decision audit listing to the submission service", async () => {
+    const requests: CapturedRequest[] = [];
+    const server = await buildApiGatewayServer({
+      accessTokenVerifier: createAccessTokenVerifier({ actor: companyAdminActor }),
+      serviceUrls,
+      idGenerator: { generate: () => "generated-correlation-id" },
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+
+        if (url.endsWith("/challenges/challenge-1")) {
+          return Response.json({
+            id: "challenge-1",
+            ownerOrganizationId: companyAdminActor.organizationId,
+            status: "selection-completed",
+          });
+        }
+
+        return Response.json([{ id: "audit-1" }]);
+      },
+    });
+    openServers.push(server);
 
     await server.inject({
       method: "GET",
-      url: "/submissions/submission-1/decision-audits",
+      url: "/challenges/challenge-1/submissions/submission-1/decision-audits",
       headers: {
         authorization: authorizationHeader,
       },
     });
 
-    const request = readCapturedRequest({ requests });
-    const headers = readForwardedHeaders({ request });
+    const auditRequest = readCapturedRequest({ requests, index: 1 });
+    const headers = readForwardedHeaders({ request: auditRequest });
 
-    expect(request.url).toBe("http://submission-service/submissions/submission-1/decision-audits");
-    expect(request.init.method).toBe("GET");
+    expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+      "GET http://challenge-service/challenges/challenge-1",
+      "GET http://submission-service/submissions/submission-1/decision-audits",
+    ]);
+    expect(auditRequest.init.method).toBe("GET");
     expect(headers.get("x-user-id")).toBe("user-company-admin");
     expect(headers.get("x-user-email")).toBe("company-admin@sparkflow.test");
+  });
+
+  it("rejects submission decision audit listing for challenges owned by another company", async () => {
+    const requests: CapturedRequest[] = [];
+    const server = await buildApiGatewayServer({
+      accessTokenVerifier: createAccessTokenVerifier({ actor: companyAdminActor }),
+      serviceUrls,
+      idGenerator: { generate: () => "generated-correlation-id" },
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+
+        return Response.json({
+          id: "challenge-1",
+          ownerOrganizationId: "org-other-company",
+          status: "selection-completed",
+        });
+      },
+    });
+    openServers.push(server);
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/challenges/challenge-1/submissions/submission-1/decision-audits",
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "forbidden" });
+    expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+      "GET http://challenge-service/challenges/challenge-1",
+    ]);
   });
 
   it("builds startup opportunities from my submissions and challenge details", async () => {

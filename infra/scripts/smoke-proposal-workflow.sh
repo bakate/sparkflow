@@ -257,7 +257,7 @@ fi
 
 printf 'PASS statuses selected=%s accepted=%s not-selected=%s\n' "$selected_count" "$accepted_count" "$not_selected_count"
 
-http_status="$(request GET "$api_url/submissions/$proposal_one_id/decision-audits" "$company_token")"
+http_status="$(request GET "$api_url/challenges/$challenge_id/submissions/$proposal_one_id/decision-audits" "$company_token")"
 assert_status "$http_status" 200 "list selected proposal decision audits"
 selected_audit_count="$(
   jq '[.[] | select(.previousStatus == "accepted" and .newStatus == "selected")] | length' "$body_file"
@@ -271,7 +271,7 @@ fi
 
 printf 'PASS selected proposal audit count=%s\n' "$selected_audit_count"
 
-http_status="$(request GET "$api_url/submissions/$proposal_two_id/decision-audits" "$company_token")"
+http_status="$(request GET "$api_url/challenges/$challenge_id/submissions/$proposal_two_id/decision-audits" "$company_token")"
 assert_status "$http_status" 200 "list not-selected proposal decision audits"
 not_selected_audit_count="$(
   jq '[.[] | select(.previousStatus == "accepted" and .newStatus == "not-selected")] | length' "$body_file"

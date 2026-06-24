@@ -103,6 +103,7 @@ export const buildApiGatewayServer = async (input: {
       "x-correlation-id",
       "x-organization-id",
       "x-role",
+      "x-user-email",
       "x-user-id",
     ],
     methods: ["GET", "HEAD", "OPTIONS", "PATCH", "POST"],
@@ -502,12 +503,22 @@ export const buildApiGatewayServer = async (input: {
     },
   );
 
-  server.get<{ Params: { readonly submissionId: string } }>(
-    "/submissions/:submissionId/decision-audits",
+  server.get<{ Params: { readonly challengeId: string; readonly submissionId: string } }>(
+    "/challenges/:challengeId/submissions/:submissionId/decision-audits",
     async (request, reply) => {
       const actor = await authenticate(request.headers);
       if (actor === null) {
         return reply.code(401).send({ error: "unauthorized" });
+      }
+
+      const guardResponse = await requireOwnedChallenge({
+        actor,
+        challengeId: request.params.challengeId,
+        headers: request.headers,
+      });
+
+      if (guardResponse !== null) {
+        return reply.code(guardResponse.statusCode).send(guardResponse.body);
       }
 
       const response = await proxy({
