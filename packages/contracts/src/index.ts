@@ -52,6 +52,11 @@ export type SubmissionDto = {
   readonly decidedAt: string | null;
 };
 
+export type ChallengeOpportunityDto = {
+  readonly challenge: ChallengeDto;
+  readonly submission: SubmissionDto;
+};
+
 export type EvaluationRecommendation = "strong-fit" | "possible-fit" | "not-fit";
 
 export type EvaluationDto = {

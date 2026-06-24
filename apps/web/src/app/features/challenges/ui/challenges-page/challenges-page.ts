@@ -98,6 +98,8 @@ export class ChallengesPage {
       return challenges;
     }
 
+    const opportunityChallenges = this.store.myOpportunityChallenges();
+
     if (selectedTab === 'published') {
       return challenges.filter(
         (challenge) =>
@@ -107,21 +109,18 @@ export class ChallengesPage {
     }
 
     if (selectedTab === 'in-progress') {
-      return challenges.filter(
+      return opportunityChallenges.filter(
         (challenge) =>
           challenge.status === 'published' &&
           this.store.submissionForChallenge({ challengeId: challenge.id })?.status === 'submitted',
       );
     }
 
-    return challenges.filter((challenge) => {
-      if (challenge.status !== 'published' && challenge.status !== 'selection-completed') {
-        return false;
-      }
-
+    return opportunityChallenges.filter((challenge) => {
       const submission = this.store.submissionForChallenge({ challengeId: challenge.id });
 
       return (
+        challenge.status === 'selection-completed' ||
         submission?.status === 'accepted' ||
         submission?.status === 'rejected' ||
         submission?.status === 'selected' ||
@@ -151,7 +150,7 @@ export class ChallengesPage {
   protected readonly underReviewStartupChallengeCount = computed(
     () =>
       this.store
-        .challenges()
+        .myOpportunityChallenges()
         .filter(
           (challenge) =>
             challenge.status === 'published' &&
@@ -161,14 +160,11 @@ export class ChallengesPage {
   );
   protected readonly assessedStartupChallengeCount = computed(
     () =>
-      this.store.challenges().filter((challenge) => {
-        if (challenge.status !== 'published' && challenge.status !== 'selection-completed') {
-          return false;
-        }
-
+      this.store.myOpportunityChallenges().filter((challenge) => {
         const submission = this.store.submissionForChallenge({ challengeId: challenge.id });
 
         return (
+          challenge.status === 'selection-completed' ||
           submission?.status === 'accepted' ||
           submission?.status === 'rejected' ||
           submission?.status === 'selected' ||

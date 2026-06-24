@@ -1,5 +1,10 @@
 import cors from "@fastify/cors";
-import type { ActorContext, ChallengeDto } from "@sparkflow/contracts";
+import type {
+  ActorContext,
+  ChallengeDto,
+  ChallengeOpportunityDto,
+  SubmissionDto,
+} from "@sparkflow/contracts";
 import Fastify from "fastify";
 import type { AccessTokenVerifier } from "./auth/access-token-verifier.ts";
 
@@ -386,6 +391,64 @@ export const buildApiGatewayServer = async (input: {
     return reply.code(response.statusCode).send(response.body);
   });
 
+  server.get("/me/opportunities", async (request, reply) => {
+    const actor = await authenticate(request.headers);
+    if (actor === null) {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+
+    if (actor.role !== "startup-member") {
+      return reply.code(403).send({ error: "forbidden" });
+    }
+
+    const submissionsResponse = await proxy({
+      actor,
+      url: `${input.serviceUrls.submissionServiceUrl}/me/submissions`,
+      method: "GET",
+      headers: request.headers,
+    });
+
+    if (submissionsResponse.statusCode !== 200) {
+      return reply.code(submissionsResponse.statusCode).send(submissionsResponse.body);
+    }
+
+    if (!isSubmissionDtoArray(submissionsResponse.body)) {
+      return reply.code(502).send({ error: "unexpected-error" });
+    }
+
+    const opportunities: ChallengeOpportunityDto[] = [];
+    const challengeById = new Map<string, ChallengeDto>();
+
+    for (const submission of submissionsResponse.body) {
+      const cachedChallenge = challengeById.get(submission.challengeId);
+
+      if (cachedChallenge !== undefined) {
+        opportunities.push({ challenge: cachedChallenge, submission });
+        continue;
+      }
+
+      const challengeResponse = await proxy({
+        actor,
+        url: `${input.serviceUrls.challengeServiceUrl}/challenges/${submission.challengeId}`,
+        method: "GET",
+        headers: request.headers,
+      });
+
+      if (challengeResponse.statusCode !== 200) {
+        return reply.code(challengeResponse.statusCode).send(challengeResponse.body);
+      }
+
+      if (!isChallengeDto(challengeResponse.body)) {
+        return reply.code(502).send({ error: "unexpected-error" });
+      }
+
+      challengeById.set(submission.challengeId, challengeResponse.body);
+      opportunities.push({ challenge: challengeResponse.body, submission });
+    }
+
+    return reply.send(opportunities);
+  });
+
   server.post<{ Params: { readonly challengeId: string }; Body: unknown }>(
     "/challenges/:challengeId/submissions",
     async (request, reply) => {
@@ -564,5 +627,24 @@ const isChallengeDto = (value: unknown): value is ChallengeDto => {
     typeof value.id === "string" &&
     typeof value.ownerOrganizationId === "string" &&
     typeof value.status === "string"
+  );
+};
+
+const isSubmissionDtoArray = (value: unknown): value is SubmissionDto[] =>
+  Array.isArray(value) && value.every(isSubmissionDto);
+
+const isSubmissionDto = (value: unknown): value is SubmissionDto => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  if (!("id" in value) || !("challengeId" in value) || !("startupOrganizationId" in value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.challengeId === "string" &&
+    typeof value.startupOrganizationId === "string"
   );
 };

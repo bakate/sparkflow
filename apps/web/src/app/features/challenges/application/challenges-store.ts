@@ -11,6 +11,7 @@ import {
   CHALLENGE_GATEWAY,
   type ArchiveChallengeCommand,
   type ChallengeFailure,
+  type ChallengeOpportunity,
   type CreateChallengeCommand,
   type DecideSubmissionCommand,
   type DraftChallengeCommand,
@@ -30,14 +31,14 @@ export class ChallengesStore {
     defaultValue: succeed<readonly Challenge[]>([]),
     loader: () => this.challengeGateway.listChallenges(),
   });
-  private readonly mySubmissionsResource = resource({
-    defaultValue: succeed<readonly Submission[]>([]),
+  private readonly myOpportunitiesResource = resource({
+    defaultValue: succeed<readonly ChallengeOpportunity[]>([]),
     loader: () => {
       const actor = this.authSession.currentActor();
 
       return actor?.role === 'startup-member'
-        ? this.challengeGateway.listMySubmissions()
-        : Promise.resolve(succeed<readonly Submission[]>([]));
+        ? this.challengeGateway.listMyOpportunities()
+        : Promise.resolve(succeed<readonly ChallengeOpportunity[]>([]));
     },
   });
   private readonly savingState = signal(false);
@@ -59,12 +60,26 @@ export class ChallengesStore {
     return result.ok ? result.value : [];
   });
   readonly mySubmissions = computed(() => {
-    const result = this.mySubmissionsResource.value();
+    const result = this.myOpportunitiesResource.value();
+
+    return result.ok ? result.value.map((opportunity) => opportunity.submission) : [];
+  });
+  readonly myOpportunities = computed(() => {
+    const result = this.myOpportunitiesResource.value();
 
     return result.ok ? result.value : [];
   });
+  readonly myOpportunityChallenges = computed(() => {
+    const challengeById = new Map<string, Challenge>();
+
+    this.myOpportunities().forEach((opportunity) => {
+      challengeById.set(opportunity.challenge.id, opportunity.challenge);
+    });
+
+    return [...challengeById.values()];
+  });
   readonly loading = this.challengesResource.isLoading;
-  readonly loadingMySubmissions = this.mySubmissionsResource.isLoading;
+  readonly loadingMySubmissions = this.myOpportunitiesResource.isLoading;
   readonly saving = this.savingState.asReadonly();
   readonly archivingIds = this.archivingIdsState.asReadonly();
   readonly draftingIds = this.draftingIdsState.asReadonly();
@@ -86,9 +101,9 @@ export class ChallengesStore {
       return result.error;
     }
 
-    const mySubmissionsResult = this.mySubmissionsResource.value();
+    const myOpportunitiesResult = this.myOpportunitiesResource.value();
 
-    return mySubmissionsResult.ok ? null : mySubmissionsResult.error;
+    return myOpportunitiesResult.ok ? null : myOpportunitiesResult.error;
   });
   readonly draftCount = computed(
     () => this.challenges().filter((challenge) => canPublishChallenge({ challenge })).length,
@@ -100,9 +115,9 @@ export class ChallengesStore {
   reloadChallenges(): boolean {
     this.commandErrorState.set(null);
     const reloadedChallenges = this.challengesResource.reload();
-    const reloadedSubmissions = this.mySubmissionsResource.reload();
+    const reloadedOpportunities = this.myOpportunitiesResource.reload();
 
-    return reloadedChallenges || reloadedSubmissions;
+    return reloadedChallenges || reloadedOpportunities;
   }
 
   async createChallenge(
@@ -214,9 +229,7 @@ export class ChallengesStore {
       return fail(result.error);
     }
 
-    this.mySubmissionsResource.update((currentResult) =>
-      currentResult.ok ? succeed([result.value, ...currentResult.value]) : succeed([result.value]),
-    );
+    this.addMyOpportunityFromSubmission({ submission: result.value });
     return succeed(result.value);
   }
 
@@ -445,6 +458,34 @@ export class ChallengesStore {
         ),
       };
     });
+    this.myOpportunitiesResource.update((currentResult) =>
+      currentResult.ok
+        ? succeed(
+            currentResult.value.map((opportunity) =>
+              opportunity.submission.id === input.submission.id
+                ? { ...opportunity, submission: input.submission }
+                : opportunity,
+            ),
+          )
+        : currentResult,
+    );
+  }
+
+  private addMyOpportunityFromSubmission(input: { readonly submission: Submission }): void {
+    const challenge = this.challenges().find(
+      (candidate) => candidate.id === input.submission.challengeId,
+    );
+
+    if (challenge === undefined) {
+      this.myOpportunitiesResource.reload();
+      return;
+    }
+
+    this.myOpportunitiesResource.update((currentResult) =>
+      currentResult.ok
+        ? succeed([{ challenge, submission: input.submission }, ...currentResult.value])
+        : succeed([{ challenge, submission: input.submission }]),
+    );
   }
 
   private removeLoadingSubmissionChallengeId(input: { readonly challengeId: string }): void {

@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { ChallengeDto, SubmissionDto } from '@sparkflow/contracts';
+import type { ChallengeDto, ChallengeOpportunityDto, SubmissionDto } from '@sparkflow/contracts';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import {
@@ -12,9 +12,10 @@ import {
 } from '@shared/domain/result';
 import { WEB_API_CONFIG } from '@shared/infrastructure/web-api.config';
 import type {
+  ArchiveChallengeCommand,
   ChallengeFailure,
   ChallengeGateway,
-  ArchiveChallengeCommand,
+  ChallengeOpportunity,
   CreateChallengeCommand,
   DecideSubmissionCommand,
   DraftChallengeCommand,
@@ -70,6 +71,21 @@ export class HttpChallengeGateway implements ChallengeGateway {
           .pipe(timeout(5000)),
       );
       return succeed(submissionDtos.map((submissionDto) => toSubmission({ submissionDto })));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
+  async listMyOpportunities(): Promise<Result<ChallengeFailure, readonly ChallengeOpportunity[]>> {
+    try {
+      const opportunityDtos = await firstValueFrom(
+        this.httpClient
+          .get<ChallengeOpportunityDto[]>(this.buildUrl({ path: '/me/opportunities' }))
+          .pipe(timeout(5000)),
+      );
+      return succeed(
+        opportunityDtos.map((opportunityDto) => toChallengeOpportunity({ opportunityDto })),
+      );
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
     }
@@ -263,6 +279,13 @@ const toSubmission = (input: { readonly submissionDto: SubmissionDto }): Submiss
   createdAt: new Date(input.submissionDto.createdAt),
   decidedAt:
     input.submissionDto.decidedAt === null ? null : new Date(input.submissionDto.decidedAt),
+});
+
+const toChallengeOpportunity = (input: {
+  readonly opportunityDto: ChallengeOpportunityDto;
+}): ChallengeOpportunity => ({
+  challenge: toChallenge({ challengeDto: input.opportunityDto.challenge }),
+  submission: toSubmission({ submissionDto: input.opportunityDto.submission }),
 });
 
 const toChallengeFailure = (input: { readonly error: unknown }): ChallengeFailure => {

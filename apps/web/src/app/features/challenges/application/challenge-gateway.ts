@@ -3,6 +3,11 @@ import type { ChallengeId, Result, SubmissionId } from '@shared/domain/result';
 import type { Challenge } from '@features/challenges/domain/challenge';
 import type { Submission } from '@features/challenges/domain/submission';
 
+export type ChallengeOpportunity = {
+  readonly challenge: Challenge;
+  readonly submission: Submission;
+};
+
 export type ChallengeFailure =
   | 'challenge-title-required'
   | 'challenge-description-required'
@@ -60,6 +65,9 @@ export type DecideSubmissionCommand = {
 export type ChallengeGateway = {
   readonly listChallenges: () => Promise<Result<ChallengeFailure, readonly Challenge[]>>;
   readonly listMySubmissions: () => Promise<Result<ChallengeFailure, readonly Submission[]>>;
+  readonly listMyOpportunities: () => Promise<
+    Result<ChallengeFailure, readonly ChallengeOpportunity[]>
+  >;
   readonly listChallengeSubmissions: (
     command: ListChallengeSubmissionsCommand,
   ) => Promise<Result<ChallengeFailure, readonly Submission[]>>;

@@ -39,7 +39,7 @@ describe("createListChallengesUseCase", () => {
     expect(challenges.map((challenge) => challenge.id)).toEqual([ownDraftChallenge.id]);
   });
 
-  it("lists open and selection completed challenges for startup members", async () => {
+  it("lists only published challenges for startup members", async () => {
     const archivedChallenge = createChallenge({
       id: "challenge-archived",
       ownerOrganizationId: "org-company-a",
@@ -55,28 +55,15 @@ describe("createListChallengesUseCase", () => {
       ownerOrganizationId: "org-company-a",
       status: "published",
     });
-    const selectionCompletedChallenge = createChallenge({
-      id: "challenge-selection-completed",
-      ownerOrganizationId: "org-company-a",
-      status: "selection-completed",
-    });
     const useCase = createListChallengesUseCase({
       challengeRepository: createChallengeRepository({
-        challenges: [
-          archivedChallenge,
-          draftChallenge,
-          publishedChallenge,
-          selectionCompletedChallenge,
-        ],
+        challenges: [archivedChallenge, draftChallenge, publishedChallenge],
       }),
     });
 
     const challenges = await useCase.execute({ actor: startupActor });
 
-    expect(challenges.map((challenge) => challenge.id)).toEqual([
-      publishedChallenge.id,
-      selectionCompletedChallenge.id,
-    ]);
+    expect(challenges.map((challenge) => challenge.id)).toEqual([publishedChallenge.id]);
   });
 });
 

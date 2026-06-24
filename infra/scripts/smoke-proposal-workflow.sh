@@ -138,6 +138,38 @@ wait_for_selection_completed_challenge() {
   exit 1
 }
 
+wait_for_startup_opportunity() {
+  local startup_token="$1"
+  local challenge_id="$2"
+  local submission_id="$3"
+  local attempt_number=1
+
+  while [[ "$attempt_number" -le "$challenge_status_retry_count" ]]; do
+    local http_status
+    http_status="$(request GET "$api_url/me/opportunities" "$startup_token")"
+    assert_status "$http_status" 200 "list startup opportunities after final selection"
+
+    local opportunity_count
+    opportunity_count="$(
+      jq --arg challenge_id "$challenge_id" --arg submission_id "$submission_id" \
+        '[.[] | select(.challenge.id == $challenge_id and .submission.id == $submission_id)] | length' \
+        "$body_file"
+    )"
+
+    if [[ "$opportunity_count" -ge 1 ]]; then
+      printf 'PASS startup opportunity count=%s\n' "$opportunity_count"
+      return
+    fi
+
+    sleep "$challenge_status_retry_delay"
+    attempt_number="$((attempt_number + 1))"
+  done
+
+  printf 'FAIL expected startup opportunity for challenge=%s submission=%s\n' "$challenge_id" "$submission_id" >&2
+  jq . "$body_file" 2>/dev/null || cat "$body_file" >&2
+  exit 1
+}
+
 require_command curl
 require_command jq
 
@@ -224,5 +256,19 @@ if [[ "$selected_count" != "1" || "$accepted_count" != "0" || "$not_selected_cou
 fi
 
 printf 'PASS statuses selected=%s accepted=%s not-selected=%s\n' "$selected_count" "$accepted_count" "$not_selected_count"
+http_status="$(request GET "$api_url/challenges" "$startup_token")"
+assert_status "$http_status" 200 "list startup marketplace after final selection"
+startup_completed_count="$(
+  jq --arg challenge_id "$challenge_id" '[.[] | select(.id == $challenge_id)] | length' "$body_file"
+)"
+
+if [[ "$startup_completed_count" != "0" ]]; then
+  printf 'FAIL expected completed challenge hidden from startup marketplace, got %s\n' "$startup_completed_count" >&2
+  jq . "$body_file"
+  exit 1
+fi
+
+printf 'PASS completed challenge hidden from startup marketplace\n'
+wait_for_startup_opportunity "$startup_token" "$challenge_id" "$proposal_one_id"
 wait_for_selected_notification "$startup_token" "$proposal_one_id"
 printf 'SMOKE_OK challenge_id=%s proposal_one=%s proposal_two=%s\n' "$challenge_id" "$proposal_one_id" "$proposal_two_id"

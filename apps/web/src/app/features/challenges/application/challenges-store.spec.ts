@@ -14,6 +14,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -23,11 +24,42 @@ describe('ChallengesStore', () => {
         submitChallengeProposal: async () => fail('unexpected-error'),
         acceptSubmission: async () => fail('unexpected-error'),
         rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
       },
     });
 
     await expect.poll(() => store.challenges()).toEqual([challenge]);
     expect(store.draftCount()).toBe(1);
+  });
+
+  it('loads startup opportunity challenges from the dedicated projection', async () => {
+    const openChallenge = createChallenge({ id: 'challenge-open', status: 'published' });
+    const completedChallenge = createChallenge({
+      id: 'challenge-completed',
+      status: 'selection-completed',
+    });
+    const submission = createSubmission({ challengeId: completedChallenge.id });
+    const store = createStore({
+      challengeGateway: {
+        listChallenges: async () => succeed([openChallenge]),
+        listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([{ challenge: completedChallenge, submission }]),
+        listChallengeSubmissions: async () => succeed([]),
+        createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => fail('unexpected-error'),
+        publishChallenge: async () => fail('unexpected-error'),
+        draftChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
+      },
+    });
+
+    await expect.poll(() => store.challenges()).toEqual([openChallenge]);
+    await expect.poll(() => store.myOpportunityChallenges()).toEqual([completedChallenge]);
+    expect(store.mySubmissions()).toEqual([submission]);
   });
 
   it('adds created challenges first', async () => {
@@ -37,6 +69,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
         listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => succeed(createdChallenge),
         updateChallenge: async () => fail('unexpected-error'),
@@ -46,6 +79,7 @@ describe('ChallengesStore', () => {
         submitChallengeProposal: async () => fail('unexpected-error'),
         acceptSubmission: async () => fail('unexpected-error'),
         rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -70,6 +104,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
         listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => succeed(updatedChallenge),
@@ -79,6 +114,7 @@ describe('ChallengesStore', () => {
         submitChallengeProposal: async () => fail('unexpected-error'),
         acceptSubmission: async () => fail('unexpected-error'),
         rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -108,6 +144,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([publishedChallenge]),
         listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -117,6 +154,7 @@ describe('ChallengesStore', () => {
         submitChallengeProposal: async () => fail('unexpected-error'),
         acceptSubmission: async () => fail('unexpected-error'),
         rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -133,6 +171,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => fail('network-error'),
         listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -142,6 +181,7 @@ describe('ChallengesStore', () => {
         submitChallengeProposal: async () => fail('unexpected-error'),
         acceptSubmission: async () => fail('unexpected-error'),
         rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -155,6 +195,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -164,9 +205,11 @@ describe('ChallengesStore', () => {
         submitChallengeProposal: async () => succeed(submission),
         acceptSubmission: async () => fail('unexpected-error'),
         rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
       },
     });
 
+    await expect.poll(() => store.challenges()).toEqual([challenge]);
     const result = await store.submitChallengeProposal({
       challengeId: challenge.id,
       summary: submission.summary,
@@ -189,6 +232,7 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([submission]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -198,6 +242,7 @@ describe('ChallengesStore', () => {
         submitChallengeProposal: async () => fail('unexpected-error'),
         acceptSubmission: async () => succeed(acceptedSubmission),
         rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
       },
     });
 
@@ -232,14 +277,20 @@ const createStore = (input: { readonly challengeGateway: ChallengeGateway }): Ch
   return TestBed.inject(ChallengesStore);
 };
 
-const createChallenge = (input: { readonly id: string }): Challenge => ({
+const createChallenge = (input: {
+  readonly id: string;
+  readonly status?: Challenge['status'];
+}): Challenge => ({
   id: input.id as ChallengeId,
   title: `Challenge ${input.id}`,
   description: `Description ${input.id}`,
   ownerOrganizationId: 'org-company',
-  status: 'draft',
+  status: input.status ?? 'draft',
   createdAt: new Date('2026-06-21T10:00:00.000Z'),
-  publishedAt: null,
+  publishedAt:
+    input.status === undefined || input.status === 'draft'
+      ? null
+      : new Date('2026-06-21T11:00:00.000Z'),
 });
 
 const createSubmission = (input: { readonly challengeId: ChallengeId }): Submission => ({
