@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { type Params, RouterLink, RouterLinkActive } from '@angular/router';
 import { Button } from 'primeng/button';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
+import { Popover } from 'primeng/popover';
 import { Tag } from 'primeng/tag';
 import { AuthSession } from '@shared/auth/auth-session';
 import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
@@ -13,7 +14,15 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
 
 @Component({
   selector: 'navbar',
-  imports: [Button, NgOptimizedImage, OverlayBadgeModule, RouterLink, RouterLinkActive, Tag],
+  imports: [
+    Button,
+    NgOptimizedImage,
+    OverlayBadgeModule,
+    Popover,
+    RouterLink,
+    RouterLinkActive,
+    Tag,
+  ],
   providers: [
     NotificationsStore,
     {
@@ -80,7 +89,7 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                     [loading]="notificationsStore.loading()"
                     [attr.aria-expanded]="notificationsPanelOpen()"
                     ariaLabel="Notifications"
-                    (onClick)="toggleNotificationsPanel()"
+                    (onClick)="notificationsPopover.toggle($event)"
                   />
                 </p-overlaybadge>
               } @else {
@@ -91,17 +100,22 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                   [loading]="notificationsStore.loading()"
                   [attr.aria-expanded]="notificationsPanelOpen()"
                   ariaLabel="Notifications"
-                  (onClick)="toggleNotificationsPanel()"
+                  (onClick)="notificationsPopover.toggle($event)"
                 />
               }
 
-              @if (notificationsPanelOpen()) {
-                <section
-                  class="notifications-panel absolute right-0 mt-2 z-5 surface-card border-1 surface-border border-round shadow-2"
-                  aria-label="Notifications"
-                >
+              <p-popover
+                #notificationsPopover
+                appendTo="body"
+                ariaLabel="Notifications"
+                [dismissable]="true"
+                [style]="{ width: 'min(24rem, calc(100vw - 2rem))' }"
+                (onShow)="openNotificationsPanel()"
+                (onHide)="closeNotificationsPanel()"
+              >
+                <div class="flex flex-column" aria-label="Notifications">
                   <div
-                    class="flex align-items-center justify-content-between gap-3 p-3 border-bottom-1 surface-border"
+                    class="flex align-items-center justify-content-between gap-3 pb-3 border-bottom-1 surface-border"
                   >
                     <p class="m-0 font-bold text-color">Notifications</p>
                     <p-button
@@ -117,15 +131,15 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
 
                   <div class="flex flex-column">
                     @if (notificationsStore.error() !== null) {
-                      <p class="m-0 p-3 text-red-700">Notifications unavailable.</p>
+                      <p class="m-0 py-3 text-red-700">Notifications unavailable.</p>
                     } @else if (notificationsStore.latestNotifications().length === 0) {
-                      <p class="m-0 p-3 text-color-secondary">No notifications yet.</p>
+                      <p class="m-0 py-3 text-color-secondary">No notifications yet.</p>
                     } @else {
                       @for (
                         notification of notificationsStore.latestNotifications();
                         track notification.id
                       ) {
-                        <article class="p-3 border-bottom-1 surface-border">
+                        <article class="py-3 border-bottom-1 surface-border">
                           <p class="m-0 font-semibold text-color">{{ notification.title }}</p>
                           <p class="m-0 mt-1 line-height-3 text-color-secondary">
                             {{ notification.message }}
@@ -141,7 +155,7 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                               [text]="true"
                               [routerLink]="notificationActionPath({ notification })"
                               [queryParams]="notificationActionQueryParams({ notification })"
-                              (onClick)="closeNotificationsPanel()"
+                              (onClick)="notificationsPopover.hide()"
                             />
                           }
                         </article>
@@ -149,18 +163,18 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                     }
                   </div>
 
-                  <div class="p-3">
+                  <div class="pt-3">
                     <p-button
                       [label]="notificationActionLabel()"
                       icon="pi pi-arrow-right"
                       severity="secondary"
                       [routerLink]="notificationActionLink()"
                       styleClass="w-full"
-                      (onClick)="closeNotificationsPanel()"
+                      (onClick)="notificationsPopover.hide()"
                     />
                   </div>
-                </section>
-              }
+                </div>
+              </p-popover>
             </div>
             <p-tag [value]="roleLabel()" severity="info" class="ml-2" />
             <p-button
@@ -234,8 +248,8 @@ export class Navbar {
     this.currentUser()?.role === 'startup-member' ? '/opportunities' : '/challenges',
   );
 
-  protected toggleNotificationsPanel(): void {
-    this.notificationsPanelOpen.update((isOpen) => !isOpen);
+  protected openNotificationsPanel(): void {
+    this.notificationsPanelOpen.set(true);
   }
 
   protected closeNotificationsPanel(): void {
@@ -285,7 +299,11 @@ const parseNotificationActionUrl = (input: {
   readonly actionUrl: string;
 }): { readonly path: string; readonly queryParams: Params | null } => {
   const parsedUrl = new URL(input.actionUrl, 'http://sparkflow.local');
-  const queryParams = Object.fromEntries(parsedUrl.searchParams.entries());
+  const queryParams: Params = {};
+
+  parsedUrl.searchParams.forEach((value, key) => {
+    queryParams[key] = value;
+  });
 
   return {
     path: parsedUrl.pathname,
