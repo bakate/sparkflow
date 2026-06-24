@@ -3,7 +3,7 @@ import { AuthSession } from '@shared/auth/auth-session';
 import { describe, expect, it } from 'vitest';
 import { fail, type ChallengeId, type SubmissionId, succeed } from '../../../shared/domain/result';
 import type { Challenge } from '../domain/challenge';
-import type { Submission } from '../domain/submission';
+import type { Submission, SubmissionDecisionAudit } from '../domain/submission';
 import { CHALLENGE_GATEWAY, type ChallengeGateway } from './challenge-gateway';
 import { ChallengesStore } from './challenges-store';
 
@@ -16,6 +16,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
@@ -45,6 +46,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([{ challenge: completedChallenge, submission }]),
         listChallengeSubmissions: async () => succeed([]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
@@ -71,6 +73,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => succeed(createdChallenge),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
@@ -106,6 +109,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => succeed(updatedChallenge),
         publishChallenge: async () => fail('unexpected-error'),
@@ -146,6 +150,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
@@ -173,6 +178,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
@@ -197,6 +203,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
@@ -234,6 +241,7 @@ describe('ChallengesStore', () => {
         listMySubmissions: async () => succeed([]),
         listMyOpportunities: async () => succeed([]),
         listChallengeSubmissions: async () => succeed([submission]),
+        listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
         publishChallenge: async () => fail('unexpected-error'),
@@ -257,6 +265,42 @@ describe('ChallengesStore', () => {
     expect(store.submissionsForChallenge({ challengeId: challenge.id })).toEqual([
       acceptedSubmission,
     ]);
+  });
+
+  it('loads decision audits for a submission', async () => {
+    const challenge = createChallenge({ id: 'challenge-1' });
+    const submission = createSubmission({ challengeId: challenge.id });
+    const audit = createSubmissionDecisionAudit({
+      challengeId: challenge.id,
+      submissionId: submission.id,
+    });
+    const store = createStore({
+      challengeGateway: {
+        listChallenges: async () => succeed([challenge]),
+        listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed([]),
+        listChallengeSubmissions: async () => succeed([submission]),
+        listSubmissionDecisionAudits: async () => succeed([audit]),
+        createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => fail('unexpected-error'),
+        publishChallenge: async () => fail('unexpected-error'),
+        draftChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
+      },
+    });
+
+    const result = await store.loadSubmissionDecisionAudits({
+      challengeId: challenge.id,
+      submissionId: submission.id,
+    });
+
+    expect(result).toEqual(succeed([audit]));
+    expect(store.isLoadingSubmissionDecisionAudits({ submissionId: submission.id })).toBe(false);
+    expect(store.decisionAuditsForSubmission({ submissionId: submission.id })).toEqual([audit]);
   });
 });
 
@@ -301,6 +345,23 @@ const createSubmission = (input: { readonly challengeId: ChallengeId }): Submiss
   status: 'submitted',
   createdAt: new Date('2026-06-22T10:00:00.000Z'),
   decidedAt: null,
+});
+
+const createSubmissionDecisionAudit = (input: {
+  readonly challengeId: ChallengeId;
+  readonly submissionId: SubmissionId;
+}): SubmissionDecisionAudit => ({
+  id: 'audit-1',
+  submissionId: input.submissionId,
+  challengeId: input.challengeId,
+  decidedByUserId: 'user-company-admin',
+  decidedByUserEmail: 'company-admin@sparkflow.test',
+  decidedByOrganizationId: 'org-company',
+  decidedByRole: 'company-admin',
+  previousStatus: 'submitted',
+  newStatus: 'accepted',
+  decidedAt: new Date('2026-06-22T11:00:00.000Z'),
+  reason: null,
 });
 
 const createStartupAccessToken = (): string => {

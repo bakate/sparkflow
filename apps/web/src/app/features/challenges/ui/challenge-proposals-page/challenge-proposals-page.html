@@ -139,5 +139,86 @@
         (selected)="selectSubmission($event)"
       />
     </section>
+
+    <section class="flex flex-column gap-3" aria-labelledby="decision-history-title">
+      <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-2">
+        <div class="flex align-items-center gap-2">
+          <i class="pi pi-history text-color-secondary" aria-hidden="true"></i>
+          <h3 id="decision-history-title" class="m-0 text-lg font-bold text-color">
+            Decision history
+          </h3>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+          <p-tag severity="secondary" [value]="decisionAuditCount() + ' events'" />
+          <p-tag severity="secondary" [value]="decidedSubmissions().length + ' proposals'" />
+        </div>
+      </div>
+
+      @if (decidedSubmissions().length === 0) {
+        <div class="p-3 border-1 surface-border border-round surface-card text-color-secondary">
+          No proposal decisions recorded yet.
+        </div>
+      } @else {
+        <div class="flex flex-column gap-2">
+          @for (submission of decidedSubmissions(); track submission.id) {
+            <article class="p-3 border-1 surface-border border-round surface-card">
+              <div class="flex flex-column gap-3">
+                <div
+                  class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-2"
+                >
+                  <div class="flex align-items-center gap-2 flex-wrap">
+                    <p class="m-0 font-bold text-color">{{ submission.startupOrganizationId }}</p>
+                    <p-tag
+                      [severity]="decisionStatusSeverity({ status: submission.status })"
+                      [value]="decisionStatusLabel({ status: submission.status })"
+                    />
+                  </div>
+
+                  @if (isLoadingDecisionAudits({ submissionId: submission.id })) {
+                    <p-tag severity="secondary" value="Loading history" />
+                  }
+                </div>
+
+                @if (decisionAuditsForSubmission({ submissionId: submission.id }).length === 0) {
+                  <p class="m-0 text-color-secondary">No decision event recorded.</p>
+                } @else {
+                  <div class="flex flex-column gap-2">
+                    @for (
+                      audit of decisionAuditsForSubmission({ submissionId: submission.id });
+                      track audit.id
+                    ) {
+                      <div
+                        class="flex flex-column lg:flex-row lg:align-items-center justify-content-between gap-2 p-2 border-round bg-gray-50"
+                      >
+                        <div class="flex align-items-center gap-2 flex-wrap">
+                          <p-tag
+                            severity="secondary"
+                            [value]="decisionStatusLabel({ status: audit.previousStatus })"
+                          />
+                          <i class="pi pi-arrow-right text-color-secondary" aria-hidden="true"></i>
+                          <p-tag
+                            [severity]="decisionStatusSeverity({ status: audit.newStatus })"
+                            [value]="decisionStatusLabel({ status: audit.newStatus })"
+                          />
+                        </div>
+
+                        <div
+                          class="flex flex-column md:flex-row md:align-items-center gap-2 text-color-secondary"
+                        >
+                          <span>{{ decisionActorLabel({ audit }) }}</span>
+                          <span class="hidden md:inline" aria-hidden="true">·</span>
+                          <span>{{ decisionDateLabel({ decidedAt: audit.decidedAt }) }}</span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
   }
 </section>

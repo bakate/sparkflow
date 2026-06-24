@@ -11,7 +11,7 @@ import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gatewa
 import { challengeErrorMessage } from '../challenge-error-message';
 import { ChallengeStatusLabel } from '../challenge-status-label';
 import { ChallengeSubmissionsReview } from '../challenge-submissions-review/challenge-submissions-review';
-import type { Submission } from '../../domain/submission';
+import type { Submission, SubmissionDecisionAudit } from '../../domain/submission';
 
 @Component({
   selector: 'app-challenge-proposals-page',
@@ -73,6 +73,16 @@ export class ChallengeProposalsPage {
   protected readonly notSelectedProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'not-selected').length,
   );
+  protected readonly decidedSubmissions = computed(() =>
+    this.submissions().filter((submission) => submission.status !== 'submitted'),
+  );
+  protected readonly decisionAuditCount = computed(() =>
+    this.decidedSubmissions().reduce(
+      (auditCount, submission) =>
+        auditCount + this.store.decisionAuditsForSubmission({ submissionId: submission.id }).length,
+      0,
+    ),
+  );
   protected readonly loadingSubmissions = computed(() => {
     const challengeId = this.challengeId();
 
@@ -90,6 +100,20 @@ export class ChallengeProposalsPage {
 
       queueMicrotask(() => {
         void this.store.loadChallengeSubmissions({ challengeId });
+      });
+    });
+
+    effect(() => {
+      const challengeId = this.challengeId();
+
+      if (challengeId === null) {
+        return;
+      }
+
+      const submissionIds = this.decidedSubmissions().map((submission) => submission.id);
+
+      queueMicrotask(() => {
+        void this.store.loadMissingSubmissionDecisionAudits({ challengeId, submissionIds });
       });
     });
   }
@@ -124,6 +148,57 @@ export class ChallengeProposalsPage {
 
   protected challengeTitle(input: { readonly challenge: Challenge | null }): string {
     return input.challenge === null ? 'Challenge proposals' : input.challenge.title;
+  }
+
+  protected decisionAuditsForSubmission(input: {
+    readonly submissionId: SubmissionId;
+  }): readonly SubmissionDecisionAudit[] {
+    return this.store.decisionAuditsForSubmission({ submissionId: input.submissionId });
+  }
+
+  protected isLoadingDecisionAudits(input: { readonly submissionId: SubmissionId }): boolean {
+    return this.store.isLoadingSubmissionDecisionAudits({ submissionId: input.submissionId });
+  }
+
+  protected decisionActorLabel(input: { readonly audit: SubmissionDecisionAudit }): string {
+    return input.audit.decidedByUserEmail ?? input.audit.decidedByUserId;
+  }
+
+  protected decisionStatusLabel(input: { readonly status: Submission['status'] }): string {
+    const labels: Record<Submission['status'], string> = {
+      accepted: 'Shortlisted',
+      rejected: 'Rejected',
+      selected: 'Selected',
+      submitted: 'Submitted',
+      'not-selected': 'Not selected',
+    };
+
+    return labels[input.status];
+  }
+
+  protected decisionStatusSeverity(input: {
+    readonly status: Submission['status'];
+  }): 'danger' | 'info' | 'secondary' | 'success' {
+    if (input.status === 'selected') {
+      return 'success';
+    }
+
+    if (input.status === 'accepted') {
+      return 'info';
+    }
+
+    if (input.status === 'rejected') {
+      return 'danger';
+    }
+
+    return 'secondary';
+  }
+
+  protected decisionDateLabel(input: { readonly decidedAt: Date }): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(input.decidedAt);
   }
 
   private readChallengeId(): ChallengeId | null {

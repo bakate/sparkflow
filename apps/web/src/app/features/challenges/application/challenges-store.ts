@@ -16,12 +16,13 @@ import {
   type DecideSubmissionCommand,
   type DraftChallengeCommand,
   type ListChallengeSubmissionsCommand,
+  type ListSubmissionDecisionAuditsCommand,
   type PublishChallengeCommand,
   type SubmitChallengeProposalCommand,
   type UpdateChallengeCommand,
 } from './challenge-gateway';
 import { canPublishChallenge, type Challenge } from '../domain/challenge';
-import type { Submission } from '../domain/submission';
+import type { Submission, SubmissionDecisionAudit } from '../domain/submission';
 
 @Service()
 export class ChallengesStore {
@@ -48,9 +49,14 @@ export class ChallengesStore {
   private readonly submittingProposalIdsState = signal<readonly string[]>([]);
   private readonly loadingSubmissionChallengeIdsState = signal<readonly string[]>([]);
   private readonly loadedSubmissionChallengeIdsState = signal<readonly string[]>([]);
+  private readonly loadingSubmissionAuditIdsState = signal<readonly string[]>([]);
+  private readonly loadedSubmissionAuditIdsState = signal<readonly string[]>([]);
   private readonly decidingSubmissionIdsState = signal<readonly string[]>([]);
   private readonly challengeSubmissionsByChallengeIdState = signal<
     Record<string, readonly Submission[]>
+  >({});
+  private readonly submissionAuditsBySubmissionIdState = signal<
+    Record<string, readonly SubmissionDecisionAudit[]>
   >({});
   private readonly commandErrorState = signal<ChallengeFailure | null>(null);
 
@@ -87,6 +93,8 @@ export class ChallengesStore {
   readonly submittingProposalIds = this.submittingProposalIdsState.asReadonly();
   readonly loadingSubmissionChallengeIds = this.loadingSubmissionChallengeIdsState.asReadonly();
   readonly loadedSubmissionChallengeIds = this.loadedSubmissionChallengeIdsState.asReadonly();
+  readonly loadingSubmissionAuditIds = this.loadingSubmissionAuditIdsState.asReadonly();
+  readonly loadedSubmissionAuditIds = this.loadedSubmissionAuditIdsState.asReadonly();
   readonly decidingSubmissionIds = this.decidingSubmissionIdsState.asReadonly();
   readonly error = computed(() => {
     const commandError = this.commandErrorState();
@@ -277,6 +285,53 @@ export class ChallengesStore {
     );
   }
 
+  async loadSubmissionDecisionAudits(
+    command: ListSubmissionDecisionAuditsCommand,
+  ): Promise<Result<ChallengeFailure, readonly SubmissionDecisionAudit[]>> {
+    this.loadingSubmissionAuditIdsState.update((submissionIds) =>
+      submissionIds.includes(command.submissionId)
+        ? submissionIds
+        : [...submissionIds, command.submissionId],
+    );
+    this.commandErrorState.set(null);
+
+    const result = await this.challengeGateway.listSubmissionDecisionAudits(command);
+    this.removeLoadingSubmissionAuditId({ submissionId: command.submissionId });
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    this.submissionAuditsBySubmissionIdState.update((auditsBySubmissionId) => ({
+      ...auditsBySubmissionId,
+      [command.submissionId]: result.value,
+    }));
+    this.loadedSubmissionAuditIdsState.update((submissionIds) =>
+      submissionIds.includes(command.submissionId)
+        ? submissionIds
+        : [...submissionIds, command.submissionId],
+    );
+    return succeed(result.value);
+  }
+
+  async loadMissingSubmissionDecisionAudits(input: {
+    readonly challengeId: ChallengeId;
+    readonly submissionIds: readonly SubmissionId[];
+  }): Promise<void> {
+    const missingSubmissionIds = input.submissionIds.filter(
+      (submissionId) =>
+        !this.loadedSubmissionAuditIds().includes(submissionId) &&
+        !this.loadingSubmissionAuditIds().includes(submissionId),
+    );
+
+    await Promise.all(
+      missingSubmissionIds.map((submissionId) =>
+        this.loadSubmissionDecisionAudits({ challengeId: input.challengeId, submissionId }),
+      ),
+    );
+  }
+
   async acceptSubmission(input: {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
@@ -341,6 +396,12 @@ export class ChallengesStore {
     return this.challengeSubmissionsByChallengeIdState()[input.challengeId] ?? [];
   }
 
+  decisionAuditsForSubmission(input: {
+    readonly submissionId: string;
+  }): readonly SubmissionDecisionAudit[] {
+    return this.submissionAuditsBySubmissionIdState()[input.submissionId] ?? [];
+  }
+
   hasAssessedSubmissionForChallenge(input: { readonly challengeId: string }): boolean {
     return this.submissionsForChallenge({ challengeId: input.challengeId }).some(
       (submission) =>
@@ -353,6 +414,10 @@ export class ChallengesStore {
 
   isLoadingChallengeSubmissions(input: { readonly challengeId: string }): boolean {
     return this.loadingSubmissionChallengeIds().includes(input.challengeId);
+  }
+
+  isLoadingSubmissionDecisionAudits(input: { readonly submissionId: string }): boolean {
+    return this.loadingSubmissionAuditIds().includes(input.submissionId);
   }
 
   isDecidingSubmission(input: { readonly submissionId: string }): boolean {
@@ -415,6 +480,10 @@ export class ChallengesStore {
     }
 
     this.replaceSubmission({ challengeId: input.challengeId, submission: result.value });
+    await this.loadSubmissionDecisionAudits({
+      challengeId: input.challengeId,
+      submissionId: input.submissionId,
+    });
 
     if (input.decision === 'select') {
       await this.loadChallengeSubmissions({ challengeId: input.challengeId });
@@ -491,6 +560,12 @@ export class ChallengesStore {
   private removeLoadingSubmissionChallengeId(input: { readonly challengeId: string }): void {
     this.loadingSubmissionChallengeIdsState.update((challengeIds) =>
       challengeIds.filter((challengeId) => challengeId !== input.challengeId),
+    );
+  }
+
+  private removeLoadingSubmissionAuditId(input: { readonly submissionId: string }): void {
+    this.loadingSubmissionAuditIdsState.update((submissionIds) =>
+      submissionIds.filter((submissionId) => submissionId !== input.submissionId),
     );
   }
 

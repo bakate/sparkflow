@@ -1,7 +1,7 @@
 import { InjectionToken } from '@angular/core';
 import type { ChallengeId, Result, SubmissionId } from '@shared/domain/result';
 import type { Challenge } from '@features/challenges/domain/challenge';
-import type { Submission } from '@features/challenges/domain/submission';
+import type { Submission, SubmissionDecisionAudit } from '@features/challenges/domain/submission';
 
 export type ChallengeOpportunity = {
   readonly challenge: Challenge;
@@ -57,6 +57,11 @@ export type ListChallengeSubmissionsCommand = {
   readonly challengeId: ChallengeId;
 };
 
+export type ListSubmissionDecisionAuditsCommand = {
+  readonly challengeId: ChallengeId;
+  readonly submissionId: SubmissionId;
+};
+
 export type DecideSubmissionCommand = {
   readonly challengeId: ChallengeId;
   readonly submissionId: SubmissionId;
@@ -71,6 +76,9 @@ export type ChallengeGateway = {
   readonly listChallengeSubmissions: (
     command: ListChallengeSubmissionsCommand,
   ) => Promise<Result<ChallengeFailure, readonly Submission[]>>;
+  readonly listSubmissionDecisionAudits: (
+    command: ListSubmissionDecisionAuditsCommand,
+  ) => Promise<Result<ChallengeFailure, readonly SubmissionDecisionAudit[]>>;
   readonly createChallenge: (
     command: CreateChallengeCommand,
   ) => Promise<Result<ChallengeFailure, Challenge>>;

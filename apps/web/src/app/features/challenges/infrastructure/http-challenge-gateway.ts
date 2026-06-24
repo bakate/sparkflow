@@ -1,6 +1,11 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { ChallengeDto, ChallengeOpportunityDto, SubmissionDto } from '@sparkflow/contracts';
+import type {
+  ChallengeDto,
+  ChallengeOpportunityDto,
+  SubmissionDecisionAuditDto,
+  SubmissionDto,
+} from '@sparkflow/contracts';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import {
@@ -20,12 +25,13 @@ import type {
   DecideSubmissionCommand,
   DraftChallengeCommand,
   ListChallengeSubmissionsCommand,
+  ListSubmissionDecisionAuditsCommand,
   PublishChallengeCommand,
   SubmitChallengeProposalCommand,
   UpdateChallengeCommand,
 } from '../application/challenge-gateway';
 import type { Challenge } from '../domain/challenge';
-import type { Submission } from '../domain/submission';
+import type { Submission, SubmissionDecisionAudit } from '../domain/submission';
 
 const challengeFailures = [
   'challenge-title-required',
@@ -103,6 +109,23 @@ export class HttpChallengeGateway implements ChallengeGateway {
           .pipe(timeout(5000)),
       );
       return succeed(submissionDtos.map((submissionDto) => toSubmission({ submissionDto })));
+    } catch (error: unknown) {
+      return fail(toChallengeFailure({ error }));
+    }
+  }
+
+  async listSubmissionDecisionAudits(
+    command: ListSubmissionDecisionAuditsCommand,
+  ): Promise<Result<ChallengeFailure, readonly SubmissionDecisionAudit[]>> {
+    try {
+      const auditDtos = await firstValueFrom(
+        this.httpClient
+          .get<
+            SubmissionDecisionAuditDto[]
+          >(this.buildUrl({ path: `/challenges/${command.challengeId}/submissions/${command.submissionId}/decision-audits` }))
+          .pipe(timeout(5000)),
+      );
+      return succeed(auditDtos.map((auditDto) => toSubmissionDecisionAudit({ auditDto })));
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
     }
@@ -279,6 +302,22 @@ const toSubmission = (input: { readonly submissionDto: SubmissionDto }): Submiss
   createdAt: new Date(input.submissionDto.createdAt),
   decidedAt:
     input.submissionDto.decidedAt === null ? null : new Date(input.submissionDto.decidedAt),
+});
+
+const toSubmissionDecisionAudit = (input: {
+  readonly auditDto: SubmissionDecisionAuditDto;
+}): SubmissionDecisionAudit => ({
+  id: input.auditDto.id,
+  submissionId: input.auditDto.submissionId as SubmissionId,
+  challengeId: input.auditDto.challengeId as ChallengeId,
+  decidedByUserId: input.auditDto.decidedByUserId,
+  decidedByUserEmail: input.auditDto.decidedByUserEmail,
+  decidedByOrganizationId: input.auditDto.decidedByOrganizationId,
+  decidedByRole: input.auditDto.decidedByRole,
+  previousStatus: input.auditDto.previousStatus,
+  newStatus: input.auditDto.newStatus,
+  decidedAt: new Date(input.auditDto.decidedAt),
+  reason: input.auditDto.reason,
 });
 
 const toChallengeOpportunity = (input: {
