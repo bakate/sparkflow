@@ -7,8 +7,9 @@
         My opportunities
       </h2>
       <p class="m-0 text-color-secondary">
-        {{ submittedCount() }} under review, {{ shortlistedCount() }} shortlisted,
-        {{ selectedCount() }} selected, {{ closedCount() }} closed
+        {{ opportunitySummary().submitted }} under review,
+        {{ opportunitySummary().shortlisted }} shortlisted,
+        {{ opportunitySummary().selected }} selected, {{ opportunitySummary().closed }} closed
       </p>
     </div>
 
@@ -40,10 +41,10 @@
   }
 
   <div class="flex gap-2 flex-wrap" aria-label="Opportunity status counters">
-    <p-tag severity="info" [value]="submittedCount() + ' under review'" />
-    <p-tag severity="info" [value]="shortlistedCount() + ' shortlisted'" />
-    <p-tag severity="success" [value]="selectedCount() + ' selected'" />
-    <p-tag severity="secondary" [value]="closedCount() + ' closed'" />
+    <p-tag severity="info" [value]="opportunitySummary().submitted + ' under review'" />
+    <p-tag severity="info" [value]="opportunitySummary().shortlisted + ' shortlisted'" />
+    <p-tag severity="success" [value]="opportunitySummary().selected + ' selected'" />
+    <p-tag severity="secondary" [value]="opportunitySummary().closed + ' closed'" />
   </div>
 
   <div class="flex gap-2 flex-wrap" aria-label="Opportunity filters">

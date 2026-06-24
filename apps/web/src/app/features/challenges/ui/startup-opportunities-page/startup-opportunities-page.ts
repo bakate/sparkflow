@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
-import type { SubmissionId } from '@shared/domain/result';
+import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { CHALLENGE_GATEWAY, type ChallengeOpportunity } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import type { Submission, SubmissionDecisionAudit } from '../../domain/submission';
@@ -28,13 +28,26 @@ export class StartupOpportunitiesPage {
   protected readonly opportunities = computed<readonly OpportunityViewModel[]>(() =>
     this.store
       .myOpportunities()
-      .map((opportunity) => this.toOpportunityViewModel({ opportunity }))
+      .map((opportunity) =>
+        toOpportunityViewModel({
+          audits: this.store.decisionAuditsForSubmission({
+            submissionId: opportunity.submission.id,
+          }),
+          isLoadingFeedback: this.store.isLoadingSubmissionDecisionAudits({
+            submissionId: opportunity.submission.id,
+          }),
+          opportunity,
+        }),
+      )
       .sort(
         (leftOpportunity, rightOpportunity) =>
-          this.opportunityRank({ opportunity: leftOpportunity }) -
-            this.opportunityRank({ opportunity: rightOpportunity }) ||
+          opportunityRank({ opportunity: leftOpportunity }) -
+            opportunityRank({ opportunity: rightOpportunity }) ||
           rightOpportunity.submittedAt.getTime() - leftOpportunity.submittedAt.getTime(),
       ),
+  );
+  protected readonly opportunitySummary = computed(() =>
+    summarizeOpportunities({ opportunities: this.opportunities() }),
   );
   protected readonly filteredOpportunities = computed<readonly OpportunityViewModel[]>(() =>
     this.opportunities().filter((opportunity) =>
@@ -56,50 +69,16 @@ export class StartupOpportunitiesPage {
       selected: this.activeFilter() === filterOption.value,
     })),
   );
-  protected readonly submittedCount = computed(
-    () =>
-      this.store
-        .myOpportunities()
-        .filter((opportunity) => opportunity.submission.status === 'submitted').length,
-  );
-  protected readonly shortlistedCount = computed(
-    () =>
-      this.store
-        .myOpportunities()
-        .filter((opportunity) => opportunity.submission.status === 'accepted').length,
-  );
-  protected readonly selectedCount = computed(
-    () =>
-      this.store
-        .myOpportunities()
-        .filter((opportunity) => opportunity.submission.status === 'selected').length,
-  );
-  protected readonly closedCount = computed(
-    () =>
-      this.store
-        .myOpportunities()
-        .filter(
-          (opportunity) =>
-            opportunity.submission.status === 'rejected' ||
-            opportunity.submission.status === 'not-selected',
-        ).length,
-  );
 
   constructor() {
     effect(() => {
-      const opportunities = this.store
-        .myOpportunities()
-        .filter((opportunity) => opportunity.submission.status !== 'submitted');
+      const auditLoadRequests = decisionAuditLoadRequestsForOpportunities({
+        opportunities: this.store.myOpportunities(),
+      });
 
+      // Defer store writes triggered by the effect until the current signal read cycle is done.
       queueMicrotask(() => {
-        void Promise.all(
-          opportunities.map((opportunity) =>
-            this.store.loadMissingSubmissionDecisionAudits({
-              challengeId: opportunity.challenge.id,
-              submissionIds: [opportunity.submission.id],
-            }),
-          ),
-        );
+        void this.loadMissingDecisionAudits({ requests: auditLoadRequests });
       });
     });
   }
@@ -148,44 +127,17 @@ export class StartupOpportunitiesPage {
     return 'secondary';
   }
 
-  private toOpportunityViewModel(input: {
-    readonly opportunity: ChallengeOpportunity;
-  }): OpportunityViewModel {
-    const audits = this.store.decisionAuditsForSubmission({
-      submissionId: input.opportunity.submission.id,
-    });
-    const latestReason = readLatestDecisionReason({ audits });
-
-    return {
-      challengeTitle: input.opportunity.challenge.title,
-      challengeDescription: input.opportunity.challenge.description,
-      companyOrganizationId: input.opportunity.challenge.ownerOrganizationId,
-      feedback: latestReason,
-      isLoadingFeedback: this.store.isLoadingSubmissionDecisionAudits({
-        submissionId: input.opportunity.submission.id,
-      }),
-      submissionId: input.opportunity.submission.id,
-      status: input.opportunity.submission.status,
-      statusDescription: opportunityStatusDescription({
-        status: input.opportunity.submission.status,
-      }),
-      statusLabel: opportunityStatusLabel({ status: input.opportunity.submission.status }),
-      submittedAt: input.opportunity.submission.createdAt,
-      summary: input.opportunity.submission.summary,
-      decidedAt: input.opportunity.submission.decidedAt,
-    };
-  }
-
-  private opportunityRank(input: { readonly opportunity: OpportunityViewModel }): number {
-    const ranks: Record<Submission['status'], number> = {
-      selected: 0,
-      accepted: 1,
-      submitted: 2,
-      'not-selected': 3,
-      rejected: 4,
-    };
-
-    return ranks[input.opportunity.status];
+  private async loadMissingDecisionAudits(input: {
+    readonly requests: readonly DecisionAuditLoadRequest[];
+  }): Promise<void> {
+    await Promise.all(
+      input.requests.map((request) =>
+        this.store.loadMissingSubmissionDecisionAudits({
+          challengeId: request.challengeId,
+          submissionIds: [request.submissionId],
+        }),
+      ),
+    );
   }
 }
 
@@ -216,12 +168,73 @@ type OpportunityFilterViewModel = OpportunityFilterOption & {
   readonly selected: boolean;
 };
 
+type OpportunitySummary = {
+  readonly closed: number;
+  readonly selected: number;
+  readonly shortlisted: number;
+  readonly submitted: number;
+};
+
+type DecisionAuditLoadRequest = {
+  readonly challengeId: ChallengeId;
+  readonly submissionId: SubmissionId;
+};
+
 const opportunityFilterOptions: readonly OpportunityFilterOption[] = [
   { label: 'All', value: 'all' },
   { label: 'My proposals', value: 'my-proposals' },
   { label: 'Shortlisted', value: 'shortlisted' },
   { label: 'Results / Closed', value: 'results' },
 ] as const;
+
+const toOpportunityViewModel = (input: {
+  readonly audits: readonly SubmissionDecisionAudit[];
+  readonly isLoadingFeedback: boolean;
+  readonly opportunity: ChallengeOpportunity;
+}): OpportunityViewModel => {
+  const latestReason = readLatestDecisionReason({ audits: input.audits });
+
+  return {
+    challengeTitle: input.opportunity.challenge.title,
+    challengeDescription: input.opportunity.challenge.description,
+    companyOrganizationId: input.opportunity.challenge.ownerOrganizationId,
+    feedback: latestReason,
+    isLoadingFeedback: input.isLoadingFeedback,
+    submissionId: input.opportunity.submission.id,
+    status: input.opportunity.submission.status,
+    statusDescription: opportunityStatusDescription({
+      status: input.opportunity.submission.status,
+    }),
+    statusLabel: opportunityStatusLabel({ status: input.opportunity.submission.status }),
+    submittedAt: input.opportunity.submission.createdAt,
+    summary: input.opportunity.submission.summary,
+    decidedAt: input.opportunity.submission.decidedAt,
+  };
+};
+
+const summarizeOpportunities = (input: {
+  readonly opportunities: readonly OpportunityViewModel[];
+}): OpportunitySummary => ({
+  closed: input.opportunities.filter(
+    (opportunity) => opportunity.status === 'not-selected' || opportunity.status === 'rejected',
+  ).length,
+  selected: input.opportunities.filter((opportunity) => opportunity.status === 'selected').length,
+  shortlisted: input.opportunities.filter((opportunity) => opportunity.status === 'accepted')
+    .length,
+  submitted: input.opportunities.filter((opportunity) => opportunity.status === 'submitted').length,
+});
+
+const opportunityRank = (input: { readonly opportunity: OpportunityViewModel }): number => {
+  const ranks: Record<Submission['status'], number> = {
+    selected: 0,
+    accepted: 1,
+    submitted: 2,
+    'not-selected': 3,
+    rejected: 4,
+  };
+
+  return ranks[input.opportunity.status];
+};
 
 const opportunityStatusLabel = (input: { readonly status: Submission['status'] }): string => {
   const labels: Record<Submission['status'], string> = {
@@ -295,3 +308,13 @@ const emptyMessageForFilter = (input: { readonly filter: OpportunityFilter }): s
 
   return 'No opportunities match this filter.';
 };
+
+const decisionAuditLoadRequestsForOpportunities = (input: {
+  readonly opportunities: readonly ChallengeOpportunity[];
+}): readonly DecisionAuditLoadRequest[] =>
+  input.opportunities
+    .filter((opportunity) => opportunity.submission.status !== 'submitted')
+    .map((opportunity) => ({
+      challengeId: opportunity.challenge.id,
+      submissionId: opportunity.submission.id,
+    }));
