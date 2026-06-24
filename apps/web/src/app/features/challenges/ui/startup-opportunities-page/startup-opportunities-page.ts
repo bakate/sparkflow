@@ -117,7 +117,7 @@ export class StartupOpportunitiesPage {
       return 'No submitted opportunities yet.';
     }
 
-    return 'No opportunities match this filter.';
+    return emptyMessageForFilter({ filter: this.activeFilter() });
   }
 
   protected errorMessage(): string | null {
@@ -166,6 +166,9 @@ export class StartupOpportunitiesPage {
       }),
       submissionId: input.opportunity.submission.id,
       status: input.opportunity.submission.status,
+      statusDescription: opportunityStatusDescription({
+        status: input.opportunity.submission.status,
+      }),
       statusLabel: opportunityStatusLabel({ status: input.opportunity.submission.status }),
       submittedAt: input.opportunity.submission.createdAt,
       summary: input.opportunity.submission.summary,
@@ -194,13 +197,14 @@ type OpportunityViewModel = {
   readonly isLoadingFeedback: boolean;
   readonly submissionId: SubmissionId;
   readonly status: Submission['status'];
+  readonly statusDescription: string;
   readonly statusLabel: string;
   readonly submittedAt: Date;
   readonly summary: string;
   readonly decidedAt: Date | null;
 };
 
-type OpportunityFilter = 'active' | 'all' | 'closed' | 'selected';
+type OpportunityFilter = 'all' | 'my-proposals' | 'results' | 'shortlisted';
 
 type OpportunityFilterOption = {
   readonly label: string;
@@ -214,21 +218,33 @@ type OpportunityFilterViewModel = OpportunityFilterOption & {
 
 const opportunityFilterOptions: readonly OpportunityFilterOption[] = [
   { label: 'All', value: 'all' },
-  { label: 'Active', value: 'active' },
-  { label: 'Selected', value: 'selected' },
-  { label: 'Closed', value: 'closed' },
+  { label: 'My proposals', value: 'my-proposals' },
+  { label: 'Shortlisted', value: 'shortlisted' },
+  { label: 'Results / Closed', value: 'results' },
 ] as const;
 
 const opportunityStatusLabel = (input: { readonly status: Submission['status'] }): string => {
   const labels: Record<Submission['status'], string> = {
     accepted: 'Shortlisted',
-    rejected: 'Rejected',
-    selected: 'Selected',
-    submitted: 'Under review',
-    'not-selected': 'Not selected',
+    rejected: 'Not retained',
+    selected: 'Selected for final project',
+    submitted: 'Proposal sent',
+    'not-selected': 'Not finally selected',
   };
 
   return labels[input.status];
+};
+
+const opportunityStatusDescription = (input: { readonly status: Submission['status'] }): string => {
+  const descriptions: Record<Submission['status'], string> = {
+    accepted: 'You are shortlisted for the next step.',
+    rejected: 'The company did not retain this proposal.',
+    selected: 'You are selected for the final project.',
+    submitted: 'Proposal sent, waiting review.',
+    'not-selected': 'Shortlisted, but not finally selected.',
+  };
+
+  return descriptions[input.status];
 };
 
 const readLatestDecisionReason = (input: {
@@ -249,13 +265,33 @@ const opportunityMatchesFilter = (input: {
     return true;
   }
 
-  if (input.filter === 'active') {
-    return input.opportunity.status === 'accepted' || input.opportunity.status === 'submitted';
+  if (input.filter === 'my-proposals') {
+    return input.opportunity.status === 'submitted';
   }
 
-  if (input.filter === 'selected') {
-    return input.opportunity.status === 'selected';
+  if (input.filter === 'shortlisted') {
+    return input.opportunity.status === 'accepted';
   }
 
-  return input.opportunity.status === 'not-selected' || input.opportunity.status === 'rejected';
+  return (
+    input.opportunity.status === 'not-selected' ||
+    input.opportunity.status === 'rejected' ||
+    input.opportunity.status === 'selected'
+  );
+};
+
+const emptyMessageForFilter = (input: { readonly filter: OpportunityFilter }): string => {
+  if (input.filter === 'my-proposals') {
+    return 'No proposals are waiting for review.';
+  }
+
+  if (input.filter === 'shortlisted') {
+    return 'No shortlisted proposals yet.';
+  }
+
+  if (input.filter === 'results') {
+    return 'No final results yet.';
+  }
+
+  return 'No opportunities match this filter.';
 };
