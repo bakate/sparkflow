@@ -197,17 +197,19 @@ assert_status "$http_status" 200 "accept proposal two"
 http_status="$(request POST "$api_url/challenges/$challenge_id/submissions/$proposal_one_id/select" "$company_token")"
 assert_status "$http_status" 200 "select final proposal"
 
+wait_for_selection_completed_challenge "$company_token" "$challenge_id"
+
 http_status="$(request POST "$api_url/challenges/$challenge_id/submissions/$proposal_two_id/select" "$company_token")"
-assert_status "$http_status" 400 "reject second final selection"
+assert_status "$http_status" 403 "reject post-selection decision"
 decision_error="$(jq -r ".error" "$body_file")"
 
-if [[ "$decision_error" != "submission-not-shortlisted" ]]; then
-  printf 'FAIL expected submission-not-shortlisted, got %s\n' "$decision_error" >&2
+if [[ "$decision_error" != "forbidden" ]]; then
+  printf 'FAIL expected forbidden, got %s\n' "$decision_error" >&2
   jq . "$body_file"
   exit 1
 fi
 
-printf 'PASS second final selection error=%s\n' "$decision_error"
+printf 'PASS post-selection decision error=%s\n' "$decision_error"
 
 http_status="$(request GET "$api_url/challenges/$challenge_id/submissions" "$company_token")"
 assert_status "$http_status" 200 "list proposals after final selection"
@@ -222,6 +224,5 @@ if [[ "$selected_count" != "1" || "$accepted_count" != "0" || "$not_selected_cou
 fi
 
 printf 'PASS statuses selected=%s accepted=%s not-selected=%s\n' "$selected_count" "$accepted_count" "$not_selected_count"
-wait_for_selection_completed_challenge "$company_token" "$challenge_id"
 wait_for_selected_notification "$startup_token" "$proposal_one_id"
 printf 'SMOKE_OK challenge_id=%s proposal_one=%s proposal_two=%s\n' "$challenge_id" "$proposal_one_id" "$proposal_two_id"

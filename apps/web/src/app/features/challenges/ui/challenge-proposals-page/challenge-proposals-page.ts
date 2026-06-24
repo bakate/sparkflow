@@ -53,6 +53,9 @@ export class ChallengeProposalsPage {
     this.submissions().filter((submission) => submission.status === 'selected'),
   );
   protected readonly hasFinalSelection = computed(() => this.selectedSubmissions().length > 0);
+  protected readonly finalSelectionLocked = computed(
+    () => this.hasFinalSelection() || this.challenge()?.status === 'selection-completed',
+  );
   protected readonly remainingSubmissions = computed(() =>
     this.submissions()
       .filter((submission) => submission.status !== 'selected')
@@ -151,7 +154,7 @@ export class ChallengeProposalsPage {
   }): Promise<void> {
     const challengeId = this.challengeId();
 
-    if (challengeId === null) {
+    if (challengeId === null || this.finalSelectionLocked()) {
       return;
     }
 

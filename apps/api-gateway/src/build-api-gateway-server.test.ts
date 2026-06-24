@@ -403,6 +403,84 @@ describe("buildApiGatewayServer", () => {
     ]);
   });
 
+  it("allows readonly submission review after challenge selection is completed", async () => {
+    const requests: CapturedRequest[] = [];
+    const server = await buildApiGatewayServer({
+      accessTokenVerifier: createAccessTokenVerifier({ actor: companyAdminActor }),
+      serviceUrls,
+      idGenerator: { generate: () => "generated-correlation-id" },
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+
+        if (url.endsWith("/challenges/challenge-1") && init.method === "GET") {
+          return Response.json({
+            id: "challenge-1",
+            ownerOrganizationId: companyAdminActor.organizationId,
+            status: "selection-completed",
+          });
+        }
+
+        return Response.json([{ id: "submission-1", status: "selected" }]);
+      },
+    });
+    openServers.push(server);
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/challenges/challenge-1/submissions",
+      headers: {
+        authorization: authorizationHeader,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([{ id: "submission-1", status: "selected" }]);
+    expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+      "GET http://challenge-service/challenges/challenge-1",
+      "GET http://submission-service/challenges/challenge-1/submissions",
+    ]);
+  });
+
+  it.each([
+    ["accept", "accept"],
+    ["reject", "reject"],
+    ["select", "select"],
+  ] as const)(
+    "rejects submission %s after challenge selection is completed",
+    async (_label, decisionPath) => {
+      const requests: CapturedRequest[] = [];
+      const server = await buildApiGatewayServer({
+        accessTokenVerifier: createAccessTokenVerifier({ actor: companyAdminActor }),
+        serviceUrls,
+        idGenerator: { generate: () => "generated-correlation-id" },
+        fetcher: async (url, init) => {
+          requests.push({ url, init });
+
+          return Response.json({
+            id: "challenge-1",
+            ownerOrganizationId: companyAdminActor.organizationId,
+            status: "selection-completed",
+          });
+        },
+      });
+      openServers.push(server);
+
+      const response = await server.inject({
+        method: "POST",
+        url: `/challenges/challenge-1/submissions/submission-1/${decisionPath}`,
+        headers: {
+          authorization: authorizationHeader,
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toEqual({ error: "forbidden" });
+      expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+        "GET http://challenge-service/challenges/challenge-1",
+      ]);
+    },
+  );
+
   it("supports the V1 backend workflow through public gateway endpoints", async () => {
     const challengeId = faker.string.uuid();
     const submissionId = faker.string.uuid();

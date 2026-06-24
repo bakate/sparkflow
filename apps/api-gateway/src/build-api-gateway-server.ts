@@ -173,6 +173,41 @@ export const buildApiGatewayServer = async (input: {
     return null;
   };
 
+  const requireOwnedPublishedChallenge = async (requestInput: {
+    readonly actor: ActorContext;
+    readonly challengeId: string;
+    readonly headers: Record<string, string | string[] | undefined>;
+  }): Promise<ServiceResponse | null> => {
+    if (requestInput.actor.role !== "company-admin") {
+      return { statusCode: 403, body: { error: "forbidden" } };
+    }
+
+    const challengeResponse = await proxy({
+      actor: requestInput.actor,
+      url: `${input.serviceUrls.challengeServiceUrl}/challenges/${requestInput.challengeId}`,
+      method: "GET",
+      headers: requestInput.headers,
+    });
+
+    if (challengeResponse.statusCode !== 200) {
+      return challengeResponse;
+    }
+
+    if (!isChallengeDto(challengeResponse.body)) {
+      return { statusCode: 502, body: { error: "unexpected-error" } };
+    }
+
+    if (challengeResponse.body.ownerOrganizationId !== requestInput.actor.organizationId) {
+      return { statusCode: 403, body: { error: "forbidden" } };
+    }
+
+    if (challengeResponse.body.status !== "published") {
+      return { statusCode: 403, body: { error: "forbidden" } };
+    }
+
+    return null;
+  };
+
   const authenticate = async (headers: Record<string, string | string[] | undefined>) =>
     input.accessTokenVerifier.verify({
       authorizationHeader: readHeader({ headers, name: "authorization" }),
@@ -409,7 +444,7 @@ export const buildApiGatewayServer = async (input: {
         return reply.code(401).send({ error: "unauthorized" });
       }
 
-      const guardResponse = await requireOwnedChallenge({
+      const guardResponse = await requireOwnedPublishedChallenge({
         actor,
         challengeId: request.params.challengeId,
         headers: request.headers,
@@ -438,7 +473,7 @@ export const buildApiGatewayServer = async (input: {
         return reply.code(401).send({ error: "unauthorized" });
       }
 
-      const guardResponse = await requireOwnedChallenge({
+      const guardResponse = await requireOwnedPublishedChallenge({
         actor,
         challengeId: request.params.challengeId,
         headers: request.headers,
@@ -467,7 +502,7 @@ export const buildApiGatewayServer = async (input: {
         return reply.code(401).send({ error: "unauthorized" });
       }
 
-      const guardResponse = await requireOwnedChallenge({
+      const guardResponse = await requireOwnedPublishedChallenge({
         actor,
         challengeId: request.params.challengeId,
         headers: request.headers,
