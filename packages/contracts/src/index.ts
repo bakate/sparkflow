@@ -67,6 +67,18 @@ export type SubmissionDecisionAuditDto = {
   readonly reason: string | null;
 };
 
+export const normalizeSubmissionDecisionReason = (input: {
+  readonly reason?: string | null | undefined;
+}): string | null => {
+  if (input.reason === undefined || input.reason === null) {
+    return null;
+  }
+
+  const trimmedReason = input.reason.trim();
+
+  return trimmedReason.length === 0 ? null : trimmedReason;
+};
+
 export type ChallengeOpportunityDto = {
   readonly challenge: ChallengeDto;
   readonly submission: SubmissionDto;

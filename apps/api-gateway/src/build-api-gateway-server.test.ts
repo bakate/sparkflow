@@ -660,6 +660,7 @@ describe("buildApiGatewayServer", () => {
     const challengeDescription = faker.lorem.paragraph();
     const proposalSummary = faker.lorem.paragraph();
     const reviewComment = faker.lorem.sentence();
+    const selectionReason = faker.lorem.sentence();
     const correlationId = faker.string.uuid();
     const { requests, server } = await createWorkflowServer({ challengeId, submissionId });
 
@@ -746,6 +747,9 @@ describe("buildApiGatewayServer", () => {
       headers: {
         authorization: authorizationHeader,
       },
+      payload: {
+        reason: selectionReason,
+      },
     });
     await server.inject({
       method: "GET",
@@ -797,5 +801,8 @@ describe("buildApiGatewayServer", () => {
         "content-type",
       ),
     ).toBeNull();
+    expect(readJsonBody({ request: readCapturedRequest({ requests, index: 13 }) })).toEqual({
+      reason: selectionReason,
+    });
   });
 });

@@ -395,6 +395,7 @@ describe("buildSubmissionHttpServer", () => {
       },
       submissionId: "submission-1",
       decision: "accept",
+      reason: null,
       correlationId: "correlation-1",
     });
   });
@@ -413,6 +414,9 @@ describe("buildSubmissionHttpServer", () => {
         "x-organization-id": "org-company",
         "x-role": "company-admin",
       },
+      payload: {
+        reason: "Not aligned with the challenge scope.",
+      },
     });
 
     const command = readRecordedCommand({ commands: decideSubmissionUseCase.commands });
@@ -428,6 +432,7 @@ describe("buildSubmissionHttpServer", () => {
       },
       submissionId: "submission-1",
       decision: "reject",
+      reason: "Not aligned with the challenge scope.",
       correlationId: "correlation-2",
     });
   });
@@ -461,6 +466,7 @@ describe("buildSubmissionHttpServer", () => {
       },
       submissionId: "submission-1",
       decision: "select",
+      reason: null,
       correlationId: "correlation-3",
     });
   });

@@ -210,6 +210,12 @@
                           <span class="hidden md:inline" aria-hidden="true">·</span>
                           <span>{{ decisionDateLabel({ decidedAt: audit.decidedAt }) }}</span>
                         </div>
+
+                        @if (audit.reason !== null) {
+                          <p class="m-0 w-full line-height-3 text-color-secondary">
+                            {{ audit.reason }}
+                          </p>
+                        }
                       </div>
                     }
                   </div>
@@ -221,4 +227,42 @@
       }
     </section>
   }
+
+  <p-dialog
+    [header]="pendingReasonDecisionTitle({ pendingDecision: pendingReasonDecision() })"
+    [modal]="true"
+    [dismissableMask]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: 'min(34rem, 92vw)' }"
+    [visible]="pendingReasonDecision() !== null"
+    (visibleChange)="setDecisionReasonDialogVisible({ visible: $event })"
+  >
+    <div class="flex flex-column gap-3">
+      <div class="flex flex-column gap-2">
+        <label for="decision-reason" class="font-bold text-color">Reason</label>
+        <textarea
+          id="decision-reason"
+          rows="5"
+          class="p-inputtext p-component w-full"
+          [value]="decisionReason()"
+          (input)="updateDecisionReason($event)"
+        ></textarea>
+      </div>
+
+      <div class="flex justify-content-end gap-2">
+        <p-button
+          label="Cancel"
+          severity="secondary"
+          type="button"
+          (onClick)="closeDecisionReasonDialog()"
+        />
+        <p-button
+          [label]="pendingReasonDecisionActionLabel({ pendingDecision: pendingReasonDecision() })"
+          type="button"
+          (onClick)="confirmDecisionReason()"
+        />
+      </div>
+    </div>
+  </p-dialog>
 </section>

@@ -199,6 +199,8 @@ assert_status "$http_status" 200 "publish challenge"
 
 proposal_one_payload='{"summary":"First smoke proposal","approach":"Pilot with a focused discovery sprint.","budget":"5000 EUR","timeline":"4 weeks"}'
 proposal_two_payload='{"summary":"Second smoke proposal","approach":"Pilot with implementation support.","budget":"7000 EUR","timeline":"6 weeks"}'
+selection_reason_payload='{"reason":"Best fit for the final implementation phase."}'
+selection_reason="Best fit for the final implementation phase."
 
 http_status="$(request POST "$api_url/challenges/$challenge_id/submissions" "$startup_token" "$proposal_one_payload")"
 assert_status "$http_status" 201 "submit proposal one"
@@ -226,7 +228,7 @@ assert_status "$http_status" 200 "accept proposal one"
 http_status="$(request POST "$api_url/challenges/$challenge_id/submissions/$proposal_two_id/accept" "$company_token")"
 assert_status "$http_status" 200 "accept proposal two"
 
-http_status="$(request POST "$api_url/challenges/$challenge_id/submissions/$proposal_one_id/select" "$company_token")"
+http_status="$(request POST "$api_url/challenges/$challenge_id/submissions/$proposal_one_id/select" "$company_token" "$selection_reason_payload")"
 assert_status "$http_status" 200 "select final proposal"
 
 wait_for_selection_completed_challenge "$company_token" "$challenge_id"
@@ -262,9 +264,12 @@ assert_status "$http_status" 200 "list selected proposal decision audits"
 selected_audit_count="$(
   jq '[.[] | select(.previousStatus == "accepted" and .newStatus == "selected")] | length' "$body_file"
 )"
+selected_audit_reason_count="$(
+  jq --arg reason "$selection_reason" '[.[] | select(.previousStatus == "accepted" and .newStatus == "selected" and .reason == $reason)] | length' "$body_file"
+)"
 
-if [[ "$selected_audit_count" != "1" ]]; then
-  printf 'FAIL expected selected audit count=1, got %s\n' "$selected_audit_count" >&2
+if [[ "$selected_audit_count" != "1" || "$selected_audit_reason_count" != "1" ]]; then
+  printf 'FAIL expected selected audit count=1 with reason, got count=%s reason_count=%s\n' "$selected_audit_count" "$selected_audit_reason_count" >&2
   jq . "$body_file"
   exit 1
 fi
@@ -276,9 +281,12 @@ assert_status "$http_status" 200 "list not-selected proposal decision audits"
 not_selected_audit_count="$(
   jq '[.[] | select(.previousStatus == "accepted" and .newStatus == "not-selected")] | length' "$body_file"
 )"
+not_selected_audit_reason_count="$(
+  jq --arg reason "$selection_reason" '[.[] | select(.previousStatus == "accepted" and .newStatus == "not-selected" and .reason == $reason)] | length' "$body_file"
+)"
 
-if [[ "$not_selected_audit_count" != "1" ]]; then
-  printf 'FAIL expected not-selected audit count=1, got %s\n' "$not_selected_audit_count" >&2
+if [[ "$not_selected_audit_count" != "1" || "$not_selected_audit_reason_count" != "1" ]]; then
+  printf 'FAIL expected not-selected audit count=1 with reason, got count=%s reason_count=%s\n' "$not_selected_audit_count" "$not_selected_audit_reason_count" >&2
   jq . "$body_file"
   exit 1
 fi

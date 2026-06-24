@@ -2,6 +2,8 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
+import { Button } from 'primeng/button';
+import { Dialog } from 'primeng/dialog';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
@@ -15,7 +17,7 @@ import type { Submission, SubmissionDecisionAudit } from '../../domain/submissio
 
 @Component({
   selector: 'app-challenge-proposals-page',
-  imports: [ChallengeStatusLabel, ChallengeSubmissionsReview, RouterLink, Tag],
+  imports: [Button, ChallengeStatusLabel, ChallengeSubmissionsReview, Dialog, RouterLink, Tag],
   providers: [
     ChallengesStore,
     {
@@ -31,6 +33,8 @@ export class ChallengeProposalsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly challengeId = signal<ChallengeId | null>(this.readChallengeId());
+  protected readonly pendingReasonDecision = signal<PendingReasonDecision | null>(null);
+  protected readonly decisionReason = signal('');
   protected readonly challenge = computed(() => this.findChallenge());
   protected readonly submissions = computed(() => {
     const challengeId = this.challengeId();
@@ -127,7 +131,7 @@ export class ChallengeProposalsPage {
   }
 
   protected async rejectSubmission(input: { readonly submissionId: SubmissionId }): Promise<void> {
-    await this.decideSubmission({
+    this.openDecisionReasonDialog({
       submissionId: input.submissionId,
       decision: 'reject',
       successSummary: 'Proposal rejected',
@@ -135,11 +139,48 @@ export class ChallengeProposalsPage {
   }
 
   protected async selectSubmission(input: { readonly submissionId: SubmissionId }): Promise<void> {
-    await this.decideSubmission({
+    this.openDecisionReasonDialog({
       submissionId: input.submissionId,
       decision: 'select',
       successSummary: 'Final startup selected',
     });
+  }
+
+  protected updateDecisionReason(event: Event): void {
+    const target = event.target;
+
+    if (!(target instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
+    this.decisionReason.set(target.value);
+  }
+
+  protected closeDecisionReasonDialog(): void {
+    this.pendingReasonDecision.set(null);
+    this.decisionReason.set('');
+  }
+
+  protected setDecisionReasonDialogVisible(input: { readonly visible: boolean }): void {
+    if (input.visible) {
+      return;
+    }
+
+    this.closeDecisionReasonDialog();
+  }
+
+  protected async confirmDecisionReason(): Promise<void> {
+    const pendingDecision = this.pendingReasonDecision();
+
+    if (pendingDecision === null) {
+      return;
+    }
+
+    await this.decideSubmission({
+      ...pendingDecision,
+      reason: this.decisionReason(),
+    });
+    this.closeDecisionReasonDialog();
   }
 
   protected errorMessage(input: { readonly error: ChallengeFailure | null }): string | null {
@@ -201,6 +242,26 @@ export class ChallengeProposalsPage {
     }).format(input.decidedAt);
   }
 
+  protected pendingReasonDecisionTitle(input: {
+    readonly pendingDecision: PendingReasonDecision | null;
+  }): string {
+    if (input.pendingDecision?.decision === 'select') {
+      return 'Final selection note';
+    }
+
+    return 'Rejection note';
+  }
+
+  protected pendingReasonDecisionActionLabel(input: {
+    readonly pendingDecision: PendingReasonDecision | null;
+  }): string {
+    if (input.pendingDecision?.decision === 'select') {
+      return 'Select final startup';
+    }
+
+    return 'Reject proposal';
+  }
+
   private readChallengeId(): ChallengeId | null {
     return this.route.snapshot.paramMap.get('challengeId') as ChallengeId | null;
   }
@@ -231,6 +292,7 @@ export class ChallengeProposalsPage {
     readonly submissionId: SubmissionId;
     readonly decision: 'accept' | 'reject' | 'select';
     readonly successSummary: string;
+    readonly reason?: string | null | undefined;
   }): Promise<void> {
     const challengeId = this.challengeId();
 
@@ -241,6 +303,7 @@ export class ChallengeProposalsPage {
     const result = await this.runSubmissionDecision({
       challengeId,
       decision: input.decision,
+      reason: input.reason,
       submissionId: input.submissionId,
     });
 
@@ -259,11 +322,13 @@ export class ChallengeProposalsPage {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
     readonly decision: 'accept' | 'reject' | 'select';
+    readonly reason?: string | null | undefined;
   }) {
     if (input.decision === 'accept') {
       return this.store.acceptSubmission({
         challengeId: input.challengeId,
         submissionId: input.submissionId,
+        reason: input.reason,
       });
     }
 
@@ -271,12 +336,29 @@ export class ChallengeProposalsPage {
       return this.store.rejectSubmission({
         challengeId: input.challengeId,
         submissionId: input.submissionId,
+        reason: input.reason,
       });
     }
 
     return this.store.selectSubmission({
       challengeId: input.challengeId,
       submissionId: input.submissionId,
+      reason: input.reason,
     });
   }
+
+  private openDecisionReasonDialog(input: PendingReasonDecision): void {
+    if (this.finalSelectionLocked()) {
+      return;
+    }
+
+    this.pendingReasonDecision.set(input);
+    this.decisionReason.set('');
+  }
 }
+
+type PendingReasonDecision = {
+  readonly submissionId: SubmissionId;
+  readonly decision: 'reject' | 'select';
+  readonly successSummary: string;
+};

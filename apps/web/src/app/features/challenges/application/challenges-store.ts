@@ -335,10 +335,12 @@ export class ChallengesStore {
   async acceptSubmission(input: {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
+    readonly reason?: string | null | undefined;
   }): Promise<Result<ChallengeFailure, Submission>> {
     return this.decideSubmission({
       challengeId: input.challengeId,
       submissionId: input.submissionId,
+      reason: input.reason,
       decision: 'accept',
     });
   }
@@ -346,10 +348,12 @@ export class ChallengesStore {
   async rejectSubmission(input: {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
+    readonly reason?: string | null | undefined;
   }): Promise<Result<ChallengeFailure, Submission>> {
     return this.decideSubmission({
       challengeId: input.challengeId,
       submissionId: input.submissionId,
+      reason: input.reason,
       decision: 'reject',
     });
   }
@@ -357,10 +361,12 @@ export class ChallengesStore {
   async selectSubmission(input: {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
+    readonly reason?: string | null | undefined;
   }): Promise<Result<ChallengeFailure, Submission>> {
     return this.decideSubmission({
       challengeId: input.challengeId,
       submissionId: input.submissionId,
+      reason: input.reason,
       decision: 'select',
     });
   }
@@ -464,6 +470,7 @@ export class ChallengesStore {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
     readonly decision: 'accept' | 'reject' | 'select';
+    readonly reason?: string | null | undefined;
   }): Promise<Result<ChallengeFailure, Submission>> {
     this.decidingSubmissionIdsState.update((submissionIds) => [
       ...submissionIds,
@@ -496,10 +503,12 @@ export class ChallengesStore {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
     readonly decision: 'accept' | 'reject' | 'select';
+    readonly reason?: string | null | undefined;
   }): Promise<Result<ChallengeFailure, Submission>> {
     const command: DecideSubmissionCommand = {
       challengeId: input.challengeId,
       submissionId: input.submissionId,
+      reason: input.reason,
     };
 
     if (input.decision === 'accept') {

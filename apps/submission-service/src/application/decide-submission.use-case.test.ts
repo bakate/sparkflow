@@ -155,9 +155,10 @@ describe("DecideSubmissionUseCase", () => {
 
   it("rejects a submitted submission and emits submission.rejected", async () => {
     const submission = createSubmittedSubmission();
+    const submissionRepository = createInMemorySubmissionRepository([submission]);
     const eventPublisher = createInMemoryEventPublisher();
     const useCase = createDecideSubmissionUseCase({
-      submissionRepository: createInMemorySubmissionRepository([submission]),
+      submissionRepository,
       clock: fixedClock,
       eventPublisher,
       idGenerator: fixedIdGenerator,
@@ -167,10 +168,12 @@ describe("DecideSubmissionUseCase", () => {
       actor: companyAdminActor,
       submissionId: submission.id,
       decision: "reject",
+      reason: "  Not aligned with the challenge scope.  ",
       correlationId: "correlation-id",
     });
 
     expect(result.ok).toBe(true);
+    expect(submissionRepository.audits[0]?.reason).toBe("Not aligned with the challenge scope.");
     expect(eventPublisher.events[0]?.eventName).toBe(eventNames.submissionRejected);
   });
 

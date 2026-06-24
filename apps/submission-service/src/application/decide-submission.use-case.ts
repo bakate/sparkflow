@@ -1,5 +1,6 @@
 import {
   eventNames,
+  normalizeSubmissionDecisionReason,
   type ActorContext,
   type DomainEvent,
   type SubmissionDto,
@@ -23,6 +24,7 @@ export type DecideSubmissionCommand = {
   readonly actor: ActorContext;
   readonly submissionId: string;
   readonly decision: SubmissionDecision;
+  readonly reason?: string | null;
   readonly correlationId: string;
 };
 
@@ -92,6 +94,7 @@ export const createDecideSubmissionUseCase = (input: {
       previousSubmission: submission,
       decidedSubmission,
       decidedAt: now,
+      reason: normalizeSubmissionDecisionReason({ reason: command.reason }),
     });
     const notSelectedAudits = notSelectedSubmissions.flatMap((notSelectedSubmission) => {
       const previousSubmission = challengeSubmissions.find(
@@ -109,6 +112,7 @@ export const createDecideSubmissionUseCase = (input: {
           previousSubmission,
           decidedSubmission: notSelectedSubmission,
           decidedAt: now,
+          reason: normalizeSubmissionDecisionReason({ reason: command.reason }),
         }),
       ];
     });

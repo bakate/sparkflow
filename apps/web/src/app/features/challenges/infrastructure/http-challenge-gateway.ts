@@ -6,6 +6,7 @@ import type {
   SubmissionDecisionAuditDto,
   SubmissionDto,
 } from '@sparkflow/contracts';
+import { normalizeSubmissionDecisionReason } from '@sparkflow/contracts';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import {
@@ -233,6 +234,7 @@ export class HttpChallengeGateway implements ChallengeGateway {
     return this.decideSubmission({
       challengeId: command.challengeId,
       submissionId: command.submissionId,
+      reason: command.reason,
       decision: 'accept',
     });
   }
@@ -243,6 +245,7 @@ export class HttpChallengeGateway implements ChallengeGateway {
     return this.decideSubmission({
       challengeId: command.challengeId,
       submissionId: command.submissionId,
+      reason: command.reason,
       decision: 'reject',
     });
   }
@@ -253,6 +256,7 @@ export class HttpChallengeGateway implements ChallengeGateway {
     return this.decideSubmission({
       challengeId: command.challengeId,
       submissionId: command.submissionId,
+      reason: command.reason,
       decision: 'select',
     });
   }
@@ -265,14 +269,16 @@ export class HttpChallengeGateway implements ChallengeGateway {
     readonly challengeId: ChallengeId;
     readonly submissionId: SubmissionId;
     readonly decision: 'accept' | 'reject' | 'select';
+    readonly reason?: string | null | undefined;
   }): Promise<Result<ChallengeFailure, Submission>> {
     try {
+      const reason = normalizeSubmissionDecisionReason({ reason: input.reason });
       const submissionDto = await firstValueFrom(
         this.httpClient.post<SubmissionDto>(
           this.buildUrl({
             path: `/challenges/${input.challengeId}/submissions/${input.submissionId}/${input.decision}`,
           }),
-          null,
+          reason === null ? null : { reason },
         ),
       );
       return succeed(toSubmission({ submissionDto }));

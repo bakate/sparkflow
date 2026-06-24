@@ -11,6 +11,10 @@ type CreateSubmissionBody = {
   readonly summary?: string;
 };
 
+type DecideSubmissionBody = {
+  readonly reason?: string | null;
+};
+
 export const buildSubmissionHttpServer = async (input: {
   readonly createSubmissionUseCase: CreateSubmissionUseCase;
   readonly decideSubmissionUseCase: DecideSubmissionUseCase;
@@ -75,13 +79,14 @@ export const buildSubmissionHttpServer = async (input: {
     },
   );
 
-  server.post<{ Params: { readonly submissionId: string } }>(
+  server.post<{ Params: { readonly submissionId: string }; Body: unknown }>(
     "/submissions/:submissionId/accept",
     async (request, reply) => {
       const result = await input.decideSubmissionUseCase.execute({
         actor: readActor({ headers: request.headers }),
         submissionId: request.params.submissionId,
         decision: "accept",
+        reason: readDecisionReason({ body: request.body }),
         correlationId: readCorrelationId({ headers: request.headers }),
       });
 
@@ -96,13 +101,14 @@ export const buildSubmissionHttpServer = async (input: {
     },
   );
 
-  server.post<{ Params: { readonly submissionId: string } }>(
+  server.post<{ Params: { readonly submissionId: string }; Body: unknown }>(
     "/submissions/:submissionId/reject",
     async (request, reply) => {
       const result = await input.decideSubmissionUseCase.execute({
         actor: readActor({ headers: request.headers }),
         submissionId: request.params.submissionId,
         decision: "reject",
+        reason: readDecisionReason({ body: request.body }),
         correlationId: readCorrelationId({ headers: request.headers }),
       });
 
@@ -117,13 +123,14 @@ export const buildSubmissionHttpServer = async (input: {
     },
   );
 
-  server.post<{ Params: { readonly submissionId: string } }>(
+  server.post<{ Params: { readonly submissionId: string }; Body: unknown }>(
     "/submissions/:submissionId/select",
     async (request, reply) => {
       const result = await input.decideSubmissionUseCase.execute({
         actor: readActor({ headers: request.headers }),
         submissionId: request.params.submissionId,
         decision: "select",
+        reason: readDecisionReason({ body: request.body }),
         correlationId: readCorrelationId({ headers: request.headers }),
       });
 
@@ -139,4 +146,20 @@ export const buildSubmissionHttpServer = async (input: {
   );
 
   return server;
+};
+
+const readDecisionReason = (input: { readonly body: unknown }): string | null => {
+  if (!isDecideSubmissionBody(input.body)) {
+    return null;
+  }
+
+  return input.body.reason ?? null;
+};
+
+const isDecideSubmissionBody = (value: unknown): value is DecideSubmissionBody => {
+  if (typeof value !== "object" || value === null || !("reason" in value)) {
+    return false;
+  }
+
+  return typeof value.reason === "string" || value.reason === null || value.reason === undefined;
 };

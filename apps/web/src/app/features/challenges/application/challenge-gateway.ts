@@ -65,6 +65,7 @@ export type ListSubmissionDecisionAuditsCommand = {
 export type DecideSubmissionCommand = {
   readonly challengeId: ChallengeId;
   readonly submissionId: SubmissionId;
+  readonly reason?: string | null | undefined;
 };
 
 export type ChallengeGateway = {
