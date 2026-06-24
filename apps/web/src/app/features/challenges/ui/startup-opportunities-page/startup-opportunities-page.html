@@ -46,17 +46,32 @@
     <p-tag severity="secondary" [value]="closedCount() + ' closed'" />
   </div>
 
+  <div class="flex gap-2 flex-wrap" aria-label="Opportunity filters">
+    @for (filter of opportunityFilters(); track filter.value) {
+      <button
+        type="button"
+        class="p-button p-component"
+        [class.p-button-secondary]="!filter.selected"
+        [class.p-button-outlined]="!filter.selected"
+        [attr.aria-pressed]="filter.selected"
+        (click)="selectFilter({ filter: filter.value })"
+      >
+        <span class="p-button-label">{{ filter.label }} ({{ filter.count }})</span>
+      </button>
+    }
+  </div>
+
   <div class="flex flex-column gap-3" aria-label="Opportunity list">
     @if (store.loadingMySubmissions()) {
       <p class="m-0 p-3 border-1 surface-border border-round surface-card">
         Loading opportunities...
       </p>
-    } @else if (opportunities().length === 0) {
+    } @else if (filteredOpportunities().length === 0) {
       <div class="p-3 border-1 surface-border border-round surface-card">
-        <p class="m-0 text-color-secondary">No submitted opportunities yet.</p>
+        <p class="m-0 text-color-secondary">{{ emptyMessage() }}</p>
       </div>
     } @else {
-      @for (opportunity of opportunities(); track opportunity.submissionId) {
+      @for (opportunity of filteredOpportunities(); track opportunity.submissionId) {
         <p-card>
           <article class="flex flex-column gap-3">
             <div

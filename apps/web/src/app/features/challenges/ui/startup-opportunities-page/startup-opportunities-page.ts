@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -24,6 +24,7 @@ import { challengeErrorMessage } from '../challenge-error-message';
 })
 export class StartupOpportunitiesPage {
   protected readonly store = inject(ChallengesStore);
+  protected readonly activeFilter = signal<OpportunityFilter>('all');
   protected readonly opportunities = computed<readonly OpportunityViewModel[]>(() =>
     this.store
       .myOpportunities()
@@ -34,6 +35,26 @@ export class StartupOpportunitiesPage {
             this.opportunityRank({ opportunity: rightOpportunity }) ||
           rightOpportunity.submittedAt.getTime() - leftOpportunity.submittedAt.getTime(),
       ),
+  );
+  protected readonly filteredOpportunities = computed<readonly OpportunityViewModel[]>(() =>
+    this.opportunities().filter((opportunity) =>
+      opportunityMatchesFilter({
+        opportunity,
+        filter: this.activeFilter(),
+      }),
+    ),
+  );
+  protected readonly opportunityFilters = computed<readonly OpportunityFilterViewModel[]>(() =>
+    opportunityFilterOptions.map((filterOption) => ({
+      ...filterOption,
+      count: this.opportunities().filter((opportunity) =>
+        opportunityMatchesFilter({
+          opportunity,
+          filter: filterOption.value,
+        }),
+      ).length,
+      selected: this.activeFilter() === filterOption.value,
+    })),
   );
   protected readonly submittedCount = computed(
     () =>
@@ -85,6 +106,18 @@ export class StartupOpportunitiesPage {
 
   protected reloadOpportunities(): void {
     this.store.reloadChallenges();
+  }
+
+  protected selectFilter(input: { readonly filter: OpportunityFilter }): void {
+    this.activeFilter.set(input.filter);
+  }
+
+  protected emptyMessage(): string {
+    if (this.store.myOpportunities().length === 0) {
+      return 'No submitted opportunities yet.';
+    }
+
+    return 'No opportunities match this filter.';
   }
 
   protected errorMessage(): string | null {
@@ -167,6 +200,25 @@ type OpportunityViewModel = {
   readonly decidedAt: Date | null;
 };
 
+type OpportunityFilter = 'active' | 'all' | 'closed' | 'selected';
+
+type OpportunityFilterOption = {
+  readonly label: string;
+  readonly value: OpportunityFilter;
+};
+
+type OpportunityFilterViewModel = OpportunityFilterOption & {
+  readonly count: number;
+  readonly selected: boolean;
+};
+
+const opportunityFilterOptions: readonly OpportunityFilterOption[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Active', value: 'active' },
+  { label: 'Selected', value: 'selected' },
+  { label: 'Closed', value: 'closed' },
+] as const;
+
 const opportunityStatusLabel = (input: { readonly status: Submission['status'] }): string => {
   const labels: Record<Submission['status'], string> = {
     accepted: 'Shortlisted',
@@ -187,4 +239,23 @@ const readLatestDecisionReason = (input: {
     .find((audit) => audit.reason !== null);
 
   return auditWithReason?.reason ?? null;
+};
+
+const opportunityMatchesFilter = (input: {
+  readonly opportunity: OpportunityViewModel;
+  readonly filter: OpportunityFilter;
+}): boolean => {
+  if (input.filter === 'all') {
+    return true;
+  }
+
+  if (input.filter === 'active') {
+    return input.opportunity.status === 'accepted' || input.opportunity.status === 'submitted';
+  }
+
+  if (input.filter === 'selected') {
+    return input.opportunity.status === 'selected';
+  }
+
+  return input.opportunity.status === 'not-selected' || input.opportunity.status === 'rejected';
 };
