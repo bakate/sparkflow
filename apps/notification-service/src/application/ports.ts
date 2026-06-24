@@ -6,6 +6,15 @@ export type NotificationRepository = {
   readonly findByOrganizationId: (input: {
     readonly organizationId: string;
   }) => Promise<readonly Notification[]>;
+  readonly markRead: (input: {
+    readonly notificationId: string;
+    readonly organizationId: string;
+    readonly readAt: Date;
+  }) => Promise<Notification | null>;
+  readonly markAllReadByOrganizationId: (input: {
+    readonly organizationId: string;
+    readonly readAt: Date;
+  }) => Promise<readonly Notification[]>;
 };
 
 export type Clock = {

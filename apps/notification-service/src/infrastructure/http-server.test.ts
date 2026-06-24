@@ -1,6 +1,8 @@
 import type { NotificationDto } from "@sparkflow/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ListNotificationsUseCase } from "../application/list-notifications.use-case.js";
+import type { MarkAllNotificationsReadUseCase } from "../application/mark-all-notifications-read.use-case.js";
+import type { MarkNotificationReadUseCase } from "../application/mark-notification-read.use-case.js";
 import { buildNotificationHttpServer } from "./http-server.js";
 
 const notificationDto: NotificationDto = {
@@ -10,6 +12,7 @@ const notificationDto: NotificationDto = {
   title: "Submission accepted",
   message: "Submission submission-1 is now accepted.",
   actionUrl: "/opportunities?submissionId=submission-1",
+  readAt: null,
   createdAt: "2026-06-16T10:00:00.000Z",
 };
 
@@ -43,13 +46,52 @@ const createRecordingListNotificationsUseCase = (input: {
   };
 };
 
+const createRecordingMarkNotificationReadUseCase = (input?: {
+  readonly notification: NotificationDto | null;
+}): MarkNotificationReadUseCase & {
+  readonly commands: { readonly notificationId: string; readonly organizationId: string }[];
+} => {
+  const commands: { readonly notificationId: string; readonly organizationId: string }[] = [];
+
+  return {
+    commands,
+    execute: async (command) => {
+      commands.push(command);
+      return input?.notification ?? null;
+    },
+  };
+};
+
+const createRecordingMarkAllNotificationsReadUseCase = (input: {
+  readonly notifications: readonly NotificationDto[];
+}): MarkAllNotificationsReadUseCase & {
+  readonly commands: { readonly organizationId: string }[];
+} => {
+  const commands: { readonly organizationId: string }[] = [];
+
+  return {
+    commands,
+    execute: async (command) => {
+      commands.push(command);
+      return input.notifications;
+    },
+  };
+};
+
 const createServer = async (input?: {
   readonly listNotificationsUseCase?: ListNotificationsUseCase;
+  readonly markAllNotificationsReadUseCase?: MarkAllNotificationsReadUseCase;
+  readonly markNotificationReadUseCase?: MarkNotificationReadUseCase;
 }) => {
   const server = await buildNotificationHttpServer({
     listNotificationsUseCase:
       input?.listNotificationsUseCase ??
       createRecordingListNotificationsUseCase({ notifications: [] }),
+    markAllNotificationsReadUseCase:
+      input?.markAllNotificationsReadUseCase ??
+      createRecordingMarkAllNotificationsReadUseCase({ notifications: [] }),
+    markNotificationReadUseCase:
+      input?.markNotificationReadUseCase ?? createRecordingMarkNotificationReadUseCase(),
   });
 
   openServers.push(server);
@@ -118,5 +160,69 @@ describe("buildNotificationHttpServer", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual([]);
     expect(command).toEqual({ organizationId: "unknown-organization" });
+  });
+
+  it("marks one notification as read for the organization from request headers", async () => {
+    const readNotification = {
+      ...notificationDto,
+      readAt: "2026-06-16T10:05:00.000Z",
+    };
+    const markNotificationReadUseCase = createRecordingMarkNotificationReadUseCase({
+      notification: readNotification,
+    });
+    const server = await createServer({ markNotificationReadUseCase });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/notifications/notification-1/read",
+      headers: {
+        "x-organization-id": "org-startup",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(readNotification);
+    expect(markNotificationReadUseCase.commands).toEqual([
+      { notificationId: "notification-1", organizationId: "org-startup" },
+    ]);
+  });
+
+  it("returns 404 when marking an inaccessible notification as read", async () => {
+    const markNotificationReadUseCase = createRecordingMarkNotificationReadUseCase();
+    const server = await createServer({ markNotificationReadUseCase });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/notifications/missing-notification/read",
+      headers: {
+        "x-organization-id": "org-startup",
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "notification-not-found" });
+  });
+
+  it("marks all unread notifications as read for the organization from request headers", async () => {
+    const readNotification = {
+      ...notificationDto,
+      readAt: "2026-06-16T10:05:00.000Z",
+    };
+    const markAllNotificationsReadUseCase = createRecordingMarkAllNotificationsReadUseCase({
+      notifications: [readNotification],
+    });
+    const server = await createServer({ markAllNotificationsReadUseCase });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/notifications/read-all",
+      headers: {
+        "x-organization-id": "org-startup",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([readNotification]);
+    expect(markAllNotificationsReadUseCase.commands).toEqual([{ organizationId: "org-startup" }]);
   });
 });

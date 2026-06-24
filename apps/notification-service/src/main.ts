@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createCreateNotificationFromEventUseCase } from "./application/create-notification-from-event.use-case.ts";
 import { createListNotificationsUseCase } from "./application/list-notifications.use-case.ts";
+import { createMarkAllNotificationsReadUseCase } from "./application/mark-all-notifications-read.use-case.ts";
+import { createMarkNotificationReadUseCase } from "./application/mark-notification-read.use-case.ts";
 import { buildNotificationHttpServer } from "./infrastructure/http-server.ts";
 import { startNatsEventConsumer } from "./infrastructure/nats-event-consumer.ts";
 import {
@@ -34,6 +36,14 @@ await startNatsEventConsumer({ natsUrl, createNotificationFromEventUseCase });
 
 const server = await buildNotificationHttpServer({
   listNotificationsUseCase: createListNotificationsUseCase({ notificationRepository }),
+  markAllNotificationsReadUseCase: createMarkAllNotificationsReadUseCase({
+    clock,
+    notificationRepository,
+  }),
+  markNotificationReadUseCase: createMarkNotificationReadUseCase({
+    clock,
+    notificationRepository,
+  }),
 });
 
 await server.listen({ host: "::", port });

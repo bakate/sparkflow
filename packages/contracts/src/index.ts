@@ -103,5 +103,6 @@ export type NotificationDto = {
   readonly title: string;
   readonly message: string;
   readonly actionUrl: string | null;
+  readonly readAt: string | null;
   readonly createdAt: string;
 };

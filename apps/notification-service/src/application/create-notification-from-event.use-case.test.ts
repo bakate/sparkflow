@@ -44,6 +44,50 @@ const createInMemoryNotificationRepository = (
       notifications.filter(
         (notification) => notification.recipientOrganizationId === organizationId,
       ),
+    markRead: async ({ notificationId, organizationId, readAt }) => {
+      const notificationIndex = notifications.findIndex(
+        (notification) =>
+          notification.id === notificationId &&
+          notification.recipientOrganizationId === organizationId,
+      );
+
+      if (notificationIndex === -1) {
+        return null;
+      }
+
+      const notification = notifications[notificationIndex];
+
+      if (notification === undefined) {
+        return null;
+      }
+
+      const updatedNotification = {
+        ...notification,
+        readAt: notification.readAt ?? readAt,
+      };
+
+      notifications[notificationIndex] = updatedNotification;
+
+      return updatedNotification;
+    },
+    markAllReadByOrganizationId: async ({ organizationId, readAt }) => {
+      const updatedNotifications: Notification[] = [];
+
+      notifications.forEach((notification, notificationIndex) => {
+        if (
+          notification.recipientOrganizationId !== organizationId ||
+          notification.readAt !== null
+        ) {
+          return;
+        }
+
+        const updatedNotification = { ...notification, readAt };
+        notifications[notificationIndex] = updatedNotification;
+        updatedNotifications.push(updatedNotification);
+      });
+
+      return updatedNotifications;
+    },
   };
 };
 
@@ -137,6 +181,7 @@ describe("CreateNotificationFromEventUseCase", () => {
         title,
         message,
         actionUrl: "/opportunities?submissionId=submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
+        readAt: null,
         createdAt: "2026-06-16T10:00:00.000Z",
       });
       expect(notificationRepository.notifications).toHaveLength(1);
@@ -160,6 +205,7 @@ describe("CreateNotificationFromEventUseCase", () => {
       message:
         "Reviewer scored submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 at 91/100.",
       actionUrl: null,
+      readAt: null,
       createdAt: "2026-06-16T10:00:00.000Z",
     });
     expect(notificationRepository.notifications).toHaveLength(1);
@@ -177,6 +223,7 @@ describe("CreateNotificationFromEventUseCase", () => {
       title: "Existing notification",
       message: "Already handled.",
       actionUrl: null,
+      readAt: null,
       createdAt: fixedCreatedAt,
     };
     const { notificationRepository, useCase } = createUseCase({

@@ -7,6 +7,7 @@ export type Notification = {
   readonly title: string;
   readonly message: string;
   readonly actionUrl: string | null;
+  readonly readAt: Date | null;
   readonly createdAt: Date;
 };
 
@@ -25,6 +26,7 @@ export const createNotification = (input: {
   title: input.title,
   message: input.message,
   actionUrl: input.actionUrl,
+  readAt: null,
   createdAt: input.now,
 });
 
@@ -35,5 +37,6 @@ export const toNotificationDto = (notification: Notification): NotificationDto =
   title: notification.title,
   message: notification.message,
   actionUrl: notification.actionUrl,
+  readAt: notification.readAt?.toISOString() ?? null,
   createdAt: notification.createdAt.toISOString(),
 });

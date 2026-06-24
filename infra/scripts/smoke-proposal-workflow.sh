@@ -89,7 +89,7 @@ wait_for_selected_notification() {
     local selected_notifications
     selected_notifications="$(
       jq --arg submission_id "$submission_id" \
-        '[.[] | select((.message | contains($submission_id)) and (.message | test("selected"; "i")))] | length' \
+        '[.[] | select((.actionUrl | strings | contains($submission_id)) and ((.title + " " + .message) | test("selected"; "i")))] | length' \
         "$body_file"
     )"
 

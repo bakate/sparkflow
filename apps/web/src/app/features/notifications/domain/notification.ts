@@ -5,5 +5,6 @@ export type Notification = {
   readonly title: string;
   readonly message: string;
   readonly actionUrl: string | null;
+  readonly readAt: Date | null;
   readonly createdAt: Date;
 };

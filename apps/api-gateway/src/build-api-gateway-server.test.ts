@@ -873,4 +873,42 @@ describe("buildApiGatewayServer", () => {
       reason: selectionReason,
     });
   });
+
+  it("proxies marking one notification as read to the notification service", async () => {
+    const { requests, server } = await createServerWithCapturedRequests();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/notifications/notification-1/read",
+      headers: { authorization: authorizationHeader },
+      payload: {},
+    });
+
+    const request = readCapturedRequest({ requests });
+
+    expect(response.statusCode).toBe(201);
+    expect(request.url).toBe("http://notification-service/notifications/notification-1/read");
+    expect(request.init.method).toBe("POST");
+    expect(readForwardedHeaders({ request }).get("x-organization-id")).toBe("org-company");
+    expect(readJsonBody({ request })).toEqual({});
+  });
+
+  it("proxies marking all notifications as read to the notification service", async () => {
+    const { requests, server } = await createServerWithCapturedRequests();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/notifications/read-all",
+      headers: { authorization: authorizationHeader },
+      payload: {},
+    });
+
+    const request = readCapturedRequest({ requests });
+
+    expect(response.statusCode).toBe(201);
+    expect(request.url).toBe("http://notification-service/notifications/read-all");
+    expect(request.init.method).toBe("POST");
+    expect(readForwardedHeaders({ request }).get("x-organization-id")).toBe("org-company");
+    expect(readJsonBody({ request })).toEqual({});
+  });
 });

@@ -642,6 +642,45 @@ export const buildApiGatewayServer = async (input: {
     return reply.code(response.statusCode).send(response.body);
   });
 
+  server.post("/notifications/read-all", async (request, reply) => {
+    const actor = await authenticate(request.headers);
+    if (actor === null) {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+
+    const response = await proxy({
+      actor,
+      url: `${input.serviceUrls.notificationServiceUrl}/notifications/read-all`,
+      method: "POST",
+      headers: request.headers,
+      body: request.body,
+    });
+
+    return reply.code(response.statusCode).send(response.body);
+  });
+
+  server.post<{
+    readonly Params: {
+      readonly notificationId: string;
+    };
+    readonly Body: unknown;
+  }>("/notifications/:notificationId/read", async (request, reply) => {
+    const actor = await authenticate(request.headers);
+    if (actor === null) {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+
+    const response = await proxy({
+      actor,
+      url: `${input.serviceUrls.notificationServiceUrl}/notifications/${request.params.notificationId}/read`,
+      method: "POST",
+      headers: request.headers,
+      body: request.body,
+    });
+
+    return reply.code(response.statusCode).send(response.body);
+  });
+
   return server;
 };
 

@@ -28,6 +28,41 @@ export class HttpNotificationGateway implements NotificationGateway {
     }
   }
 
+  async markNotificationRead(input: {
+    readonly notificationId: string;
+  }): Promise<Result<NotificationFailure, Notification>> {
+    try {
+      const notificationDto = await firstValueFrom(
+        this.httpClient
+          .post<NotificationDto>(
+            this.buildUrl({ path: `/notifications/${input.notificationId}/read` }),
+            {},
+          )
+          .pipe(timeout(5000)),
+      );
+
+      return succeed(toNotification({ notificationDto }));
+    } catch (error: unknown) {
+      return fail(toNotificationFailure({ error }));
+    }
+  }
+
+  async markAllNotificationsRead(): Promise<Result<NotificationFailure, readonly Notification[]>> {
+    try {
+      const notificationDtos = await firstValueFrom(
+        this.httpClient
+          .post<NotificationDto[]>(this.buildUrl({ path: '/notifications/read-all' }), {})
+          .pipe(timeout(5000)),
+      );
+
+      return succeed(
+        notificationDtos.map((notificationDto) => toNotification({ notificationDto })),
+      );
+    } catch (error: unknown) {
+      return fail(toNotificationFailure({ error }));
+    }
+  }
+
   private buildUrl(input: { readonly path: string }): string {
     return `${this.webApiConfig.apiUrl}${input.path}`;
   }
@@ -40,6 +75,7 @@ const toNotification = (input: { readonly notificationDto: NotificationDto }): N
   title: input.notificationDto.title,
   message: input.notificationDto.message,
   actionUrl: input.notificationDto.actionUrl ?? null,
+  readAt: input.notificationDto.readAt === null ? null : new Date(input.notificationDto.readAt),
   createdAt: new Date(input.notificationDto.createdAt),
 });
 

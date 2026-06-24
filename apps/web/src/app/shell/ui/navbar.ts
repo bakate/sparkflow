@@ -118,15 +118,26 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                     class="flex align-items-center justify-content-between gap-3 pb-3 border-bottom-1 surface-border"
                   >
                     <p class="m-0 font-bold text-color">Notifications</p>
-                    <p-button
-                      icon="pi pi-refresh"
-                      severity="secondary"
-                      [text]="true"
-                      [rounded]="true"
-                      [loading]="notificationsStore.loading()"
-                      ariaLabel="Refresh notifications"
-                      (onClick)="reloadNotifications()"
-                    />
+                    <div class="flex align-items-center gap-1">
+                      @if (notificationsStore.unreadNotificationCount() > 0) {
+                        <p-button
+                          label="Mark all read"
+                          severity="secondary"
+                          [text]="true"
+                          [loading]="notificationsStore.loading()"
+                          (onClick)="markAllNotificationsRead()"
+                        />
+                      }
+                      <p-button
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        [text]="true"
+                        [rounded]="true"
+                        [loading]="notificationsStore.loading()"
+                        ariaLabel="Refresh notifications"
+                        (onClick)="reloadNotifications()"
+                      />
+                    </div>
                   </div>
 
                   <div class="flex flex-column">
@@ -139,8 +150,16 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                         notification of notificationsStore.latestNotifications();
                         track notification.id
                       ) {
-                        <article class="py-3 border-bottom-1 surface-border">
-                          <p class="m-0 font-semibold text-color">{{ notification.title }}</p>
+                        <article
+                          class="py-3 border-bottom-1 surface-border notification-item"
+                          [class.notification-item-unread]="notification.readAt === null"
+                        >
+                          <div class="flex align-items-center justify-content-between gap-2">
+                            <p class="m-0 font-semibold text-color">{{ notification.title }}</p>
+                            @if (notification.readAt === null) {
+                              <p-tag value="Unread" severity="info" />
+                            }
+                          </div>
                           <p class="m-0 mt-1 line-height-3 text-color-secondary">
                             {{ notification.message }}
                           </p>
@@ -155,7 +174,9 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                               [text]="true"
                               [routerLink]="notificationActionPath({ notification })"
                               [queryParams]="notificationActionQueryParams({ notification })"
-                              (onClick)="notificationsPopover.hide()"
+                              (onClick)="
+                                openNotification({ notification, popover: notificationsPopover })
+                              "
                             />
                           }
                         </article>
@@ -222,6 +243,16 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
       padding: 0;
       width: 1.375rem;
     }
+
+    .notification-item {
+      border-left: 3px solid transparent;
+      padding-left: 0.75rem;
+    }
+
+    .notification-item-unread {
+      border-left-color: var(--p-primary-color);
+      background: color-mix(in srgb, var(--p-primary-color) 6%, transparent);
+    }
   `,
 })
 export class Navbar {
@@ -258,6 +289,20 @@ export class Navbar {
 
   protected reloadNotifications(): void {
     this.notificationsStore.reloadNotifications();
+  }
+
+  protected markAllNotificationsRead(): void {
+    void this.notificationsStore.markAllNotificationsRead();
+  }
+
+  protected openNotification(input: {
+    readonly notification: Notification;
+    readonly popover: Popover;
+  }): void {
+    void this.notificationsStore.markNotificationRead({
+      notificationId: input.notification.id,
+    });
+    input.popover.hide();
   }
 
   protected notificationActionPath(input: { readonly notification: Notification }): string {

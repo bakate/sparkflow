@@ -9,6 +9,7 @@ type NotificationRow = {
   readonly title: string;
   readonly message: string;
   readonly action_url: string | null;
+  readonly read_at: Date | null;
   readonly created_at: Date;
 };
 
@@ -19,6 +20,7 @@ const toNotification = (row: NotificationRow): Notification => ({
   title: row.title,
   message: row.message,
   actionUrl: row.action_url,
+  readAt: row.read_at,
   createdAt: row.created_at,
 });
 
@@ -28,8 +30,8 @@ export const createPostgresNotificationRepository = (input: {
   save: async ({ notification }) => {
     await input.pool.query(
       `INSERT INTO notifications (
-        id, event_id, recipient_organization_id, title, message, action_url, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        id, event_id, recipient_organization_id, title, message, action_url, read_at, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (event_id) DO NOTHING`,
       [
         notification.id,
@@ -38,6 +40,7 @@ export const createPostgresNotificationRepository = (input: {
         notification.title,
         notification.message,
         notification.actionUrl,
+        notification.readAt,
         notification.createdAt,
       ],
     );
@@ -60,6 +63,28 @@ export const createPostgresNotificationRepository = (input: {
 
     return result.rows.map(toNotification);
   },
+  markRead: async ({ notificationId, organizationId, readAt }) => {
+    const result = await input.pool.query<NotificationRow>(
+      `UPDATE notifications
+       SET read_at = COALESCE(read_at, $3)
+       WHERE id = $1 AND recipient_organization_id = $2
+       RETURNING *`,
+      [notificationId, organizationId, readAt],
+    );
+
+    return result.rows[0] === undefined ? null : toNotification(result.rows[0]);
+  },
+  markAllReadByOrganizationId: async ({ organizationId, readAt }) => {
+    const result = await input.pool.query<NotificationRow>(
+      `UPDATE notifications
+       SET read_at = $2
+       WHERE recipient_organization_id = $1 AND read_at IS NULL
+       RETURNING *`,
+      [organizationId, readAt],
+    );
+
+    return result.rows.map(toNotification);
+  },
 });
 
 export const ensureNotificationSchema = async (input: { readonly pool: Pool }): Promise<void> => {
@@ -71,8 +96,10 @@ export const ensureNotificationSchema = async (input: { readonly pool: Pool }): 
       title text NOT NULL,
       message text NOT NULL,
       action_url text,
+      read_at timestamptz,
       created_at timestamptz NOT NULL
     )
   `);
   await input.pool.query("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url text");
+  await input.pool.query("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at timestamptz");
 };

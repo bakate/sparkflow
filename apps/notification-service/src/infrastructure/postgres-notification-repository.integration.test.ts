@@ -25,6 +25,7 @@ const createNotificationFixture = (input: {
   title: input.title ?? faker.company.catchPhrase(),
   message: faker.lorem.sentence(),
   actionUrl: input.actionUrl ?? null,
+  readAt: null,
   createdAt: input.createdAt,
 });
 
