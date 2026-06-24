@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
+import { WEB_API_CONFIG } from '@shared/infrastructure/web-api.config';
 import { App } from './app';
 import { sparkFlowPrimeNgConfig } from './shell/ui/primeng.config';
 
@@ -13,8 +15,13 @@ describe('App', () => {
       imports: [App],
       providers: [
         MessageService,
+        provideHttpClient(),
         providePrimeNG(sparkFlowPrimeNgConfig),
         provideRouter([]),
+        {
+          provide: WEB_API_CONFIG,
+          useValue: { apiUrl: 'http://localhost:3000' },
+        },
         {
           provide: OAuthAuthenticator,
           useValue: {
