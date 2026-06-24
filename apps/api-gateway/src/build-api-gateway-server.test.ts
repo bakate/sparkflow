@@ -349,6 +349,42 @@ describe("buildApiGatewayServer", () => {
     ]);
   });
 
+  it("rejects startup submission creation when selection is completed", async () => {
+    const requests: CapturedRequest[] = [];
+    const server = await buildApiGatewayServer({
+      accessTokenVerifier: createAccessTokenVerifier({ actor: startupMemberActor }),
+      serviceUrls,
+      idGenerator: { generate: () => "generated-correlation-id" },
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+
+        return Response.json({
+          id: "challenge-1",
+          ownerOrganizationId: "org-company",
+          status: "selection-completed",
+        });
+      },
+    });
+    openServers.push(server);
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/challenges/challenge-1/submissions",
+      headers: {
+        authorization: authorizationHeader,
+      },
+      payload: {
+        summary: "A late proposal",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "forbidden" });
+    expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
+      "GET http://challenge-service/challenges/challenge-1",
+    ]);
+  });
+
   it("routes evaluation submission to the Python evaluation service", async () => {
     const { requests, server } = await createServerWithCapturedRequests();
 

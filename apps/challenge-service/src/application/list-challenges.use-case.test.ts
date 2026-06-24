@@ -45,6 +45,11 @@ describe("createListChallengesUseCase", () => {
       ownerOrganizationId: "org-company-a",
       status: "archived",
     });
+    const completedChallenge = createChallenge({
+      id: "challenge-completed",
+      ownerOrganizationId: "org-company-a",
+      status: "selection-completed",
+    });
     const draftChallenge = createChallenge({
       id: "challenge-draft",
       ownerOrganizationId: "org-company-a",
@@ -57,7 +62,7 @@ describe("createListChallengesUseCase", () => {
     });
     const useCase = createListChallengesUseCase({
       challengeRepository: createChallengeRepository({
-        challenges: [archivedChallenge, draftChallenge, publishedChallenge],
+        challenges: [archivedChallenge, completedChallenge, draftChallenge, publishedChallenge],
       }),
     });
 
