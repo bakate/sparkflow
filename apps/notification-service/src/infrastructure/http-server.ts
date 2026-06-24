@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import { readPagination } from "@sparkflow/http";
 import Fastify from "fastify";
 import type { ListNotificationsUseCase } from "../application/list-notifications.use-case.ts";
 import type { MarkAllNotificationsReadUseCase } from "../application/mark-all-notifications-read.use-case.ts";
@@ -14,10 +15,20 @@ export const buildNotificationHttpServer = async (input: {
 
   server.get("/health", async () => ({ status: "ok" }));
 
-  server.get("/notifications", async (request) =>
-    input.listNotificationsUseCase.execute({
-      organizationId: String(request.headers["x-organization-id"] ?? "unknown-organization"),
-    }),
+  server.get<{ Querystring: Record<string, string | string[] | undefined> }>(
+    "/notifications",
+    async (request, reply) => {
+      const pageResult = readPagination({ query: request.query });
+
+      if (!pageResult.ok) {
+        return reply.code(400).send({ error: pageResult.error });
+      }
+
+      return input.listNotificationsUseCase.execute({
+        organizationId: String(request.headers["x-organization-id"] ?? "unknown-organization"),
+        page: pageResult.value,
+      });
+    },
   );
 
   server.post("/notifications/read-all", async (request) =>

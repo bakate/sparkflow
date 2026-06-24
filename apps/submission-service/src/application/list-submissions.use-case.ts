@@ -1,17 +1,26 @@
-import type { SubmissionDto } from "@sparkflow/contracts";
+import type { CursorPageRequestDto, PaginatedDto, SubmissionDto } from "@sparkflow/contracts";
 import { toSubmissionDto } from "../domain/submission.ts";
 import type { SubmissionRepository } from "./ports.ts";
 
 export type ListSubmissionsUseCase = {
-  readonly execute: (input: { readonly challengeId: string }) => Promise<readonly SubmissionDto[]>;
+  readonly execute: (input: {
+    readonly challengeId: string;
+    readonly page: CursorPageRequestDto;
+  }) => Promise<PaginatedDto<SubmissionDto>>;
 };
 
 export const createListSubmissionsUseCase = (input: {
   readonly submissionRepository: SubmissionRepository;
 }): ListSubmissionsUseCase => ({
-  execute: async ({ challengeId }) => {
-    const submissions = await input.submissionRepository.findByChallengeId({ challengeId });
+  execute: async ({ challengeId, page }) => {
+    const submissionsPage = await input.submissionRepository.findPageByChallengeId({
+      challengeId,
+      page,
+    });
 
-    return submissions.map(toSubmissionDto);
+    return {
+      items: submissionsPage.items.map(toSubmissionDto),
+      page: { limit: page.limit, nextCursor: submissionsPage.nextCursor },
+    };
   },
 });

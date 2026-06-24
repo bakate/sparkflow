@@ -1,4 +1,4 @@
-import type { NotificationDto } from "@sparkflow/contracts";
+import type { CursorPageRequestDto, NotificationDto } from "@sparkflow/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ListNotificationsUseCase } from "../application/list-notifications.use-case.js";
 import type { MarkAllNotificationsReadUseCase } from "../application/mark-all-notifications-read.use-case.js";
@@ -19,8 +19,11 @@ const notificationDto: NotificationDto = {
 const openServers: { readonly close: () => Promise<void> }[] = [];
 
 const readRecordedCommand = (input: {
-  readonly commands: readonly { readonly organizationId: string }[];
-}): { readonly organizationId: string } => {
+  readonly commands: readonly {
+    readonly organizationId: string;
+    readonly page?: CursorPageRequestDto;
+  }[];
+}): { readonly organizationId: string; readonly page?: CursorPageRequestDto } => {
   const command = input.commands[0];
 
   if (command === undefined) {
@@ -33,15 +36,18 @@ const readRecordedCommand = (input: {
 const createRecordingListNotificationsUseCase = (input: {
   readonly notifications: readonly NotificationDto[];
 }): ListNotificationsUseCase & {
-  readonly commands: { readonly organizationId: string }[];
+  readonly commands: { readonly organizationId: string; readonly page: CursorPageRequestDto }[];
 } => {
-  const commands: { readonly organizationId: string }[] = [];
+  const commands: { readonly organizationId: string; readonly page: CursorPageRequestDto }[] = [];
 
   return {
     commands,
     execute: async (command) => {
       commands.push(command);
-      return input.notifications;
+      return {
+        items: input.notifications,
+        page: { limit: command.page.limit, nextCursor: null },
+      };
     },
   };
 };
@@ -140,8 +146,11 @@ describe("buildNotificationHttpServer", () => {
     const command = readRecordedCommand({ commands: listNotificationsUseCase.commands });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual([notificationDto]);
-    expect(command).toEqual({ organizationId: "org-startup" });
+    expect(response.json()).toEqual({
+      items: [notificationDto],
+      page: { limit: 20, nextCursor: null },
+    });
+    expect(command).toEqual({ organizationId: "org-startup", page: { limit: 20, cursor: null } });
   });
 
   it("uses an explicit unknown organization fallback when the header is missing", async () => {
@@ -158,8 +167,14 @@ describe("buildNotificationHttpServer", () => {
     const command = readRecordedCommand({ commands: listNotificationsUseCase.commands });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual([]);
-    expect(command).toEqual({ organizationId: "unknown-organization" });
+    expect(response.json()).toEqual({
+      items: [],
+      page: { limit: 20, nextCursor: null },
+    });
+    expect(command).toEqual({
+      organizationId: "unknown-organization",
+      page: { limit: 20, cursor: null },
+    });
   });
 
   it("marks one notification as read for the organization from request headers", async () => {

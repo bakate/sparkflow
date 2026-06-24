@@ -29,6 +29,20 @@ type SubmissionDecisionAuditRow = {
   readonly reason: string | null;
 };
 
+const toCursorPage = <TEntity extends { readonly id: string }>(input: {
+  readonly rows: readonly TEntity[];
+  readonly limit: number;
+}): { readonly items: readonly TEntity[]; readonly nextCursor: string | null } => {
+  const items = input.rows.slice(0, input.limit);
+  const hasNextPage = input.rows.length > input.limit;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor: hasNextPage && lastItem !== undefined ? lastItem.id : null,
+  };
+};
+
 const toSubmission = (row: SubmissionRow): Submission => ({
   id: row.id,
   challengeId: row.challenge_id,
@@ -142,6 +156,25 @@ export const createPostgresSubmissionRepository = (input: {
 
     return result.rows.map(toSubmission);
   },
+  findPageByChallengeId: async ({ challengeId, page }) => {
+    const result = await input.pool.query<SubmissionRow>(
+      `SELECT * FROM submissions
+      WHERE challenge_id = $1
+      AND (
+        $2::uuid IS NULL
+        OR (created_at, id) < (
+          SELECT cursor_submission.created_at, cursor_submission.id
+          FROM submissions AS cursor_submission
+          WHERE cursor_submission.id = $2::uuid AND cursor_submission.challenge_id = $1
+        )
+      )
+      ORDER BY created_at DESC, id DESC
+      LIMIT $3`,
+      [challengeId, page.cursor, page.limit + 1],
+    );
+
+    return toCursorPage({ rows: result.rows.map(toSubmission), limit: page.limit });
+  },
   findByStartupOrganizationId: async ({ startupOrganizationId }) => {
     const result = await input.pool.query<SubmissionRow>(
       "SELECT * FROM submissions WHERE startup_organization_id = $1 ORDER BY created_at DESC",
@@ -149,6 +182,26 @@ export const createPostgresSubmissionRepository = (input: {
     );
 
     return result.rows.map(toSubmission);
+  },
+  findPageByStartupOrganizationId: async ({ startupOrganizationId, page }) => {
+    const result = await input.pool.query<SubmissionRow>(
+      `SELECT * FROM submissions
+      WHERE startup_organization_id = $1
+      AND (
+        $2::uuid IS NULL
+        OR (created_at, id) < (
+          SELECT cursor_submission.created_at, cursor_submission.id
+          FROM submissions AS cursor_submission
+          WHERE cursor_submission.id = $2::uuid
+          AND cursor_submission.startup_organization_id = $1
+        )
+      )
+      ORDER BY created_at DESC, id DESC
+      LIMIT $3`,
+      [startupOrganizationId, page.cursor, page.limit + 1],
+    );
+
+    return toCursorPage({ rows: result.rows.map(toSubmission), limit: page.limit });
   },
   findDecisionAuditsBySubmissionId: async ({ submissionId }) => {
     const result = await input.pool.query<SubmissionDecisionAuditRow>(
@@ -187,6 +240,14 @@ export const ensureSubmissionSchema = async (input: { readonly pool: Pool }): Pr
     CREATE UNIQUE INDEX IF NOT EXISTS submissions_one_selected_per_challenge_idx
     ON submissions (challenge_id)
     WHERE status = 'selected'
+  `);
+  await input.pool.query(`
+    CREATE INDEX IF NOT EXISTS submissions_challenge_created_at_idx
+    ON submissions (challenge_id, created_at DESC, id DESC)
+  `);
+  await input.pool.query(`
+    CREATE INDEX IF NOT EXISTS submissions_startup_created_at_idx
+    ON submissions (startup_organization_id, created_at DESC, id DESC)
   `);
   await input.pool.query(`
     CREATE TABLE IF NOT EXISTS submission_decision_audits (

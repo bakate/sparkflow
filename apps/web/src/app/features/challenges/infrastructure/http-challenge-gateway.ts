@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import type {
   ChallengeDto,
   ChallengeOpportunityDto,
+  PaginatedDto,
   SubmissionDecisionAuditDto,
   SubmissionDto,
 } from '@sparkflow/contracts';
@@ -74,10 +75,10 @@ export class HttpChallengeGateway implements ChallengeGateway {
     try {
       const submissionDtos = await firstValueFrom(
         this.httpClient
-          .get<SubmissionDto[]>(this.buildUrl({ path: '/me/submissions' }))
+          .get<PaginatedDto<SubmissionDto>>(this.buildUrl({ path: '/me/submissions' }))
           .pipe(timeout(5000)),
       );
-      return succeed(submissionDtos.map((submissionDto) => toSubmission({ submissionDto })));
+      return succeed(submissionDtos.items.map((submissionDto) => toSubmission({ submissionDto })));
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
     }
@@ -87,11 +88,11 @@ export class HttpChallengeGateway implements ChallengeGateway {
     try {
       const opportunityDtos = await firstValueFrom(
         this.httpClient
-          .get<ChallengeOpportunityDto[]>(this.buildUrl({ path: '/me/opportunities' }))
+          .get<PaginatedDto<ChallengeOpportunityDto>>(this.buildUrl({ path: '/me/opportunities' }))
           .pipe(timeout(5000)),
       );
       return succeed(
-        opportunityDtos.map((opportunityDto) => toChallengeOpportunity({ opportunityDto })),
+        opportunityDtos.items.map((opportunityDto) => toChallengeOpportunity({ opportunityDto })),
       );
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
@@ -105,11 +106,11 @@ export class HttpChallengeGateway implements ChallengeGateway {
       const submissionDtos = await firstValueFrom(
         this.httpClient
           .get<
-            SubmissionDto[]
+            PaginatedDto<SubmissionDto>
           >(this.buildUrl({ path: `/challenges/${command.challengeId}/submissions` }))
           .pipe(timeout(5000)),
       );
-      return succeed(submissionDtos.map((submissionDto) => toSubmission({ submissionDto })));
+      return succeed(submissionDtos.items.map((submissionDto) => toSubmission({ submissionDto })));
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
     }

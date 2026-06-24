@@ -94,10 +94,12 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresNotificationRepository inte
 
     const notifications = await repository.findByOrganizationId({
       organizationId: recipientOrganizationId,
+      page: { limit: 20, cursor: null },
     });
 
-    expect(notifications).toHaveLength(1);
-    expect(notifications[0]).toMatchObject({
+    expect(notifications.items).toHaveLength(1);
+    expect(notifications.nextCursor).toBeNull();
+    expect(notifications.items[0]).toMatchObject({
       id: originalNotification.id,
       eventId,
       title: "Original notification",
@@ -136,9 +138,10 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresNotificationRepository inte
 
     const notifications = await repository.findByOrganizationId({
       organizationId: recipientOrganizationId,
+      page: { limit: 20, cursor: null },
     });
 
-    expect(notifications.map((notification) => notification.id)).toEqual([
+    expect(notifications.items.map((notification) => notification.id)).toEqual([
       newerNotification.id,
       olderNotification.id,
     ]);

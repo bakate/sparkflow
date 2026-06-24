@@ -15,10 +15,24 @@ const createInMemorySubmissionRepository = (input: {
     input.submissions.find((submission) => submission.id === submissionId) ?? null,
   findByChallengeId: async ({ challengeId }) =>
     input.submissions.filter((submission) => submission.challengeId === challengeId),
+  findPageByChallengeId: async ({ challengeId, page }) =>
+    toCursorPage({
+      items: input.submissions.filter((submission) => submission.challengeId === challengeId),
+      limit: page.limit,
+      cursor: page.cursor,
+    }),
   findByStartupOrganizationId: async ({ startupOrganizationId }) =>
     input.submissions.filter(
       (submission) => submission.startupOrganizationId === startupOrganizationId,
     ),
+  findPageByStartupOrganizationId: async ({ startupOrganizationId, page }) =>
+    toCursorPage({
+      items: input.submissions.filter(
+        (submission) => submission.startupOrganizationId === startupOrganizationId,
+      ),
+      limit: page.limit,
+      cursor: page.cursor,
+    }),
   findDecisionAuditsBySubmissionId: async () => [],
 });
 
@@ -38,21 +52,27 @@ describe("ListMySubmissionsUseCase", () => {
       }),
     });
 
-    const result = await useCase.execute({ actor: startupMemberActor });
+    const result = await useCase.execute({
+      actor: startupMemberActor,
+      page: { limit: 20, cursor: null },
+    });
 
     expect(result).toEqual({
       ok: true,
-      value: [
-        {
-          id: ownSubmission.id,
-          challengeId: ownSubmission.challengeId,
-          startupOrganizationId: ownSubmission.startupOrganizationId,
-          summary: ownSubmission.summary,
-          status: ownSubmission.status,
-          createdAt: ownSubmission.createdAt.toISOString(),
-          decidedAt: null,
-        },
-      ],
+      value: {
+        items: [
+          {
+            id: ownSubmission.id,
+            challengeId: ownSubmission.challengeId,
+            startupOrganizationId: ownSubmission.startupOrganizationId,
+            summary: ownSubmission.summary,
+            status: ownSubmission.status,
+            createdAt: ownSubmission.createdAt.toISOString(),
+            decidedAt: null,
+          },
+        ],
+        page: { limit: 20, nextCursor: null },
+      },
     });
   });
 
@@ -61,11 +81,34 @@ describe("ListMySubmissionsUseCase", () => {
       submissionRepository: createInMemorySubmissionRepository({ submissions: [] }),
     });
 
-    const result = await useCase.execute({ actor: companyAdminActor });
+    const result = await useCase.execute({
+      actor: companyAdminActor,
+      page: { limit: 20, cursor: null },
+    });
 
     expect(result).toEqual({ ok: false, error: "forbidden" });
   });
 });
+
+const toCursorPage = (input: {
+  readonly items: readonly Submission[];
+  readonly limit: number;
+  readonly cursor: string | null;
+}) => {
+  const cursorIndex =
+    input.cursor === null
+      ? -1
+      : input.items.findIndex((submission) => submission.id === input.cursor);
+  const startIndex = cursorIndex + 1;
+  const pageItems = input.items.slice(startIndex, startIndex + input.limit);
+  const hasNextPage = input.items.length > startIndex + input.limit;
+  const lastItem = pageItems.at(-1);
+
+  return {
+    items: pageItems,
+    nextCursor: hasNextPage && lastItem !== undefined ? lastItem.id : null,
+  };
+};
 
 const createSubmission = (input: {
   readonly id: string;

@@ -15,6 +15,7 @@
     "@fastify/cors": "catalog:",
     "@sparkflow/config": "workspace:*",
     "@sparkflow/contracts": "workspace:*",
+    "@sparkflow/http": "workspace:*",
     "@sparkflow/logger": "workspace:*",
     "@sparkflow/result": "workspace:*",
     "fastify": "catalog:",

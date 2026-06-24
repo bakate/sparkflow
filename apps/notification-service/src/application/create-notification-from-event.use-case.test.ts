@@ -40,10 +40,24 @@ const createInMemoryNotificationRepository = (
     },
     existsByEventId: async ({ eventId }) =>
       notifications.some((notification) => notification.eventId === eventId),
-    findByOrganizationId: async ({ organizationId }) =>
-      notifications.filter(
+    findByOrganizationId: async ({ organizationId, page }) => {
+      const organizationNotifications = notifications.filter(
         (notification) => notification.recipientOrganizationId === organizationId,
-      ),
+      );
+      const cursorIndex =
+        page.cursor === null
+          ? -1
+          : organizationNotifications.findIndex((notification) => notification.id === page.cursor);
+      const startIndex = cursorIndex + 1;
+      const items = organizationNotifications.slice(startIndex, startIndex + page.limit);
+      const hasNextPage = organizationNotifications.length > startIndex + page.limit;
+      const lastItem = items.at(-1);
+
+      return {
+        items,
+        nextCursor: hasNextPage && lastItem !== undefined ? lastItem.id : null,
+      };
+    },
     markRead: async ({ notificationId, organizationId, readAt }) => {
       const notificationIndex = notifications.findIndex(
         (notification) =>

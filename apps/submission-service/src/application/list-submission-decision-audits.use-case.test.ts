@@ -17,7 +17,9 @@ const createInMemorySubmissionRepository = (input: {
   findById: async ({ submissionId }) =>
     input.submissions?.find((submission) => submission.id === submissionId) ?? null,
   findByChallengeId: async () => [],
+  findPageByChallengeId: async () => ({ items: [], nextCursor: null }),
   findByStartupOrganizationId: async () => [],
+  findPageByStartupOrganizationId: async () => ({ items: [], nextCursor: null }),
   findDecisionAuditsBySubmissionId: async ({ submissionId }) =>
     input.audits.filter((audit) => audit.submissionId === submissionId),
 });

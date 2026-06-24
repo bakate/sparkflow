@@ -221,6 +221,9 @@ importers:
       '@sparkflow/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@sparkflow/http':
+        specifier: workspace:*
+        version: link:../../packages/http
       '@sparkflow/logger':
         specifier: workspace:*
         version: link:../../packages/logger

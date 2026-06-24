@@ -529,17 +529,23 @@ describe("buildApiGatewayServer", () => {
         requests.push({ url, init });
 
         if (url.endsWith("/me/submissions")) {
-          return Response.json([
-            {
-              id: "submission-1",
-              challengeId: "challenge-1",
-              startupOrganizationId: startupMemberActor.organizationId,
-              summary: "A serious proposal.",
-              status: "selected",
-              createdAt: "2026-06-22T10:00:00.000Z",
-              decidedAt: "2026-06-22T12:00:00.000Z",
+          return Response.json({
+            items: [
+              {
+                id: "submission-1",
+                challengeId: "challenge-1",
+                startupOrganizationId: startupMemberActor.organizationId,
+                summary: "A serious proposal.",
+                status: "selected",
+                createdAt: "2026-06-22T10:00:00.000Z",
+                decidedAt: "2026-06-22T12:00:00.000Z",
+              },
+            ],
+            page: {
+              limit: 20,
+              nextCursor: null,
             },
-          ]);
+          });
         }
 
         return Response.json({
@@ -564,28 +570,31 @@ describe("buildApiGatewayServer", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual([
-      {
-        challenge: {
-          id: "challenge-1",
-          title: "Completed challenge",
-          description: "Challenge description",
-          ownerOrganizationId: "org-company",
-          status: "selection-completed",
-          createdAt: "2026-06-21T10:00:00.000Z",
-          publishedAt: "2026-06-21T11:00:00.000Z",
+    expect(response.json()).toEqual({
+      items: [
+        {
+          challenge: {
+            id: "challenge-1",
+            title: "Completed challenge",
+            description: "Challenge description",
+            ownerOrganizationId: "org-company",
+            status: "selection-completed",
+            createdAt: "2026-06-21T10:00:00.000Z",
+            publishedAt: "2026-06-21T11:00:00.000Z",
+          },
+          submission: {
+            id: "submission-1",
+            challengeId: "challenge-1",
+            startupOrganizationId: startupMemberActor.organizationId,
+            summary: "A serious proposal.",
+            status: "selected",
+            createdAt: "2026-06-22T10:00:00.000Z",
+            decidedAt: "2026-06-22T12:00:00.000Z",
+          },
         },
-        submission: {
-          id: "submission-1",
-          challengeId: "challenge-1",
-          startupOrganizationId: startupMemberActor.organizationId,
-          summary: "A serious proposal.",
-          status: "selected",
-          createdAt: "2026-06-22T10:00:00.000Z",
-          decidedAt: "2026-06-22T12:00:00.000Z",
-        },
-      },
-    ]);
+      ],
+      page: { limit: 20, nextCursor: null },
+    });
     expect(requests.map((request) => `${request.init.method} ${request.url}`)).toEqual([
       "GET http://submission-service/me/submissions",
       "GET http://challenge-service/challenges/challenge-1",

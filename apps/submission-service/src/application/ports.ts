@@ -1,8 +1,12 @@
-import type { DomainEvent, SubmissionDto } from "@sparkflow/contracts";
+import type { CursorPageRequestDto, DomainEvent, SubmissionDto } from "@sparkflow/contracts";
 import type { Result } from "@sparkflow/result";
 import type { Submission, SubmissionDecisionAudit } from "../domain/submission.ts";
 
 export type SubmissionPersistenceError = "challenge-already-selected";
+export type CursorPage<TEntity> = {
+  readonly items: readonly TEntity[];
+  readonly nextCursor: string | null;
+};
 
 export type SubmissionRepository = {
   readonly save: (input: {
@@ -19,9 +23,17 @@ export type SubmissionRepository = {
   readonly findByChallengeId: (input: {
     readonly challengeId: string;
   }) => Promise<readonly Submission[]>;
+  readonly findPageByChallengeId: (input: {
+    readonly challengeId: string;
+    readonly page: CursorPageRequestDto;
+  }) => Promise<CursorPage<Submission>>;
   readonly findByStartupOrganizationId: (input: {
     readonly startupOrganizationId: string;
   }) => Promise<readonly Submission[]>;
+  readonly findPageByStartupOrganizationId: (input: {
+    readonly startupOrganizationId: string;
+    readonly page: CursorPageRequestDto;
+  }) => Promise<CursorPage<Submission>>;
   readonly findDecisionAuditsBySubmissionId: (input: {
     readonly submissionId: string;
   }) => Promise<readonly SubmissionDecisionAudit[]>;

@@ -1,5 +1,5 @@
 import cors from "@fastify/cors";
-import { readActor, readCorrelationId } from "@sparkflow/http";
+import { readActor, readCorrelationId, readPagination } from "@sparkflow/http";
 import Fastify from "fastify";
 import type { CreateSubmissionUseCase } from "../application/create-submission.use-case.ts";
 import type { DecideSubmissionUseCase } from "../application/decide-submission.use-case.ts";
@@ -27,23 +27,43 @@ export const buildSubmissionHttpServer = async (input: {
 
   server.get("/health", async () => ({ status: "ok" }));
 
-  server.get("/me/submissions", async (request, reply) => {
-    const result = await input.listMySubmissionsUseCase.execute({
-      actor: readActor({ headers: request.headers }),
-    });
+  server.get<{ Querystring: Record<string, string | string[] | undefined> }>(
+    "/me/submissions",
+    async (request, reply) => {
+      const pageResult = readPagination({ query: request.query });
 
-    if (!result.ok) {
-      return reply.code(403).send({ error: result.error });
+      if (!pageResult.ok) {
+        return reply.code(400).send({ error: pageResult.error });
+      }
+
+      const result = await input.listMySubmissionsUseCase.execute({
+        actor: readActor({ headers: request.headers }),
+        page: pageResult.value,
+      });
+
+      if (!result.ok) {
+        return reply.code(403).send({ error: result.error });
+      }
+
+      return reply.send(result.value);
+    },
+  );
+
+  server.get<{
+    Params: { readonly challengeId: string };
+    Querystring: Record<string, string | string[] | undefined>;
+  }>("/challenges/:challengeId/submissions", async (request, reply) => {
+    const pageResult = readPagination({ query: request.query });
+
+    if (!pageResult.ok) {
+      return reply.code(400).send({ error: pageResult.error });
     }
 
-    return reply.send(result.value);
+    return input.listSubmissionsUseCase.execute({
+      challengeId: request.params.challengeId,
+      page: pageResult.value,
+    });
   });
-
-  server.get<{ Params: { readonly challengeId: string } }>(
-    "/challenges/:challengeId/submissions",
-    async (request) =>
-      input.listSubmissionsUseCase.execute({ challengeId: request.params.challengeId }),
-  );
 
   server.get<{ Params: { readonly submissionId: string } }>(
     "/submissions/:submissionId/decision-audits",

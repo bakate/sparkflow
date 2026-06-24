@@ -8,6 +8,21 @@ export type ActorContext = {
   readonly role: UserRole;
 };
 
+export type CursorPageRequestDto = {
+  readonly limit: number;
+  readonly cursor: string | null;
+};
+
+export type CursorPageMetaDto = {
+  readonly limit: number;
+  readonly nextCursor: string | null;
+};
+
+export type PaginatedDto<TItem> = {
+  readonly items: readonly TItem[];
+  readonly page: CursorPageMetaDto;
+};
+
 export const eventNames = {
   challengePublished: "challenge.published",
   submissionCreated: "submission.created",

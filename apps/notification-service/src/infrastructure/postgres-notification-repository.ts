@@ -24,6 +24,20 @@ const toNotification = (row: NotificationRow): Notification => ({
   createdAt: row.created_at,
 });
 
+const toCursorPage = <TEntity extends { readonly id: string }>(input: {
+  readonly rows: readonly TEntity[];
+  readonly limit: number;
+}): { readonly items: readonly TEntity[]; readonly nextCursor: string | null } => {
+  const items = input.rows.slice(0, input.limit);
+  const hasNextPage = input.rows.length > input.limit;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor: hasNextPage && lastItem !== undefined ? lastItem.id : null,
+  };
+};
+
 export const createPostgresNotificationRepository = (input: {
   readonly pool: Pool;
 }): NotificationRepository => ({
@@ -53,15 +67,25 @@ export const createPostgresNotificationRepository = (input: {
 
     return result.rows[0]?.exists ?? false;
   },
-  findByOrganizationId: async ({ organizationId }) => {
+  findByOrganizationId: async ({ organizationId, page }) => {
     const result = await input.pool.query<NotificationRow>(
       `SELECT * FROM notifications
        WHERE recipient_organization_id = $1
-       ORDER BY created_at DESC`,
-      [organizationId],
+       AND (
+         $2::uuid IS NULL
+         OR (created_at, id) < (
+           SELECT cursor_notification.created_at, cursor_notification.id
+           FROM notifications AS cursor_notification
+           WHERE cursor_notification.id = $2::uuid
+           AND cursor_notification.recipient_organization_id = $1
+         )
+       )
+       ORDER BY created_at DESC, id DESC
+       LIMIT $3`,
+      [organizationId, page.cursor, page.limit + 1],
     );
 
-    return result.rows.map(toNotification);
+    return toCursorPage({ rows: result.rows.map(toNotification), limit: page.limit });
   },
   markRead: async ({ notificationId, organizationId, readAt }) => {
     const result = await input.pool.query<NotificationRow>(
@@ -102,4 +126,8 @@ export const ensureNotificationSchema = async (input: { readonly pool: Pool }): 
   `);
   await input.pool.query("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url text");
   await input.pool.query("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at timestamptz");
+  await input.pool.query(`
+    CREATE INDEX IF NOT EXISTS notifications_recipient_created_at_idx
+    ON notifications (recipient_organization_id, created_at DESC, id DESC)
+  `);
 };

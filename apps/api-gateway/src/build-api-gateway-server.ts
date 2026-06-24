@@ -3,6 +3,7 @@ import type {
   ActorContext,
   ChallengeDto,
   ChallengeOpportunityDto,
+  PaginatedDto,
   SubmissionDto,
 } from "@sparkflow/contracts";
 import Fastify from "fastify";
@@ -87,6 +88,19 @@ const proxyJson = async (input: {
     statusCode: response.status,
     body: text.length === 0 ? null : JSON.parse(text),
   };
+};
+
+const forwardQueryString = (input: {
+  readonly targetUrl: string;
+  readonly requestUrl: string;
+}): string => {
+  const queryStartIndex = input.requestUrl.indexOf("?");
+
+  if (queryStartIndex === -1) {
+    return input.targetUrl;
+  }
+
+  return `${input.targetUrl}${input.requestUrl.slice(queryStartIndex)}`;
 };
 
 export const buildApiGatewayServer = async (input: {
@@ -370,7 +384,10 @@ export const buildApiGatewayServer = async (input: {
 
       const response = await proxy({
         actor,
-        url: `${input.serviceUrls.submissionServiceUrl}/challenges/${request.params.challengeId}/submissions`,
+        url: forwardQueryString({
+          targetUrl: `${input.serviceUrls.submissionServiceUrl}/challenges/${request.params.challengeId}/submissions`,
+          requestUrl: request.url,
+        }),
         method: "GET",
         headers: request.headers,
       });
@@ -387,7 +404,10 @@ export const buildApiGatewayServer = async (input: {
 
     const response = await proxy({
       actor,
-      url: `${input.serviceUrls.submissionServiceUrl}/me/submissions`,
+      url: forwardQueryString({
+        targetUrl: `${input.serviceUrls.submissionServiceUrl}/me/submissions`,
+        requestUrl: request.url,
+      }),
       method: "GET",
       headers: request.headers,
     });
@@ -407,7 +427,10 @@ export const buildApiGatewayServer = async (input: {
 
     const submissionsResponse = await proxy({
       actor,
-      url: `${input.serviceUrls.submissionServiceUrl}/me/submissions`,
+      url: forwardQueryString({
+        targetUrl: `${input.serviceUrls.submissionServiceUrl}/me/submissions`,
+        requestUrl: request.url,
+      }),
       method: "GET",
       headers: request.headers,
     });
@@ -416,14 +439,14 @@ export const buildApiGatewayServer = async (input: {
       return reply.code(submissionsResponse.statusCode).send(submissionsResponse.body);
     }
 
-    if (!isSubmissionDtoArray(submissionsResponse.body)) {
+    if (!isPaginatedSubmissionDto(submissionsResponse.body)) {
       return reply.code(502).send({ error: "unexpected-error" });
     }
 
     const opportunities: ChallengeOpportunityDto[] = [];
     const challengeById = new Map<string, ChallengeDto>();
 
-    for (const submission of submissionsResponse.body) {
+    for (const submission of submissionsResponse.body.items) {
       const cachedChallenge = challengeById.get(submission.challengeId);
 
       if (cachedChallenge !== undefined) {
@@ -450,7 +473,10 @@ export const buildApiGatewayServer = async (input: {
       opportunities.push({ challenge: challengeResponse.body, submission });
     }
 
-    return reply.send(opportunities);
+    return reply.send({
+      items: opportunities,
+      page: submissionsResponse.body.page,
+    });
   });
 
   server.post<{ Params: { readonly challengeId: string }; Body: unknown }>(
@@ -634,7 +660,10 @@ export const buildApiGatewayServer = async (input: {
 
     const response = await proxy({
       actor,
-      url: `${input.serviceUrls.notificationServiceUrl}/notifications`,
+      url: forwardQueryString({
+        targetUrl: `${input.serviceUrls.notificationServiceUrl}/notifications`,
+        requestUrl: request.url,
+      }),
       method: "GET",
       headers: request.headers,
     });
@@ -709,8 +738,32 @@ const isChallengeDto = (value: unknown): value is ChallengeDto => {
   );
 };
 
-const isSubmissionDtoArray = (value: unknown): value is SubmissionDto[] =>
-  Array.isArray(value) && value.every(isSubmissionDto);
+const isPaginatedSubmissionDto = (value: unknown): value is PaginatedDto<SubmissionDto> => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  if (!("items" in value) || !("page" in value)) {
+    return false;
+  }
+
+  return Array.isArray(value.items) && value.items.every(isSubmissionDto) && isPageMeta(value.page);
+};
+
+const isPageMeta = (value: unknown): value is PaginatedDto<unknown>["page"] => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  if (!("limit" in value) || !("nextCursor" in value)) {
+    return false;
+  }
+
+  return (
+    typeof value.limit === "number" &&
+    (typeof value.nextCursor === "string" || value.nextCursor === null)
+  );
+};
 
 const isSubmissionDto = (value: unknown): value is SubmissionDto => {
   if (typeof value !== "object" || value === null) {

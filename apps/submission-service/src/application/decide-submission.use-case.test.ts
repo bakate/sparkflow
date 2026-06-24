@@ -80,12 +80,46 @@ const createInMemorySubmissionRepository = (
       submissions.find((submission) => submission.id === submissionId) ?? null,
     findByChallengeId: async ({ challengeId }) =>
       submissions.filter((submission) => submission.challengeId === challengeId),
+    findPageByChallengeId: async ({ challengeId, page }) =>
+      toCursorPage({
+        items: submissions.filter((submission) => submission.challengeId === challengeId),
+        limit: page.limit,
+        cursor: page.cursor,
+      }),
     findByStartupOrganizationId: async ({ startupOrganizationId }) =>
       submissions.filter(
         (submission) => submission.startupOrganizationId === startupOrganizationId,
       ),
+    findPageByStartupOrganizationId: async ({ startupOrganizationId, page }) =>
+      toCursorPage({
+        items: submissions.filter(
+          (submission) => submission.startupOrganizationId === startupOrganizationId,
+        ),
+        limit: page.limit,
+        cursor: page.cursor,
+      }),
     findDecisionAuditsBySubmissionId: async ({ submissionId }) =>
       audits.filter((audit) => audit.submissionId === submissionId),
+  };
+};
+
+const toCursorPage = (input: {
+  readonly items: readonly Submission[];
+  readonly limit: number;
+  readonly cursor: string | null;
+}) => {
+  const cursorIndex =
+    input.cursor === null
+      ? -1
+      : input.items.findIndex((submission) => submission.id === input.cursor);
+  const startIndex = cursorIndex + 1;
+  const pageItems = input.items.slice(startIndex, startIndex + input.limit);
+  const hasNextPage = input.items.length > startIndex + input.limit;
+  const lastItem = pageItems.at(-1);
+
+  return {
+    items: pageItems,
+    nextCursor: hasNextPage && lastItem !== undefined ? lastItem.id : null,
   };
 };
 

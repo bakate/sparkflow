@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { NotificationDto } from '@sparkflow/contracts';
+import type { NotificationDto, PaginatedDto } from '@sparkflow/contracts';
 import { firstValueFrom, timeout } from 'rxjs';
 import { fail, type Result, succeed } from '@shared/domain/result';
 import { WEB_API_CONFIG } from '@shared/infrastructure/web-api.config';
@@ -16,12 +16,12 @@ export class HttpNotificationGateway implements NotificationGateway {
     try {
       const notificationDtos = await firstValueFrom(
         this.httpClient
-          .get<NotificationDto[]>(this.buildUrl({ path: '/notifications' }))
+          .get<PaginatedDto<NotificationDto>>(this.buildUrl({ path: '/notifications' }))
           .pipe(timeout(5000)),
       );
 
       return succeed(
-        notificationDtos.map((notificationDto) => toNotification({ notificationDto })),
+        notificationDtos.items.map((notificationDto) => toNotification({ notificationDto })),
       );
     } catch (error: unknown) {
       return fail(toNotificationFailure({ error }));

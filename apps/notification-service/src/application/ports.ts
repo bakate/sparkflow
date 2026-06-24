@@ -1,11 +1,18 @@
+import type { CursorPageRequestDto } from "@sparkflow/contracts";
 import type { Notification } from "../domain/notification.ts";
+
+export type CursorPage<TEntity> = {
+  readonly items: readonly TEntity[];
+  readonly nextCursor: string | null;
+};
 
 export type NotificationRepository = {
   readonly save: (input: { readonly notification: Notification }) => Promise<void>;
   readonly existsByEventId: (input: { readonly eventId: string }) => Promise<boolean>;
   readonly findByOrganizationId: (input: {
     readonly organizationId: string;
-  }) => Promise<readonly Notification[]>;
+    readonly page: CursorPageRequestDto;
+  }) => Promise<CursorPage<Notification>>;
   readonly markRead: (input: {
     readonly notificationId: string;
     readonly organizationId: string;

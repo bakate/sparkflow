@@ -1,4 +1,5 @@
 import type { ActorContext, SubmissionDecisionAuditDto, SubmissionDto } from "@sparkflow/contracts";
+import type { CursorPageRequestDto } from "@sparkflow/contracts";
 import { fail, succeed } from "@sparkflow/result";
 import { afterEach, describe, expect, it } from "vitest";
 import type {
@@ -115,15 +116,18 @@ const createRecordingDecideSubmissionUseCase = (input?: {
 const createRecordingListSubmissionsUseCase = (input: {
   readonly submissions: readonly SubmissionDto[];
 }): ListSubmissionsUseCase & {
-  readonly commands: { readonly challengeId: string }[];
+  readonly commands: { readonly challengeId: string; readonly page: CursorPageRequestDto }[];
 } => {
-  const commands: { readonly challengeId: string }[] = [];
+  const commands: { readonly challengeId: string; readonly page: CursorPageRequestDto }[] = [];
 
   return {
     commands,
     execute: async (command) => {
       commands.push(command);
-      return input.submissions;
+      return {
+        items: input.submissions,
+        page: { limit: command.page.limit, nextCursor: null },
+      };
     },
   };
 };
@@ -131,9 +135,9 @@ const createRecordingListSubmissionsUseCase = (input: {
 const createRecordingListMySubmissionsUseCase = (input: {
   readonly result: Awaited<ReturnType<ListMySubmissionsUseCase["execute"]>>;
 }): ListMySubmissionsUseCase & {
-  readonly commands: { readonly actor: ActorContext }[];
+  readonly commands: { readonly actor: ActorContext; readonly page: CursorPageRequestDto }[];
 } => {
-  const commands: { readonly actor: ActorContext }[] = [];
+  const commands: { readonly actor: ActorContext; readonly page: CursorPageRequestDto }[] = [];
 
   return {
     commands,
@@ -177,7 +181,9 @@ const createServer = async (input?: {
       createRecordingListSubmissionDecisionAuditsUseCase({ result: succeed([]) }),
     listMySubmissionsUseCase:
       input?.listMySubmissionsUseCase ??
-      createRecordingListMySubmissionsUseCase({ result: succeed([]) }),
+      createRecordingListMySubmissionsUseCase({
+        result: succeed({ items: [], page: { limit: 20, nextCursor: null } }),
+      }),
     listSubmissionsUseCase:
       input?.listSubmissionsUseCase ?? createRecordingListSubmissionsUseCase({ submissions: [] }),
   });
@@ -197,7 +203,7 @@ afterEach(async () => {
 describe("buildSubmissionHttpServer", () => {
   it("lists submissions for the current startup actor", async () => {
     const listMySubmissionsUseCase = createRecordingListMySubmissionsUseCase({
-      result: succeed([submissionDto]),
+      result: succeed({ items: [submissionDto], page: { limit: 20, nextCursor: null } }),
     });
     const server = await createServer({ listMySubmissionsUseCase });
 
@@ -215,7 +221,10 @@ describe("buildSubmissionHttpServer", () => {
     const command = readRecordedCommand({ commands: listMySubmissionsUseCase.commands });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual([submissionDto]);
+    expect(response.json()).toEqual({
+      items: [submissionDto],
+      page: { limit: 20, nextCursor: null },
+    });
     expect(command).toEqual({
       actor: {
         userId: "startup-user",
@@ -223,6 +232,7 @@ describe("buildSubmissionHttpServer", () => {
         organizationId: "org-startup",
         role: "startup-member",
       },
+      page: { limit: 20, cursor: null },
     });
   });
 
@@ -256,8 +266,11 @@ describe("buildSubmissionHttpServer", () => {
     const command = readRecordedCommand({ commands: listSubmissionsUseCase.commands });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual([submissionDto]);
-    expect(command).toEqual({ challengeId: "challenge-1" });
+    expect(response.json()).toEqual({
+      items: [submissionDto],
+      page: { limit: 20, nextCursor: null },
+    });
+    expect(command).toEqual({ challengeId: "challenge-1", page: { limit: 20, cursor: null } });
   });
 
   it("lists decision audits for a submission through the audit use case", async () => {
