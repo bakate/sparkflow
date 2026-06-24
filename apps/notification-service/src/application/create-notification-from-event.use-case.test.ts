@@ -101,26 +101,26 @@ describe("CreateNotificationFromEventUseCase", () => {
     {
       fileName: "submission-created-event.json",
       eventName: "submission.created",
-      title: "Submission received",
-      message: "Submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 is now submitted.",
+      title: "Proposal sent",
+      message: "Your proposal was sent and is waiting for company review.",
     },
     {
       fileName: "submission-accepted-event.json",
       eventName: "submission.accepted",
-      title: "Submission accepted",
-      message: "Submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 is now accepted.",
+      title: "Proposal shortlisted",
+      message: "Your proposal was shortlisted. Track the next steps in My opportunities.",
     },
     {
       fileName: "submission-rejected-event.json",
       eventName: "submission.rejected",
-      title: "Submission rejected",
-      message: "Submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 is now rejected.",
+      title: "Proposal not retained",
+      message: "Your proposal was not retained. Review the feedback in My opportunities.",
     },
     {
       fileName: "submission-selected-event.json",
       eventName: "submission.selected",
-      title: "Submission selected",
-      message: "Submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 is now selected.",
+      title: "Final project selected",
+      message: "You were selected for the final project. Open My opportunities for details.",
     },
   ] as const)(
     "creates a notification from $eventName fixture",
@@ -136,6 +136,7 @@ describe("CreateNotificationFromEventUseCase", () => {
         recipientOrganizationId: "org-startup",
         title,
         message,
+        actionUrl: "/opportunities?submissionId=submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58",
         createdAt: "2026-06-16T10:00:00.000Z",
       });
       expect(notificationRepository.notifications).toHaveLength(1);
@@ -158,6 +159,7 @@ describe("CreateNotificationFromEventUseCase", () => {
       title: "Evaluation submitted",
       message:
         "Reviewer scored submission submission-2b6c2fed-89d4-4f9b-9cbf-c6d5da96af58 at 91/100.",
+      actionUrl: null,
       createdAt: "2026-06-16T10:00:00.000Z",
     });
     expect(notificationRepository.notifications).toHaveLength(1);
@@ -174,6 +176,7 @@ describe("CreateNotificationFromEventUseCase", () => {
       recipientOrganizationId: "org-startup",
       title: "Existing notification",
       message: "Already handled.",
+      actionUrl: null,
       createdAt: fixedCreatedAt,
     };
     const { notificationRepository, useCase } = createUseCase({

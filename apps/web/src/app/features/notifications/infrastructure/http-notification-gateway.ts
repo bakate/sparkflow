@@ -39,6 +39,7 @@ const toNotification = (input: { readonly notificationDto: NotificationDto }): N
   recipientOrganizationId: input.notificationDto.recipientOrganizationId,
   title: input.notificationDto.title,
   message: input.notificationDto.message,
+  actionUrl: input.notificationDto.actionUrl ?? null,
   createdAt: new Date(input.notificationDto.createdAt),
 });
 

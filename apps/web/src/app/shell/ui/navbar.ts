@@ -1,6 +1,6 @@
 import { NgOptimizedImage } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { type Params, RouterLink, RouterLinkActive } from '@angular/router';
 import { Button } from 'primeng/button';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { Tag } from 'primeng/tag';
@@ -8,6 +8,7 @@ import { AuthSession } from '@shared/auth/auth-session';
 import { OAuthAuthenticator } from '@shared/auth/oauth-authenticator';
 import { NOTIFICATION_GATEWAY } from '@features/notifications/application/notification-gateway';
 import { NotificationsStore } from '@features/notifications/application/notifications-store';
+import type { Notification } from '@features/notifications/domain/notification';
 import { HttpNotificationGateway } from '@features/notifications/infrastructure/http-notification-gateway';
 
 @Component({
@@ -66,8 +67,9 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
             <div class="relative">
               @if (notificationsStore.notificationCount() > 0) {
                 <p-overlaybadge
-                  [value]="notificationsStore.notificationCount()"
+                  [value]="notificationBadgeValue()"
                   severity="danger"
+                  styleClass="notification-overlay-badge"
                   [style]="{ 'font-variant-numeric': 'tabular-nums' }"
                 >
                   <p-button
@@ -131,6 +133,17 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                           <p class="m-0 mt-2 text-sm text-color-secondary">
                             {{ formatDate({ date: notification.createdAt }) }}
                           </p>
+                          @if (notification.actionUrl !== null) {
+                            <p-button
+                              label="Open"
+                              icon="pi pi-arrow-right"
+                              severity="secondary"
+                              [text]="true"
+                              [routerLink]="notificationActionPath({ notification })"
+                              [queryParams]="notificationActionQueryParams({ notification })"
+                              (onClick)="closeNotificationsPanel()"
+                            />
+                          }
                         </article>
                       }
                     }
@@ -182,6 +195,19 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
     .notifications-panel {
       width: min(24rem, calc(100vw - 2rem));
     }
+
+    :host ::ng-deep .notification-overlay-badge.p-badge {
+      align-items: center;
+      border-radius: 999px;
+      display: inline-flex;
+      font-size: 0.6875rem;
+      height: 1.375rem;
+      justify-content: center;
+      line-height: 1;
+      min-width: 1.375rem;
+      padding: 0;
+      width: 1.375rem;
+    }
   `,
 })
 export class Navbar {
@@ -220,6 +246,28 @@ export class Navbar {
     this.notificationsStore.reloadNotifications();
   }
 
+  protected notificationActionPath(input: { readonly notification: Notification }): string {
+    const actionUrl = input.notification.actionUrl;
+
+    if (actionUrl === null) {
+      return this.notificationActionLink();
+    }
+
+    return parseNotificationActionUrl({ actionUrl }).path;
+  }
+
+  protected notificationActionQueryParams(input: {
+    readonly notification: Notification;
+  }): Params | null {
+    const actionUrl = input.notification.actionUrl;
+
+    if (actionUrl === null) {
+      return null;
+    }
+
+    return parseNotificationActionUrl({ actionUrl }).queryParams;
+  }
+
   protected formatDate(input: { readonly date: Date }): string {
     return new Intl.DateTimeFormat('fr-FR', {
       dateStyle: 'medium',
@@ -232,3 +280,15 @@ export class Navbar {
     this.authenticator.logout();
   }
 }
+
+const parseNotificationActionUrl = (input: {
+  readonly actionUrl: string;
+}): { readonly path: string; readonly queryParams: Params | null } => {
+  const parsedUrl = new URL(input.actionUrl, 'http://sparkflow.local');
+  const queryParams = Object.fromEntries(parsedUrl.searchParams.entries());
+
+  return {
+    path: parsedUrl.pathname,
+    queryParams: Object.keys(queryParams).length === 0 ? null : queryParams,
+  };
+};

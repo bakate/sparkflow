@@ -9,6 +9,7 @@ const notificationDto: NotificationDto = {
   recipientOrganizationId: "org-startup",
   title: "Submission accepted",
   message: "Submission submission-1 is now accepted.",
+  actionUrl: "/opportunities?submissionId=submission-1",
   createdAt: "2026-06-16T10:00:00.000Z",
 };
 

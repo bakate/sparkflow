@@ -16,6 +16,7 @@ const createNotificationFixture = (input: {
   readonly eventId: string;
   readonly recipientOrganizationId: string;
   readonly createdAt: Date;
+  readonly actionUrl?: string | null;
   readonly title?: string;
 }): Notification => ({
   id: input.id,
@@ -23,6 +24,7 @@ const createNotificationFixture = (input: {
   recipientOrganizationId: input.recipientOrganizationId,
   title: input.title ?? faker.company.catchPhrase(),
   message: faker.lorem.sentence(),
+  actionUrl: input.actionUrl ?? null,
   createdAt: input.createdAt,
 });
 
@@ -75,6 +77,7 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresNotificationRepository inte
       recipientOrganizationId,
       createdAt: new Date("2026-06-16T09:00:00.000Z"),
       title: "Original notification",
+      actionUrl: "/opportunities?submissionId=submission-1",
     });
     const duplicateNotification = createNotificationFixture({
       id: faker.string.uuid(),
@@ -82,6 +85,7 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresNotificationRepository inte
       recipientOrganizationId,
       createdAt: new Date("2026-06-16T10:00:00.000Z"),
       title: "Duplicate notification",
+      actionUrl: "/opportunities?submissionId=submission-2",
     });
 
     await repository.save({ notification: originalNotification });
@@ -96,6 +100,7 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresNotificationRepository inte
       id: originalNotification.id,
       eventId,
       title: "Original notification",
+      actionUrl: "/opportunities?submissionId=submission-1",
     });
   });
 

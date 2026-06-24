@@ -6,6 +6,7 @@ export type Notification = {
   readonly recipientOrganizationId: string;
   readonly title: string;
   readonly message: string;
+  readonly actionUrl: string | null;
   readonly createdAt: Date;
 };
 
@@ -15,6 +16,7 @@ export const createNotification = (input: {
   readonly recipientOrganizationId: string;
   readonly title: string;
   readonly message: string;
+  readonly actionUrl: string | null;
   readonly now: Date;
 }): Notification => ({
   id: input.id,
@@ -22,6 +24,7 @@ export const createNotification = (input: {
   recipientOrganizationId: input.recipientOrganizationId,
   title: input.title,
   message: input.message,
+  actionUrl: input.actionUrl,
   createdAt: input.now,
 });
 
@@ -31,5 +34,6 @@ export const toNotificationDto = (notification: Notification): NotificationDto =
   recipientOrganizationId: notification.recipientOrganizationId,
   title: notification.title,
   message: notification.message,
+  actionUrl: notification.actionUrl,
   createdAt: notification.createdAt.toISOString(),
 });

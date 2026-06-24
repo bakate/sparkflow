@@ -8,6 +8,7 @@ type NotificationRow = {
   readonly recipient_organization_id: string;
   readonly title: string;
   readonly message: string;
+  readonly action_url: string | null;
   readonly created_at: Date;
 };
 
@@ -17,6 +18,7 @@ const toNotification = (row: NotificationRow): Notification => ({
   recipientOrganizationId: row.recipient_organization_id,
   title: row.title,
   message: row.message,
+  actionUrl: row.action_url,
   createdAt: row.created_at,
 });
 
@@ -26,8 +28,8 @@ export const createPostgresNotificationRepository = (input: {
   save: async ({ notification }) => {
     await input.pool.query(
       `INSERT INTO notifications (
-        id, event_id, recipient_organization_id, title, message, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6)
+        id, event_id, recipient_organization_id, title, message, action_url, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (event_id) DO NOTHING`,
       [
         notification.id,
@@ -35,6 +37,7 @@ export const createPostgresNotificationRepository = (input: {
         notification.recipientOrganizationId,
         notification.title,
         notification.message,
+        notification.actionUrl,
         notification.createdAt,
       ],
     );
@@ -67,7 +70,9 @@ export const ensureNotificationSchema = async (input: { readonly pool: Pool }): 
       recipient_organization_id text NOT NULL,
       title text NOT NULL,
       message text NOT NULL,
+      action_url text,
       created_at timestamptz NOT NULL
     )
   `);
+  await input.pool.query("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url text");
 };

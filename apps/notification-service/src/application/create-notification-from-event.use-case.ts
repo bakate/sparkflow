@@ -34,6 +34,7 @@ const buildNotificationText = (
   readonly recipientOrganizationId: string;
   readonly title: string;
   readonly message: string;
+  readonly actionUrl: string | null;
 } | null => {
   if (
     (event.eventName === eventNames.submissionAccepted ||
@@ -42,13 +43,38 @@ const buildNotificationText = (
       event.eventName === eventNames.submissionCreated) &&
     isSubmissionPayload(event.payload)
   ) {
+    const notificationTextByStatus: Record<
+      SubmissionDto["status"],
+      { readonly title: string; readonly message: string }
+    > = {
+      accepted: {
+        title: "Proposal shortlisted",
+        message: "Your proposal was shortlisted. Track the next steps in My opportunities.",
+      },
+      rejected: {
+        title: "Proposal not retained",
+        message: "Your proposal was not retained. Review the feedback in My opportunities.",
+      },
+      selected: {
+        title: "Final project selected",
+        message: "You were selected for the final project. Open My opportunities for details.",
+      },
+      submitted: {
+        title: "Proposal sent",
+        message: "Your proposal was sent and is waiting for company review.",
+      },
+      "not-selected": {
+        title: "Not finally selected",
+        message: "Your shortlisted proposal was not selected for the final project.",
+      },
+    };
+    const notificationText = notificationTextByStatus[event.payload.status];
+
     return {
       recipientOrganizationId: event.payload.startupOrganizationId,
-      title:
-        event.eventName === eventNames.submissionCreated
-          ? "Submission received"
-          : `Submission ${event.payload.status}`,
-      message: `Submission ${event.payload.id} is now ${event.payload.status}.`,
+      title: notificationText.title,
+      message: notificationText.message,
+      actionUrl: `/opportunities?submissionId=${encodeURIComponent(event.payload.id)}`,
     };
   }
 
@@ -57,6 +83,7 @@ const buildNotificationText = (
       recipientOrganizationId: "org-company",
       title: "Evaluation submitted",
       message: `Reviewer scored submission ${event.payload.submissionId} at ${event.payload.score}/100.`,
+      actionUrl: null,
     };
   }
 
@@ -89,6 +116,7 @@ export const createCreateNotificationFromEventUseCase = (input: {
       recipientOrganizationId: notificationText.recipientOrganizationId,
       title: notificationText.title,
       message: notificationText.message,
+      actionUrl: notificationText.actionUrl,
       now: input.clock.now(),
     });
 
