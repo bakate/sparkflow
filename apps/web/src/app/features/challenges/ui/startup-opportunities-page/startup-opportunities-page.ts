@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
-import { Card } from 'primeng/card';
+import { DataViewModule } from 'primeng/dataview';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { CHALLENGE_GATEWAY, type ChallengeOpportunity } from '../../application/challenge-gateway';
@@ -13,7 +13,7 @@ import { challengeErrorMessage } from '../challenge-error-message';
 
 @Component({
   selector: 'app-startup-opportunities-page',
-  imports: [Button, Card, RouterLink, Tag],
+  imports: [Button, DataViewModule, RouterLink, Tag],
   providers: [
     ChallengesStore,
     {
@@ -62,6 +62,7 @@ export class StartupOpportunitiesPage {
       opportunities: this.opportunities(),
     }),
   );
+  protected readonly dataViewOpportunities = computed(() => [...this.filteredOpportunities()]);
   protected readonly opportunityFilters = computed<readonly OpportunityFilterViewModel[]>(() =>
     opportunityFilterOptions.map((filterOption) => ({
       ...filterOption,

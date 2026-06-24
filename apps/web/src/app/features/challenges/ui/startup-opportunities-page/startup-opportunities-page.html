@@ -78,80 +78,84 @@
     }
   </div>
 
-  <div class="flex flex-column gap-3" aria-label="Opportunity list">
+  <div aria-label="Opportunity list">
     @if (store.loadingMySubmissions()) {
       <p class="m-0 p-3 border-1 surface-border border-round surface-card">
         Loading opportunities...
       </p>
-    } @else if (filteredOpportunities().length === 0) {
-      <div class="p-3 border-1 surface-border border-round surface-card">
-        <p class="m-0 text-color-secondary">{{ emptyMessage() }}</p>
-      </div>
     } @else {
-      @for (opportunity of filteredOpportunities(); track opportunity.submissionId) {
-        <p-card>
-          <article class="flex flex-column gap-3">
-            <div
-              class="flex flex-column md:flex-row md:align-items-start justify-content-between gap-3"
-            >
-              <div class="flex flex-column gap-2 min-w-0">
-                <div class="flex align-items-center gap-2 flex-wrap">
-                  <h3 class="m-0 text-xl font-bold text-color">{{ opportunity.challengeTitle }}</h3>
-                  <p-tag
-                    [severity]="statusSeverity({ status: opportunity.status })"
-                    [value]="opportunity.statusLabel"
-                  />
+      <p-dataview [value]="dataViewOpportunities()" layout="list" [emptyMessage]="emptyMessage()">
+        <ng-template #list let-opportunityItems>
+          <div class="flex flex-column gap-3">
+            @for (opportunity of opportunityItems; track opportunity.submissionId) {
+              <article
+                class="flex flex-column gap-3 p-3 border-1 surface-border border-round surface-card"
+              >
+                <div
+                  class="flex flex-column md:flex-row md:align-items-start justify-content-between gap-3"
+                >
+                  <div class="flex flex-column gap-2 min-w-0">
+                    <div class="flex align-items-center gap-2 flex-wrap">
+                      <h3 class="m-0 text-xl font-bold text-color">
+                        {{ opportunity.challengeTitle }}
+                      </h3>
+                      <p-tag
+                        [severity]="statusSeverity({ status: opportunity.status })"
+                        [value]="opportunity.statusLabel"
+                      />
+                    </div>
+                    <p class="m-0 font-semibold text-color-secondary">
+                      {{ opportunity.statusDescription }}
+                    </p>
+                    <p class="m-0 text-color-secondary line-height-3">
+                      {{ opportunity.challengeDescription }}
+                    </p>
+                  </div>
+
+                  @if (opportunity.status === 'selected') {
+                    <p-tag severity="success" value="Final selection" />
+                  } @else if (opportunity.status === 'not-selected') {
+                    <p-tag severity="secondary" value="Selection closed" />
+                  }
                 </div>
-                <p class="m-0 font-semibold text-color-secondary">
-                  {{ opportunity.statusDescription }}
-                </p>
-                <p class="m-0 text-color-secondary line-height-3">
-                  {{ opportunity.challengeDescription }}
-                </p>
-              </div>
 
-              @if (opportunity.status === 'selected') {
-                <p-tag severity="success" value="Final selection" />
-              } @else if (opportunity.status === 'not-selected') {
-                <p-tag severity="secondary" value="Selection closed" />
-              }
-            </div>
+                <div class="flex flex-column gap-2">
+                  <p class="m-0 font-semibold text-color">Your proposal</p>
+                  <p class="m-0 text-color-secondary line-height-3">{{ opportunity.summary }}</p>
+                </div>
 
-            <div class="flex flex-column gap-2">
-              <p class="m-0 font-semibold text-color">Your proposal</p>
-              <p class="m-0 text-color-secondary line-height-3">{{ opportunity.summary }}</p>
-            </div>
+                <div class="flex flex-column sm:flex-row gap-3 text-color-secondary text-sm">
+                  <span class="inline-flex align-items-center gap-2">
+                    <i class="pi pi-building" aria-hidden="true"></i>
+                    {{ opportunity.companyOrganizationId }}
+                  </span>
+                  <span class="inline-flex align-items-center gap-2">
+                    <i class="pi pi-calendar" aria-hidden="true"></i>
+                    Submitted {{ formatDate({ date: opportunity.submittedAt }) }}
+                  </span>
+                  @if (opportunity.decidedAt !== null) {
+                    <span class="inline-flex align-items-center gap-2">
+                      <i class="pi pi-check-circle" aria-hidden="true"></i>
+                      Decided {{ formatDate({ date: opportunity.decidedAt }) }}
+                    </span>
+                  }
+                </div>
 
-            <div class="flex flex-column sm:flex-row gap-3 text-color-secondary text-sm">
-              <span class="inline-flex align-items-center gap-2">
-                <i class="pi pi-building" aria-hidden="true"></i>
-                {{ opportunity.companyOrganizationId }}
-              </span>
-              <span class="inline-flex align-items-center gap-2">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                Submitted {{ formatDate({ date: opportunity.submittedAt }) }}
-              </span>
-              @if (opportunity.decidedAt !== null) {
-                <span class="inline-flex align-items-center gap-2">
-                  <i class="pi pi-check-circle" aria-hidden="true"></i>
-                  Decided {{ formatDate({ date: opportunity.decidedAt }) }}
-                </span>
-              }
-            </div>
-
-            @if (opportunity.isLoadingFeedback) {
-              <p-tag severity="secondary" value="Loading feedback" />
-            } @else if (opportunity.feedback !== null) {
-              <div class="p-3 border-1 surface-border border-round bg-gray-50">
-                <p class="m-0 font-semibold text-color">Decision feedback</p>
-                <p class="m-0 mt-2 text-color-secondary line-height-3">
-                  {{ opportunity.feedback }}
-                </p>
-              </div>
+                @if (opportunity.isLoadingFeedback) {
+                  <p-tag severity="secondary" value="Loading feedback" />
+                } @else if (opportunity.feedback !== null) {
+                  <div class="p-3 border-1 surface-border border-round bg-gray-50">
+                    <p class="m-0 font-semibold text-color">Decision feedback</p>
+                    <p class="m-0 mt-2 text-color-secondary line-height-3">
+                      {{ opportunity.feedback }}
+                    </p>
+                  </div>
+                }
+              </article>
             }
-          </article>
-        </p-card>
-      }
+          </div>
+        </ng-template>
+      </p-dataview>
     }
   </div>
 </section>

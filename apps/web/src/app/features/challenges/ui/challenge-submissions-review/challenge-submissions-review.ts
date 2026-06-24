@@ -1,6 +1,7 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import type { SubmissionStatus } from '@sparkflow/contracts';
 import { Button } from 'primeng/button';
+import { DataViewModule } from 'primeng/dataview';
 import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import type { SubmissionId } from '@shared/domain/result';
@@ -8,7 +9,7 @@ import type { Submission } from '../../domain/submission';
 
 @Component({
   selector: 'challenge-submissions-review',
-  imports: [Button, Skeleton, Tag],
+  imports: [Button, DataViewModule, Skeleton, Tag],
   templateUrl: './challenge-submissions-review.html',
 })
 export class ChallengeSubmissionsReview {
@@ -21,6 +22,7 @@ export class ChallengeSubmissionsReview {
   readonly accepted = output<{ readonly submissionId: SubmissionId }>();
   readonly rejected = output<{ readonly submissionId: SubmissionId }>();
   readonly selected = output<{ readonly submissionId: SubmissionId }>();
+  protected readonly dataViewSubmissions = computed(() => [...this.submissions()]);
 
   protected canDecide(input: { readonly submission: Submission }): boolean {
     return !this.finalSelectionLocked() && input.submission.status === 'submitted';
