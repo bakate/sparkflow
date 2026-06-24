@@ -46,6 +46,7 @@ export class ChallengeSubmissionsReview {
       accepted: 'Shortlisted',
       rejected: 'Rejected',
       selected: 'Selected',
+      'not-selected': 'Not selected',
     };
 
     return labels[input.status];
@@ -53,9 +54,13 @@ export class ChallengeSubmissionsReview {
 
   protected statusSeverity(input: {
     readonly status: SubmissionStatus;
-  }): 'danger' | 'info' | 'success' {
+  }): 'danger' | 'info' | 'secondary' | 'success' {
     if (input.status === 'accepted' || input.status === 'selected') {
       return 'success';
+    }
+
+    if (input.status === 'not-selected') {
+      return 'secondary';
     }
 
     if (input.status === 'rejected') {

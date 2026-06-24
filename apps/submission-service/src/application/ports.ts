@@ -8,6 +8,9 @@ export type SubmissionRepository = {
   readonly save: (input: {
     readonly submission: Submission;
   }) => Promise<Result<SubmissionPersistenceError, void>>;
+  readonly saveMany: (input: {
+    readonly submissions: readonly Submission[];
+  }) => Promise<Result<SubmissionPersistenceError, void>>;
   readonly findById: (input: { readonly submissionId: string }) => Promise<Submission | null>;
   readonly findByChallengeId: (input: {
     readonly challengeId: string;

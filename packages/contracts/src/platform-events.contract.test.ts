@@ -73,7 +73,11 @@ const parseChallengePublishedEvent = (value: unknown): DomainEvent<ChallengeDto>
 };
 
 const isSubmissionStatus = (value: unknown): value is SubmissionDto["status"] =>
-  value === "submitted" || value === "accepted" || value === "rejected" || value === "selected";
+  value === "submitted" ||
+  value === "accepted" ||
+  value === "rejected" ||
+  value === "selected" ||
+  value === "not-selected";
 
 const parseSubmissionEvent = (input: {
   readonly value: unknown;

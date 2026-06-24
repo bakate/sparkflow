@@ -40,6 +40,22 @@ const createInMemorySubmissionRepository = (
       submissions[submissionIndex] = submission;
       return succeed(undefined);
     },
+    saveMany: async ({ submissions: nextSubmissions }) => {
+      for (const submission of nextSubmissions) {
+        const submissionIndex = submissions.findIndex(
+          (candidate) => candidate.id === submission.id,
+        );
+
+        if (submissionIndex === -1) {
+          submissions.push(submission);
+          continue;
+        }
+
+        submissions[submissionIndex] = submission;
+      }
+
+      return succeed(undefined);
+    },
     findById: async ({ submissionId }) =>
       submissions.find((submission) => submission.id === submissionId) ?? null,
     findByChallengeId: async ({ challengeId }) =>
@@ -157,6 +173,67 @@ describe("DecideSubmissionUseCase", () => {
         decidedAt: "2026-06-16T10:00:00.000Z",
       },
     });
+  });
+
+  it("marks other shortlisted submissions as not selected when selecting the final submission", async () => {
+    const challengeId = faker.string.uuid();
+    const selectedSubmission: Submission = {
+      ...createSubmittedSubmission(),
+      challengeId,
+      status: "accepted",
+      decidedAt: fixedDecidedAt,
+    };
+    const notSelectedSubmission: Submission = {
+      ...createSubmittedSubmission(),
+      challengeId,
+      status: "accepted",
+      decidedAt: fixedDecidedAt,
+    };
+    const pendingSubmission: Submission = {
+      ...createSubmittedSubmission(),
+      challengeId,
+    };
+    const rejectedSubmission: Submission = {
+      ...createSubmittedSubmission(),
+      challengeId,
+      status: "rejected",
+      decidedAt: fixedDecidedAt,
+    };
+    const submissionRepository = createInMemorySubmissionRepository([
+      selectedSubmission,
+      notSelectedSubmission,
+      pendingSubmission,
+      rejectedSubmission,
+    ]);
+    const eventPublisher = createInMemoryEventPublisher();
+    const useCase = createDecideSubmissionUseCase({
+      submissionRepository,
+      clock: fixedClock,
+      eventPublisher,
+      idGenerator: fixedIdGenerator,
+    });
+
+    const result = await useCase.execute({
+      actor: companyAdminActor,
+      submissionId: selectedSubmission.id,
+      decision: "select",
+      correlationId: "correlation-id",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(
+      submissionRepository.submissions.map((submission) => ({
+        id: submission.id,
+        status: submission.status,
+      })),
+    ).toEqual([
+      { id: selectedSubmission.id, status: "selected" },
+      { id: notSelectedSubmission.id, status: "not-selected" },
+      { id: pendingSubmission.id, status: "submitted" },
+      { id: rejectedSubmission.id, status: "rejected" },
+    ]);
+    expect(eventPublisher.events).toHaveLength(1);
+    expect(eventPublisher.events[0]?.eventName).toBe(eventNames.submissionSelected);
   });
 
   it("rejects decisions from non company admins", async () => {

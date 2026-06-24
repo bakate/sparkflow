@@ -166,27 +166,28 @@ assert_status "$http_status" 200 "select final proposal"
 
 http_status="$(request POST "$api_url/challenges/$challenge_id/submissions/$proposal_two_id/select" "$company_token")"
 assert_status "$http_status" 400 "reject second final selection"
-conflict_error="$(jq -r ".error" "$body_file")"
+decision_error="$(jq -r ".error" "$body_file")"
 
-if [[ "$conflict_error" != "challenge-already-selected" ]]; then
-  printf 'FAIL expected challenge-already-selected, got %s\n' "$conflict_error" >&2
+if [[ "$decision_error" != "submission-not-shortlisted" ]]; then
+  printf 'FAIL expected submission-not-shortlisted, got %s\n' "$decision_error" >&2
   jq . "$body_file"
   exit 1
 fi
 
-printf 'PASS unique final selection error=%s\n' "$conflict_error"
+printf 'PASS second final selection error=%s\n' "$decision_error"
 
 http_status="$(request GET "$api_url/challenges/$challenge_id/submissions" "$company_token")"
 assert_status "$http_status" 200 "list proposals after final selection"
 selected_count="$(jq '[.[] | select(.status == "selected")] | length' "$body_file")"
 accepted_count="$(jq '[.[] | select(.status == "accepted")] | length' "$body_file")"
+not_selected_count="$(jq '[.[] | select(.status == "not-selected")] | length' "$body_file")"
 
-if [[ "$selected_count" != "1" || "$accepted_count" != "1" ]]; then
-  printf 'FAIL expected selected=1 accepted=1, got selected=%s accepted=%s\n' "$selected_count" "$accepted_count" >&2
+if [[ "$selected_count" != "1" || "$accepted_count" != "0" || "$not_selected_count" != "1" ]]; then
+  printf 'FAIL expected selected=1 accepted=0 not-selected=1, got selected=%s accepted=%s not-selected=%s\n' "$selected_count" "$accepted_count" "$not_selected_count" >&2
   jq . "$body_file"
   exit 1
 fi
 
-printf 'PASS statuses selected=%s accepted=%s\n' "$selected_count" "$accepted_count"
+printf 'PASS statuses selected=%s accepted=%s not-selected=%s\n' "$selected_count" "$accepted_count" "$not_selected_count"
 wait_for_selected_notification "$startup_token" "$proposal_one_id"
 printf 'SMOKE_OK challenge_id=%s proposal_one=%s proposal_two=%s\n' "$challenge_id" "$proposal_one_id" "$proposal_two_id"

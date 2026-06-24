@@ -333,7 +333,8 @@ export class ChallengesStore {
       (submission) =>
         submission.status === 'accepted' ||
         submission.status === 'rejected' ||
-        submission.status === 'selected',
+        submission.status === 'selected' ||
+        submission.status === 'not-selected',
     );
   }
 
@@ -401,6 +402,11 @@ export class ChallengesStore {
     }
 
     this.replaceSubmission({ challengeId: input.challengeId, submission: result.value });
+
+    if (input.decision === 'select') {
+      await this.loadChallengeSubmissions({ challengeId: input.challengeId });
+    }
+
     return succeed(result.value);
   }
 

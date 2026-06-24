@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { fail, succeed } from "@sparkflow/result";
 import type { SubmissionRepository } from "../application/ports.ts";
 import type { Submission } from "../domain/submission.ts";
@@ -10,7 +10,7 @@ type SubmissionRow = {
   readonly challenge_id: string;
   readonly startup_organization_id: string;
   readonly summary: string;
-  readonly status: "submitted" | "accepted" | "rejected" | "selected";
+  readonly status: "submitted" | "accepted" | "rejected" | "selected" | "not-selected";
   readonly created_at: Date;
   readonly decided_at: Date | null;
 };
@@ -30,24 +30,7 @@ export const createPostgresSubmissionRepository = (input: {
 }): SubmissionRepository => ({
   save: async ({ submission }) => {
     try {
-      await input.pool.query(
-        `INSERT INTO submissions (
-          id, challenge_id, startup_organization_id, summary, status, created_at, decided_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (id) DO UPDATE SET
-          summary = EXCLUDED.summary,
-          status = EXCLUDED.status,
-          decided_at = EXCLUDED.decided_at`,
-        [
-          submission.id,
-          submission.challengeId,
-          submission.startupOrganizationId,
-          submission.summary,
-          submission.status,
-          submission.createdAt,
-          submission.decidedAt,
-        ],
-      );
+      await saveSubmission({ executor: input.pool, submission });
 
       return succeed(undefined);
     } catch (error: unknown) {
@@ -56,6 +39,30 @@ export const createPostgresSubmissionRepository = (input: {
       }
 
       throw error;
+    }
+  },
+  saveMany: async ({ submissions }) => {
+    const client = await input.pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      for (const submission of submissions) {
+        await saveSubmission({ executor: client, submission });
+      }
+
+      await client.query("COMMIT");
+      return succeed(undefined);
+    } catch (error: unknown) {
+      await client.query("ROLLBACK");
+
+      if (isSelectedSubmissionUniquenessViolation({ error })) {
+        return fail("challenge-already-selected");
+      }
+
+      throw error;
+    } finally {
+      client.release();
     }
   },
   findById: async ({ submissionId }) => {
@@ -96,7 +103,7 @@ export const ensureSubmissionSchema = async (input: { readonly pool: Pool }): Pr
       challenge_id uuid NOT NULL,
       startup_organization_id text NOT NULL,
       summary text NOT NULL,
-      status text NOT NULL CHECK (status IN ('submitted', 'accepted', 'rejected', 'selected')),
+      status text NOT NULL CHECK (status IN ('submitted', 'accepted', 'rejected', 'selected', 'not-selected')),
       created_at timestamptz NOT NULL,
       decided_at timestamptz NULL
     )
@@ -108,13 +115,37 @@ export const ensureSubmissionSchema = async (input: { readonly pool: Pool }): Pr
   await input.pool.query(`
     ALTER TABLE submissions
     ADD CONSTRAINT submissions_status_check
-    CHECK (status IN ('submitted', 'accepted', 'rejected', 'selected'))
+    CHECK (status IN ('submitted', 'accepted', 'rejected', 'selected', 'not-selected'))
   `);
   await input.pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS submissions_one_selected_per_challenge_idx
     ON submissions (challenge_id)
     WHERE status = 'selected'
   `);
+};
+
+const saveSubmission = async (input: {
+  readonly executor: Pick<Pool | PoolClient, "query">;
+  readonly submission: Submission;
+}): Promise<void> => {
+  await input.executor.query(
+    `INSERT INTO submissions (
+      id, challenge_id, startup_organization_id, summary, status, created_at, decided_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT (id) DO UPDATE SET
+      summary = EXCLUDED.summary,
+      status = EXCLUDED.status,
+      decided_at = EXCLUDED.decided_at`,
+    [
+      input.submission.id,
+      input.submission.challengeId,
+      input.submission.startupOrganizationId,
+      input.submission.summary,
+      input.submission.status,
+      input.submission.createdAt,
+      input.submission.decidedAt,
+    ],
+  );
 };
 
 const isSelectedSubmissionUniquenessViolation = (input: { readonly error: unknown }): boolean => {

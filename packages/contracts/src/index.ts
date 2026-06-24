@@ -40,7 +40,7 @@ export type ChallengeDto = {
   readonly publishedAt: string | null;
 };
 
-export type SubmissionStatus = "submitted" | "accepted" | "rejected" | "selected";
+export type SubmissionStatus = "submitted" | "accepted" | "rejected" | "selected" | "not-selected";
 
 export type SubmissionDto = {
   readonly id: string;

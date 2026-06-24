@@ -132,7 +132,8 @@ export class ChallengesPage {
       return (
         submission?.status === 'accepted' ||
         submission?.status === 'rejected' ||
-        submission?.status === 'selected'
+        submission?.status === 'selected' ||
+        submission?.status === 'not-selected'
       );
     });
   });
@@ -178,7 +179,8 @@ export class ChallengesPage {
         return (
           submission?.status === 'accepted' ||
           submission?.status === 'rejected' ||
-          submission?.status === 'selected'
+          submission?.status === 'selected' ||
+          submission?.status === 'not-selected'
         );
       }).length,
   );
@@ -320,7 +322,8 @@ export class ChallengesPage {
     return (
       input.submission?.status === 'accepted' ||
       input.submission?.status === 'rejected' ||
-      input.submission?.status === 'selected'
+      input.submission?.status === 'selected' ||
+      input.submission?.status === 'not-selected'
     );
   }
 

@@ -9,6 +9,7 @@ const createInMemorySubmissionRepository = (input: {
   readonly submissions: readonly Submission[];
 }): SubmissionRepository => ({
   save: async () => succeed(undefined),
+  saveMany: async () => succeed(undefined),
   findById: async ({ submissionId }) =>
     input.submissions.find((submission) => submission.id === submissionId) ?? null,
   findByChallengeId: async ({ challengeId }) =>

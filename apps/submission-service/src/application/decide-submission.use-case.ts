@@ -7,6 +7,7 @@ import {
 import { fail, succeed, type Result } from "@sparkflow/result";
 import {
   acceptSubmission,
+  markSubmissionNotSelected,
   rejectSubmission,
   selectSubmission,
   toSubmissionDto,
@@ -53,10 +54,14 @@ export const createDecideSubmissionUseCase = (input: {
       return fail("submission-not-shortlisted");
     }
 
+    const challengeSubmissions =
+      command.decision === "select"
+        ? await input.submissionRepository.findByChallengeId({
+            challengeId: submission.challengeId,
+          })
+        : [];
+
     if (command.decision === "select") {
-      const challengeSubmissions = await input.submissionRepository.findByChallengeId({
-        challengeId: submission.challengeId,
-      });
       const alreadySelected = challengeSubmissions.some(
         (candidate) => candidate.id !== submission.id && candidate.status === "selected",
       );
@@ -72,8 +77,21 @@ export const createDecideSubmissionUseCase = (input: {
 
     const now = input.clock.now();
     const decidedSubmission = decideSubmission({ decision: command.decision, now, submission });
+    const notSelectedSubmissions =
+      command.decision === "select"
+        ? challengeSubmissions
+            .filter(
+              (candidate) => candidate.id !== submission.id && candidate.status === "accepted",
+            )
+            .map((candidate) => markSubmissionNotSelected({ submission: candidate, now }))
+        : [];
 
-    const saveResult = await input.submissionRepository.save({ submission: decidedSubmission });
+    const saveResult =
+      command.decision === "select"
+        ? await input.submissionRepository.saveMany({
+            submissions: [decidedSubmission, ...notSelectedSubmissions],
+          })
+        : await input.submissionRepository.save({ submission: decidedSubmission });
 
     if (!saveResult.ok) {
       return fail(saveResult.error);

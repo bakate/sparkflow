@@ -60,6 +60,15 @@ export const selectSubmission = (input: {
   decidedAt: input.now,
 });
 
+export const markSubmissionNotSelected = (input: {
+  readonly submission: Submission;
+  readonly now: Date;
+}): Submission => ({
+  ...input.submission,
+  status: "not-selected",
+  decidedAt: input.now,
+});
+
 export const toSubmissionDto = (submission: Submission): SubmissionDto => ({
   id: submission.id,
   challengeId: submission.challengeId,

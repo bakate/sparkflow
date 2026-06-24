@@ -95,6 +95,41 @@ describe.skipIf(!shouldRunIntegrationTests)("PostgresSubmissionRepository integr
     expect(foundSubmission?.decidedAt?.toISOString()).toBe("2026-06-16T10:00:00.000Z");
   });
 
+  it("saves multiple submissions in one operation", async () => {
+    const repository = createPostgresSubmissionRepository({ pool });
+    const challengeId = faker.string.uuid();
+    const selectedSubmission: Submission = {
+      ...createSubmittedSubmission({
+        id: faker.string.uuid(),
+        challengeId,
+        createdAt: new Date("2026-06-16T09:00:00.000Z"),
+      }),
+      status: "selected",
+      decidedAt: new Date("2026-06-16T10:00:00.000Z"),
+    };
+    const notSelectedSubmission: Submission = {
+      ...createSubmittedSubmission({
+        id: faker.string.uuid(),
+        challengeId,
+        createdAt: new Date("2026-06-16T11:00:00.000Z"),
+      }),
+      status: "not-selected",
+      decidedAt: new Date("2026-06-16T10:00:00.000Z"),
+    };
+
+    const result = await repository.saveMany({
+      submissions: [selectedSubmission, notSelectedSubmission],
+    });
+
+    const submissions = await repository.findByChallengeId({ challengeId });
+
+    expect(result).toEqual({ ok: true, value: undefined });
+    expect(submissions.map((submission) => submission.status).sort()).toEqual([
+      "not-selected",
+      "selected",
+    ]);
+  });
+
   it("lists submissions for one challenge from newest to oldest", async () => {
     const repository = createPostgresSubmissionRepository({ pool });
     const challengeId = faker.string.uuid();

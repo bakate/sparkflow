@@ -18,6 +18,10 @@ const createInMemorySubmissionRepository = (): SubmissionRepository & {
       submissions.push(submission);
       return succeed(undefined);
     },
+    saveMany: async ({ submissions: nextSubmissions }) => {
+      submissions.push(...nextSubmissions);
+      return succeed(undefined);
+    },
     findById: async ({ submissionId }) =>
       submissions.find((submission) => submission.id === submissionId) ?? null,
     findByChallengeId: async ({ challengeId }) =>

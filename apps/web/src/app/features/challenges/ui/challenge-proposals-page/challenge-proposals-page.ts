@@ -48,6 +48,9 @@ export class ChallengeProposalsPage {
   protected readonly selectedProposalCount = computed(
     () => this.submissions().filter((submission) => submission.status === 'selected').length,
   );
+  protected readonly notSelectedProposalCount = computed(
+    () => this.submissions().filter((submission) => submission.status === 'not-selected').length,
+  );
   protected readonly loadingSubmissions = computed(() => {
     const challengeId = this.challengeId();
 
