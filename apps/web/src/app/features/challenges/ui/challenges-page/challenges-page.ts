@@ -8,11 +8,11 @@ import { Skeleton } from 'primeng/skeleton';
 import type { ChallengeId } from '@shared/domain/result';
 import { AuthSession } from '@shared/auth/auth-session';
 import { EmptyState } from '@shared/ui/empty-state';
-import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
+import { type ChallengeFailure } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import { canCreateChallenge, type Challenge } from '../../domain/challenge';
 import type { Submission } from '../../domain/submission';
-import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gateway';
+
 import { ChallengeCard, type ChallengeCardState } from '../challenge-card/challenge-card';
 import { challengeErrorMessage } from '../challenge-error-message';
 import {
@@ -41,13 +41,6 @@ type ChallengeTab = CompanyChallengeTab | StartupChallengeTab;
     Dialog,
     EmptyState,
     Skeleton,
-  ],
-  providers: [
-    ChallengesStore,
-    {
-      provide: CHALLENGE_GATEWAY,
-      useClass: HttpChallengeGateway,
-    },
   ],
   templateUrl: './challenges-page.html',
 })

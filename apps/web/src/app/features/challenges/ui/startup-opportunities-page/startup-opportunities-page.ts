@@ -7,22 +7,15 @@ import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { EmptyState } from '@shared/ui/empty-state';
-import { CHALLENGE_GATEWAY, type ChallengeOpportunity } from '../../application/challenge-gateway';
+import { type ChallengeOpportunity } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import type { Submission, SubmissionDecisionAudit } from '../../domain/submission';
-import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gateway';
+
 import { challengeErrorMessage } from '../challenge-error-message';
 
 @Component({
   selector: 'app-startup-opportunities-page',
   imports: [Button, DataViewModule, EmptyState, RouterLink, Skeleton, Tag],
-  providers: [
-    ChallengesStore,
-    {
-      provide: CHALLENGE_GATEWAY,
-      useClass: HttpChallengeGateway,
-    },
-  ],
   templateUrl: './startup-opportunities-page.html',
 })
 export class StartupOpportunitiesPage {

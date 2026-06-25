@@ -1,5 +1,4 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
@@ -8,10 +7,10 @@ import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { EmptyState } from '@shared/ui/empty-state';
-import { CHALLENGE_GATEWAY, type ChallengeFailure } from '../../application/challenge-gateway';
+import { type ChallengeFailure } from '../../application/challenge-gateway';
 import { ChallengesStore } from '../../application/challenges-store';
 import type { Challenge } from '../../domain/challenge';
-import { HttpChallengeGateway } from '../../infrastructure/http-challenge-gateway';
+
 import { challengeErrorMessage } from '../challenge-error-message';
 import { ChallengeStatusLabel } from '../challenge-status-label';
 import { ChallengeSubmissionsReview } from '../challenge-submissions-review/challenge-submissions-review';
@@ -28,13 +27,6 @@ import type { Submission, SubmissionDecisionAudit } from '../../domain/submissio
     RouterLink,
     Skeleton,
     Tag,
-  ],
-  providers: [
-    ChallengesStore,
-    {
-      provide: CHALLENGE_GATEWAY,
-      useClass: HttpChallengeGateway,
-    },
   ],
   templateUrl: './challenge-proposals-page.html',
 })
