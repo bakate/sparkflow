@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { DataViewModule } from 'primeng/dataview';
+import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { EmptyState } from '@shared/ui/empty-state';
@@ -14,7 +15,7 @@ import { challengeErrorMessage } from '../challenge-error-message';
 
 @Component({
   selector: 'app-startup-opportunities-page',
-  imports: [Button, DataViewModule, EmptyState, RouterLink, Tag],
+  imports: [Button, DataViewModule, EmptyState, RouterLink, Skeleton, Tag],
   providers: [
     ChallengesStore,
     {

@@ -95,9 +95,44 @@
 
   <div aria-label="Opportunity list">
     @if (store.loadingMySubmissions()) {
-      <p class="m-0 p-3 border-1 surface-border border-round surface-card">
-        Loading opportunities...
-      </p>
+      <div class="flex flex-column gap-3" aria-label="Loading opportunities">
+        @for (skeletonIndex of [1, 2, 3]; track skeletonIndex) {
+          <article
+            class="flex flex-column gap-3 p-3 border-1 surface-border border-round surface-card"
+          >
+            <div
+              class="flex flex-column md:flex-row md:align-items-start justify-content-between gap-3"
+            >
+              <div class="flex flex-column gap-2 flex-1">
+                <div class="flex align-items-center gap-2 flex-wrap">
+                  <p-skeleton width="16rem" height="1.5rem" />
+                  <p-skeleton width="10rem" height="1.75rem" borderRadius="6px" />
+                </div>
+                <p-skeleton width="14rem" height="1rem" />
+                <p-skeleton width="100%" height="3rem" />
+              </div>
+
+              <p-skeleton width="8rem" height="1.75rem" borderRadius="6px" />
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <p-skeleton width="7rem" height="1rem" />
+              <p-skeleton width="70%" height="1rem" />
+            </div>
+
+            <div class="flex flex-column sm:flex-row gap-3">
+              <p-skeleton width="8rem" height="1rem" />
+              <p-skeleton width="12rem" height="1rem" />
+              <p-skeleton width="11rem" height="1rem" />
+            </div>
+
+            <div class="p-3 border-1 surface-border border-round bg-gray-50">
+              <p-skeleton width="9rem" height="1rem" />
+              <p-skeleton width="80%" height="1rem" styleClass="mt-2" />
+            </div>
+          </article>
+        }
+      </div>
     } @else {
       <p-dataview
         [value]="dataViewOpportunities()"

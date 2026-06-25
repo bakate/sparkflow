@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
+import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import type { ChallengeId, SubmissionId } from '@shared/domain/result';
 import { EmptyState } from '@shared/ui/empty-state';
@@ -25,6 +26,7 @@ import type { Submission, SubmissionDecisionAudit } from '../../domain/submissio
     Dialog,
     EmptyState,
     RouterLink,
+    Skeleton,
     Tag,
   ],
   providers: [

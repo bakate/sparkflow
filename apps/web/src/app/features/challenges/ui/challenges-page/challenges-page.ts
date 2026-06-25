@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
+import { Skeleton } from 'primeng/skeleton';
 import type { ChallengeId } from '@shared/domain/result';
 import { AuthSession } from '@shared/auth/auth-session';
 import { EmptyState } from '@shared/ui/empty-state';
@@ -39,6 +40,7 @@ type ChallengeTab = CompanyChallengeTab | StartupChallengeTab;
     ChallengeTabs,
     Dialog,
     EmptyState,
+    Skeleton,
   ],
   providers: [
     ChallengesStore,
