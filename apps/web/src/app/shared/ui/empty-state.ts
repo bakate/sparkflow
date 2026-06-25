@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { Button } from 'primeng/button';
 
 @Component({
-  selector: 'app-empty-state',
+  selector: 'empty-state',
   imports: [Button],
   template: `
     <div

@@ -23,10 +23,12 @@ import type {
   ChallengeFailure,
   ChallengeGateway,
   ChallengeOpportunity,
+  CursorPage,
   CreateChallengeCommand,
   DecideSubmissionCommand,
   DraftChallengeCommand,
   ListChallengeSubmissionsCommand,
+  ListMyOpportunitiesCommand,
   ListSubmissionDecisionAuditsCommand,
   PublishChallengeCommand,
   SubmitChallengeProposalCommand,
@@ -84,16 +86,23 @@ export class HttpChallengeGateway implements ChallengeGateway {
     }
   }
 
-  async listMyOpportunities(): Promise<Result<ChallengeFailure, readonly ChallengeOpportunity[]>> {
+  async listMyOpportunities(
+    command: ListMyOpportunitiesCommand = {},
+  ): Promise<Result<ChallengeFailure, CursorPage<ChallengeOpportunity>>> {
     try {
       const opportunityDtos = await firstValueFrom(
         this.httpClient
-          .get<PaginatedDto<ChallengeOpportunityDto>>(this.buildUrl({ path: '/me/opportunities' }))
+          .get<
+            PaginatedDto<ChallengeOpportunityDto>
+          >(this.buildPaginatedUrl({ path: '/me/opportunities', cursor: command.cursor ?? null }))
           .pipe(timeout(5000)),
       );
-      return succeed(
-        opportunityDtos.items.map((opportunityDto) => toChallengeOpportunity({ opportunityDto })),
-      );
+      return succeed({
+        items: opportunityDtos.items.map((opportunityDto) =>
+          toChallengeOpportunity({ opportunityDto }),
+        ),
+        page: opportunityDtos.page,
+      });
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
     }
@@ -101,16 +110,19 @@ export class HttpChallengeGateway implements ChallengeGateway {
 
   async listChallengeSubmissions(
     command: ListChallengeSubmissionsCommand,
-  ): Promise<Result<ChallengeFailure, readonly Submission[]>> {
+  ): Promise<Result<ChallengeFailure, CursorPage<Submission>>> {
     try {
       const submissionDtos = await firstValueFrom(
         this.httpClient
           .get<
             PaginatedDto<SubmissionDto>
-          >(this.buildUrl({ path: `/challenges/${command.challengeId}/submissions` }))
+          >(this.buildPaginatedUrl({ path: `/challenges/${command.challengeId}/submissions`, cursor: command.cursor ?? null }))
           .pipe(timeout(5000)),
       );
-      return succeed(submissionDtos.items.map((submissionDto) => toSubmission({ submissionDto })));
+      return succeed({
+        items: submissionDtos.items.map((submissionDto) => toSubmission({ submissionDto })),
+        page: submissionDtos.page,
+      });
     } catch (error: unknown) {
       return fail(toChallengeFailure({ error }));
     }
@@ -264,6 +276,19 @@ export class HttpChallengeGateway implements ChallengeGateway {
 
   private buildUrl(input: { readonly path: string }): string {
     return `${this.webApiConfig.apiUrl}${input.path}`;
+  }
+
+  private buildPaginatedUrl(input: {
+    readonly path: string;
+    readonly cursor: string | null;
+  }): string {
+    const url = new URL(this.buildUrl({ path: input.path }));
+
+    if (input.cursor !== null) {
+      url.searchParams.set('cursor', input.cursor);
+    }
+
+    return url.toString();
   }
 
   private async decideSubmission(input: {

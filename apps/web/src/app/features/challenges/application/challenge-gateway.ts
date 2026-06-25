@@ -1,4 +1,5 @@
 import { InjectionToken } from '@angular/core';
+import type { CursorPageMetaDto } from '@sparkflow/contracts';
 import type { ChallengeId, Result, SubmissionId } from '@shared/domain/result';
 import type { Challenge } from '@features/challenges/domain/challenge';
 import type { Submission, SubmissionDecisionAudit } from '@features/challenges/domain/submission';
@@ -6,6 +7,11 @@ import type { Submission, SubmissionDecisionAudit } from '@features/challenges/d
 export type ChallengeOpportunity = {
   readonly challenge: Challenge;
   readonly submission: Submission;
+};
+
+export type CursorPage<TItem> = {
+  readonly items: readonly TItem[];
+  readonly page: CursorPageMetaDto;
 };
 
 export type ChallengeFailure =
@@ -55,6 +61,11 @@ export type SubmitChallengeProposalCommand = {
 
 export type ListChallengeSubmissionsCommand = {
   readonly challengeId: ChallengeId;
+  readonly cursor?: string | null | undefined;
+};
+
+export type ListMyOpportunitiesCommand = {
+  readonly cursor?: string | null | undefined;
 };
 
 export type ListSubmissionDecisionAuditsCommand = {
@@ -71,12 +82,12 @@ export type DecideSubmissionCommand = {
 export type ChallengeGateway = {
   readonly listChallenges: () => Promise<Result<ChallengeFailure, readonly Challenge[]>>;
   readonly listMySubmissions: () => Promise<Result<ChallengeFailure, readonly Submission[]>>;
-  readonly listMyOpportunities: () => Promise<
-    Result<ChallengeFailure, readonly ChallengeOpportunity[]>
-  >;
+  readonly listMyOpportunities: (
+    command?: ListMyOpportunitiesCommand,
+  ) => Promise<Result<ChallengeFailure, CursorPage<ChallengeOpportunity>>>;
   readonly listChallengeSubmissions: (
     command: ListChallengeSubmissionsCommand,
-  ) => Promise<Result<ChallengeFailure, readonly Submission[]>>;
+  ) => Promise<Result<ChallengeFailure, CursorPage<Submission>>>;
   readonly listSubmissionDecisionAudits: (
     command: ListSubmissionDecisionAuditsCommand,
   ) => Promise<Result<ChallengeFailure, readonly SubmissionDecisionAudit[]>>;

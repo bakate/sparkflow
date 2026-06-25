@@ -101,6 +101,18 @@ export class ChallengeProposalsPage {
 
     return challengeId === null ? false : this.store.isLoadingChallengeSubmissions({ challengeId });
   });
+  protected readonly loadingMoreSubmissions = computed(() => {
+    const challengeId = this.challengeId();
+
+    return challengeId === null
+      ? false
+      : this.store.isLoadingMoreChallengeSubmissions({ challengeId });
+  });
+  protected readonly hasMoreSubmissions = computed(() => {
+    const challengeId = this.challengeId();
+
+    return challengeId === null ? false : this.store.hasMoreChallengeSubmissions({ challengeId });
+  });
 
   constructor() {
     effect(() => {
@@ -168,6 +180,16 @@ export class ChallengeProposalsPage {
   protected closeDecisionReasonDialog(): void {
     this.pendingReasonDecision.set(null);
     this.decisionReason.set('');
+  }
+
+  protected async loadMoreSubmissions(): Promise<void> {
+    const challengeId = this.challengeId();
+
+    if (challengeId === null) {
+      return;
+    }
+
+    await this.store.loadMoreChallengeSubmissions({ challengeId });
   }
 
   protected setDecisionReasonDialogVisible(input: { readonly visible: boolean }): void {

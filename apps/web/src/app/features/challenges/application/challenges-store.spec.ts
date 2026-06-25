@@ -14,8 +14,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -44,8 +44,9 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([openChallenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([{ challenge: completedChallenge, submission }]),
-        listChallengeSubmissions: async () => succeed([]),
+        listMyOpportunities: async () =>
+          succeed(createCursorPage([{ challenge: completedChallenge, submission }])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -64,6 +65,58 @@ describe('ChallengesStore', () => {
     expect(store.mySubmissions()).toEqual([submission]);
   });
 
+  it('appends the next startup opportunity cursor page', async () => {
+    const firstChallenge = createChallenge({ id: 'challenge-1', status: 'selection-completed' });
+    const secondChallenge = createChallenge({ id: 'challenge-2', status: 'selection-completed' });
+    const firstSubmission = createSubmission({ challengeId: firstChallenge.id });
+    const secondSubmission = createSubmission({
+      challengeId: secondChallenge.id,
+      id: 'submission-2' as SubmissionId,
+    });
+    const store = createStore({
+      challengeGateway: {
+        listChallenges: async () => succeed([]),
+        listMySubmissions: async () => succeed([]),
+        listMyOpportunities: async (command) =>
+          command?.cursor === 'submission-1'
+            ? succeed(
+                createCursorPage([{ challenge: secondChallenge, submission: secondSubmission }]),
+              )
+            : succeed(
+                createCursorPage(
+                  [{ challenge: firstChallenge, submission: firstSubmission }],
+                  'submission-1',
+                ),
+              ),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
+        listSubmissionDecisionAudits: async () => succeed([]),
+        createChallenge: async () => fail('unexpected-error'),
+        updateChallenge: async () => fail('unexpected-error'),
+        publishChallenge: async () => fail('unexpected-error'),
+        draftChallenge: async () => fail('unexpected-error'),
+        archiveChallenge: async () => fail('unexpected-error'),
+        submitChallengeProposal: async () => fail('unexpected-error'),
+        acceptSubmission: async () => fail('unexpected-error'),
+        rejectSubmission: async () => fail('unexpected-error'),
+        selectSubmission: async () => fail('unexpected-error'),
+      },
+    });
+
+    await expect
+      .poll(() => store.myOpportunities())
+      .toEqual([{ challenge: firstChallenge, submission: firstSubmission }]);
+    expect(store.hasMoreMyOpportunities()).toBe(true);
+
+    const result = await store.loadMoreMyOpportunities();
+
+    expect(result.ok).toBe(true);
+    expect(store.myOpportunities()).toEqual([
+      { challenge: firstChallenge, submission: firstSubmission },
+      { challenge: secondChallenge, submission: secondSubmission },
+    ]);
+    expect(store.hasMoreMyOpportunities()).toBe(false);
+  });
+
   it('adds created challenges first', async () => {
     const existingChallenge = createChallenge({ id: 'challenge-1' });
     const createdChallenge = createChallenge({ id: 'challenge-2' });
@@ -71,8 +124,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => succeed(createdChallenge),
         updateChallenge: async () => fail('unexpected-error'),
@@ -107,8 +160,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([existingChallenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => succeed(updatedChallenge),
@@ -148,8 +201,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([publishedChallenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -176,8 +229,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => fail('network-error'),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -201,8 +254,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -239,8 +292,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([submission]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([submission])),
         listSubmissionDecisionAudits: async () => succeed([]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -278,8 +331,8 @@ describe('ChallengesStore', () => {
       challengeGateway: {
         listChallenges: async () => succeed([challenge]),
         listMySubmissions: async () => succeed([]),
-        listMyOpportunities: async () => succeed([]),
-        listChallengeSubmissions: async () => succeed([submission]),
+        listMyOpportunities: async () => succeed(createCursorPage([])),
+        listChallengeSubmissions: async () => succeed(createCursorPage([submission])),
         listSubmissionDecisionAudits: async () => succeed([audit]),
         createChallenge: async () => fail('unexpected-error'),
         updateChallenge: async () => fail('unexpected-error'),
@@ -302,6 +355,11 @@ describe('ChallengesStore', () => {
     expect(store.isLoadingSubmissionDecisionAudits({ submissionId: submission.id })).toBe(false);
     expect(store.decisionAuditsForSubmission({ submissionId: submission.id })).toEqual([audit]);
   });
+});
+
+const createCursorPage = <TItem>(items: readonly TItem[], nextCursor: string | null = null) => ({
+  items,
+  page: { limit: 20, nextCursor },
 });
 
 const createStore = (input: { readonly challengeGateway: ChallengeGateway }): ChallengesStore => {
@@ -337,8 +395,11 @@ const createChallenge = (input: {
       : new Date('2026-06-21T11:00:00.000Z'),
 });
 
-const createSubmission = (input: { readonly challengeId: ChallengeId }): Submission => ({
-  id: 'submission-1' as SubmissionId,
+const createSubmission = (input: {
+  readonly challengeId: ChallengeId;
+  readonly id?: SubmissionId;
+}): Submission => ({
+  id: input.id ?? ('submission-1' as SubmissionId),
   challengeId: input.challengeId,
   startupOrganizationId: 'org-startup',
   summary: 'A serious implementation proposal.',

@@ -28,6 +28,7 @@ export class StartupOpportunitiesPage {
   protected readonly store = inject(ChallengesStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly localPaginatorRows = 20;
   protected readonly activeFilter = signal<OpportunityFilter>('all');
   protected readonly focusedSubmissionId = signal<SubmissionId | null>(
     toSubmissionId({ value: this.route.snapshot.queryParamMap.get('submissionId') }),
@@ -64,6 +65,11 @@ export class StartupOpportunitiesPage {
     }),
   );
   protected readonly dataViewOpportunities = computed(() => [...this.filteredOpportunities()]);
+  protected readonly usesLocalPaginator = computed(
+    () =>
+      !this.store.hasMoreMyOpportunities() &&
+      this.filteredOpportunities().length > this.localPaginatorRows,
+  );
   protected readonly opportunityFilters = computed<readonly OpportunityFilterViewModel[]>(() =>
     opportunityFilterOptions.map((filterOption) => ({
       ...filterOption,
@@ -73,6 +79,7 @@ export class StartupOpportunitiesPage {
           filter: filterOption.value,
         }),
       ).length,
+      hasMore: this.store.hasMoreMyOpportunities(),
       selected: this.activeFilter() === filterOption.value,
     })),
   );
@@ -96,6 +103,10 @@ export class StartupOpportunitiesPage {
 
   protected reloadOpportunities(): void {
     this.store.reloadChallenges();
+  }
+
+  protected async loadMoreOpportunities(): Promise<void> {
+    await this.store.loadMoreMyOpportunities();
   }
 
   protected selectFilter(input: { readonly filter: OpportunityFilter }): void {
@@ -137,6 +148,10 @@ export class StartupOpportunitiesPage {
     }
 
     return 'No results for this filter';
+  }
+
+  protected opportunityCountLabel(input: { readonly count: number }): string {
+    return `${input.count}${this.store.hasMoreMyOpportunities() ? '+' : ''}`;
   }
 
   protected errorMessage(): string | null {
@@ -205,6 +220,7 @@ type OpportunityFilterOption = {
 
 type OpportunityFilterViewModel = OpportunityFilterOption & {
   readonly count: number;
+  readonly hasMore: boolean;
   readonly selected: boolean;
 };
 

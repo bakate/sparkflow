@@ -12,6 +12,7 @@ import {
   type ArchiveChallengeCommand,
   type ChallengeFailure,
   type ChallengeOpportunity,
+  type CursorPage,
   type CreateChallengeCommand,
   type DecideSubmissionCommand,
   type DraftChallengeCommand,
@@ -33,13 +34,13 @@ export class ChallengesStore {
     loader: () => this.challengeGateway.listChallenges(),
   });
   private readonly myOpportunitiesResource = resource({
-    defaultValue: succeed<readonly ChallengeOpportunity[]>([]),
+    defaultValue: succeed<CursorPage<ChallengeOpportunity>>(emptyCursorPage()),
     loader: () => {
       const actor = this.authSession.currentActor();
 
       return actor?.role === 'startup-member'
         ? this.challengeGateway.listMyOpportunities()
-        : Promise.resolve(succeed<readonly ChallengeOpportunity[]>([]));
+        : Promise.resolve(succeed<CursorPage<ChallengeOpportunity>>(emptyCursorPage()));
     },
   });
   private readonly savingState = signal(false);
@@ -48,6 +49,7 @@ export class ChallengesStore {
   private readonly publishingIdsState = signal<readonly string[]>([]);
   private readonly submittingProposalIdsState = signal<readonly string[]>([]);
   private readonly loadingSubmissionChallengeIdsState = signal<readonly string[]>([]);
+  private readonly loadingMoreSubmissionChallengeIdsState = signal<readonly string[]>([]);
   private readonly loadedSubmissionChallengeIdsState = signal<readonly string[]>([]);
   private readonly loadingSubmissionAuditIdsState = signal<readonly string[]>([]);
   private readonly loadedSubmissionAuditIdsState = signal<readonly string[]>([]);
@@ -55,9 +57,13 @@ export class ChallengesStore {
   private readonly challengeSubmissionsByChallengeIdState = signal<
     Record<string, readonly Submission[]>
   >({});
+  private readonly challengeSubmissionPageByChallengeIdState = signal<
+    Record<string, CursorPage<Submission>['page']>
+  >({});
   private readonly submissionAuditsBySubmissionIdState = signal<
     Record<string, readonly SubmissionDecisionAudit[]>
   >({});
+  private readonly loadingMoreMyOpportunitiesState = signal(false);
   private readonly commandErrorState = signal<ChallengeFailure | null>(null);
 
   readonly challenges = computed(() => {
@@ -68,12 +74,12 @@ export class ChallengesStore {
   readonly mySubmissions = computed(() => {
     const result = this.myOpportunitiesResource.value();
 
-    return result.ok ? result.value.map((opportunity) => opportunity.submission) : [];
+    return result.ok ? result.value.items.map((opportunity) => opportunity.submission) : [];
   });
   readonly myOpportunities = computed(() => {
     const result = this.myOpportunitiesResource.value();
 
-    return result.ok ? result.value : [];
+    return result.ok ? result.value.items : [];
   });
   readonly myOpportunityChallenges = computed(() => {
     const challengeById = new Map<string, Challenge>();
@@ -86,12 +92,20 @@ export class ChallengesStore {
   });
   readonly loading = this.challengesResource.isLoading;
   readonly loadingMySubmissions = this.myOpportunitiesResource.isLoading;
+  readonly loadingMoreMyOpportunities = this.loadingMoreMyOpportunitiesState.asReadonly();
+  readonly hasMoreMyOpportunities = computed(() => {
+    const result = this.myOpportunitiesResource.value();
+
+    return result.ok && result.value.page.nextCursor !== null;
+  });
   readonly saving = this.savingState.asReadonly();
   readonly archivingIds = this.archivingIdsState.asReadonly();
   readonly draftingIds = this.draftingIdsState.asReadonly();
   readonly publishingIds = this.publishingIdsState.asReadonly();
   readonly submittingProposalIds = this.submittingProposalIdsState.asReadonly();
   readonly loadingSubmissionChallengeIds = this.loadingSubmissionChallengeIdsState.asReadonly();
+  readonly loadingMoreSubmissionChallengeIds =
+    this.loadingMoreSubmissionChallengeIdsState.asReadonly();
   readonly loadedSubmissionChallengeIds = this.loadedSubmissionChallengeIdsState.asReadonly();
   readonly loadingSubmissionAuditIds = this.loadingSubmissionAuditIdsState.asReadonly();
   readonly loadedSubmissionAuditIds = this.loadedSubmissionAuditIdsState.asReadonly();
@@ -251,7 +265,10 @@ export class ChallengesStore {
     );
     this.commandErrorState.set(null);
 
-    const result = await this.challengeGateway.listChallengeSubmissions(command);
+    const result = await this.challengeGateway.listChallengeSubmissions({
+      challengeId: command.challengeId,
+      cursor: command.cursor ?? null,
+    });
     this.removeLoadingSubmissionChallengeId({ challengeId: command.challengeId });
 
     if (!result.ok) {
@@ -261,14 +278,107 @@ export class ChallengesStore {
 
     this.challengeSubmissionsByChallengeIdState.update((submissionsByChallengeId) => ({
       ...submissionsByChallengeId,
-      [command.challengeId]: result.value,
+      [command.challengeId]: result.value.items,
+    }));
+    this.challengeSubmissionPageByChallengeIdState.update((pagesByChallengeId) => ({
+      ...pagesByChallengeId,
+      [command.challengeId]: result.value.page,
     }));
     this.loadedSubmissionChallengeIdsState.update((challengeIds) =>
       challengeIds.includes(command.challengeId)
         ? challengeIds
         : [...challengeIds, command.challengeId],
     );
-    return succeed(result.value);
+    return succeed(result.value.items);
+  }
+
+  async loadMoreChallengeSubmissions(input: {
+    readonly challengeId: ChallengeId;
+  }): Promise<Result<ChallengeFailure, readonly Submission[]>> {
+    const nextCursor =
+      this.challengeSubmissionPageByChallengeIdState()[input.challengeId]?.nextCursor;
+
+    if (nextCursor === null || nextCursor === undefined) {
+      return succeed(this.submissionsForChallenge({ challengeId: input.challengeId }));
+    }
+
+    if (this.isLoadingMoreChallengeSubmissions({ challengeId: input.challengeId })) {
+      return succeed(this.submissionsForChallenge({ challengeId: input.challengeId }));
+    }
+
+    this.loadingMoreSubmissionChallengeIdsState.update((challengeIds) => [
+      ...challengeIds,
+      input.challengeId,
+    ]);
+    this.commandErrorState.set(null);
+
+    const result = await this.challengeGateway.listChallengeSubmissions({
+      challengeId: input.challengeId,
+      cursor: nextCursor,
+    });
+    this.removeLoadingMoreSubmissionChallengeId({ challengeId: input.challengeId });
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    this.challengeSubmissionsByChallengeIdState.update((submissionsByChallengeId) => ({
+      ...submissionsByChallengeId,
+      [input.challengeId]: mergeSubmissions({
+        currentSubmissions: submissionsByChallengeId[input.challengeId] ?? [],
+        nextSubmissions: result.value.items,
+      }),
+    }));
+    this.challengeSubmissionPageByChallengeIdState.update((pagesByChallengeId) => ({
+      ...pagesByChallengeId,
+      [input.challengeId]: result.value.page,
+    }));
+
+    return succeed(this.submissionsForChallenge({ challengeId: input.challengeId }));
+  }
+
+  async loadMoreMyOpportunities(): Promise<
+    Result<ChallengeFailure, CursorPage<ChallengeOpportunity>>
+  > {
+    const currentResult = this.myOpportunitiesResource.value();
+
+    if (!currentResult.ok) {
+      return fail(currentResult.error);
+    }
+
+    const nextCursor = currentResult.value.page.nextCursor;
+
+    if (nextCursor === null) {
+      return succeed(currentResult.value);
+    }
+
+    if (this.loadingMoreMyOpportunities()) {
+      return succeed(currentResult.value);
+    }
+
+    this.loadingMoreMyOpportunitiesState.set(true);
+    this.commandErrorState.set(null);
+
+    const result = await this.challengeGateway.listMyOpportunities({ cursor: nextCursor });
+    this.loadingMoreMyOpportunitiesState.set(false);
+
+    if (!result.ok) {
+      this.commandErrorState.set(result.error);
+      return fail(result.error);
+    }
+
+    const nextPage = {
+      items: mergeOpportunities({
+        currentOpportunities: currentResult.value.items,
+        nextOpportunities: result.value.items,
+      }),
+      page: result.value.page,
+    };
+
+    this.myOpportunitiesResource.update(() => succeed(nextPage));
+
+    return succeed(nextPage);
   }
 
   async loadMissingChallengeSubmissions(input: {
@@ -422,6 +532,17 @@ export class ChallengesStore {
     return this.loadingSubmissionChallengeIds().includes(input.challengeId);
   }
 
+  isLoadingMoreChallengeSubmissions(input: { readonly challengeId: string }): boolean {
+    return this.loadingMoreSubmissionChallengeIds().includes(input.challengeId);
+  }
+
+  hasMoreChallengeSubmissions(input: { readonly challengeId: string }): boolean {
+    return (
+      this.challengeSubmissionPageByChallengeIdState()[input.challengeId]?.nextCursor !== null &&
+      this.challengeSubmissionPageByChallengeIdState()[input.challengeId]?.nextCursor !== undefined
+    );
+  }
+
   isLoadingSubmissionDecisionAudits(input: { readonly submissionId: string }): boolean {
     return this.loadingSubmissionAuditIds().includes(input.submissionId);
   }
@@ -538,13 +659,14 @@ export class ChallengesStore {
     });
     this.myOpportunitiesResource.update((currentResult) =>
       currentResult.ok
-        ? succeed(
-            currentResult.value.map((opportunity) =>
+        ? succeed({
+            ...currentResult.value,
+            items: currentResult.value.items.map((opportunity) =>
               opportunity.submission.id === input.submission.id
                 ? { ...opportunity, submission: input.submission }
                 : opportunity,
             ),
-          )
+          })
         : currentResult,
     );
   }
@@ -561,13 +683,25 @@ export class ChallengesStore {
 
     this.myOpportunitiesResource.update((currentResult) =>
       currentResult.ok
-        ? succeed([{ challenge, submission: input.submission }, ...currentResult.value])
-        : succeed([{ challenge, submission: input.submission }]),
+        ? succeed({
+            ...currentResult.value,
+            items: [{ challenge, submission: input.submission }, ...currentResult.value.items],
+          })
+        : succeed({
+            items: [{ challenge, submission: input.submission }],
+            page: { limit: 20, nextCursor: null },
+          }),
     );
   }
 
   private removeLoadingSubmissionChallengeId(input: { readonly challengeId: string }): void {
     this.loadingSubmissionChallengeIdsState.update((challengeIds) =>
+      challengeIds.filter((challengeId) => challengeId !== input.challengeId),
+    );
+  }
+
+  private removeLoadingMoreSubmissionChallengeId(input: { readonly challengeId: string }): void {
+    this.loadingMoreSubmissionChallengeIdsState.update((challengeIds) =>
       challengeIds.filter((challengeId) => challengeId !== input.challengeId),
     );
   }
@@ -584,3 +718,38 @@ export class ChallengesStore {
     );
   }
 }
+
+const emptyCursorPage = <TItem>(): CursorPage<TItem> => ({
+  items: [],
+  page: { limit: 20, nextCursor: null },
+});
+
+const mergeOpportunities = (input: {
+  readonly currentOpportunities: readonly ChallengeOpportunity[];
+  readonly nextOpportunities: readonly ChallengeOpportunity[];
+}): readonly ChallengeOpportunity[] => {
+  const opportunitiesBySubmissionId = new Map(
+    input.currentOpportunities.map((opportunity) => [opportunity.submission.id, opportunity]),
+  );
+
+  input.nextOpportunities.forEach((opportunity) => {
+    opportunitiesBySubmissionId.set(opportunity.submission.id, opportunity);
+  });
+
+  return [...opportunitiesBySubmissionId.values()];
+};
+
+const mergeSubmissions = (input: {
+  readonly currentSubmissions: readonly Submission[];
+  readonly nextSubmissions: readonly Submission[];
+}): readonly Submission[] => {
+  const submissionsById = new Map(
+    input.currentSubmissions.map((submission) => [submission.id, submission]),
+  );
+
+  input.nextSubmissions.forEach((submission) => {
+    submissionsById.set(submission.id, submission);
+  });
+
+  return [...submissionsById.values()];
+};

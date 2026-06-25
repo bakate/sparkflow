@@ -19,9 +19,16 @@
       </div>
     }
   } @else {
-    <p-dataview [value]="dataViewSubmissions()" layout="list" [emptyMessage]="emptyMessage()">
+    <p-dataview
+      [value]="dataViewSubmissions()"
+      layout="list"
+      [emptyMessage]="emptyMessage()"
+      [rows]="localPaginatorRows"
+      [paginator]="usesLocalPaginator()"
+      [alwaysShowPaginator]="false"
+    >
       <ng-template #emptymessage>
-        <app-empty-state
+        <empty-state
           title="No proposals here"
           [description]="emptyMessage()"
           icon="pi pi-inbox"
@@ -107,5 +114,19 @@
         </div>
       </ng-template>
     </p-dataview>
+
+    @if (hasMore()) {
+      <div class="flex justify-content-center">
+        <p-button
+          label="Load more proposals"
+          icon="pi pi-chevron-down"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="loadingMore()"
+          [disabled]="loadingMore()"
+          (onClick)="loadMore.emit()"
+        />
+      </div>
+    }
   }
 </div>

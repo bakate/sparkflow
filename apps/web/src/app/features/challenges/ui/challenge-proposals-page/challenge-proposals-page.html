@@ -26,7 +26,7 @@
         } @else if (store.loading()) {
           <p class="m-0 text-color-secondary">Loading challenge...</p>
         } @else {
-          <app-empty-state
+          <empty-state
             title="Challenge not found"
             description="Go back to challenges and open an available review."
             icon="pi pi-search"
@@ -104,12 +104,14 @@
           emptyMessage="No final startup selected yet."
           [decidingSubmissionIds]="store.decidingSubmissionIds()"
           [finalSelectionLocked]="finalSelectionLocked()"
+          [hasMore]="false"
+          [loadingMore]="false"
           (accepted)="acceptSubmission($event)"
           (rejected)="rejectSubmission($event)"
           (selected)="selectSubmission($event)"
         />
       } @else {
-        <app-empty-state
+        <empty-state
           title="No final startup selected"
           description="Shortlist a proposal first, then select the startup that should move forward."
           icon="pi pi-star"
@@ -144,9 +146,12 @@
         emptyMessage="No other proposals to review."
         [decidingSubmissionIds]="store.decidingSubmissionIds()"
         [finalSelectionLocked]="finalSelectionLocked()"
+        [hasMore]="hasMoreSubmissions()"
+        [loadingMore]="loadingMoreSubmissions()"
         (accepted)="acceptSubmission($event)"
         (rejected)="rejectSubmission($event)"
         (selected)="selectSubmission($event)"
+        (loadMore)="loadMoreSubmissions()"
       />
     </section>
 
@@ -166,7 +171,7 @@
       </div>
 
       @if (decidedSubmissions().length === 0) {
-        <app-empty-state
+        <empty-state
           title="No decision history"
           description="Shortlist, reject, or select a proposal to start the audit trail."
           icon="pi pi-history"

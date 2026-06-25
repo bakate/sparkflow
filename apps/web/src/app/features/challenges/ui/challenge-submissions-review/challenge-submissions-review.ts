@@ -20,10 +20,17 @@ export class ChallengeSubmissionsReview {
   readonly decidingSubmissionIds = input<readonly string[]>([]);
   readonly emptyMessage = input('No proposals submitted yet.');
   readonly finalSelectionLocked = input(false);
+  readonly hasMore = input(false);
+  readonly loadingMore = input(false);
   readonly accepted = output<{ readonly submissionId: SubmissionId }>();
   readonly rejected = output<{ readonly submissionId: SubmissionId }>();
   readonly selected = output<{ readonly submissionId: SubmissionId }>();
+  readonly loadMore = output<void>();
+  protected readonly localPaginatorRows = 20;
   protected readonly dataViewSubmissions = computed(() => [...this.submissions()]);
+  protected readonly usesLocalPaginator = computed(
+    () => !this.hasMore() && this.submissions().length > this.localPaginatorRows,
+  );
 
   protected canDecide(input: { readonly submission: Submission }): boolean {
     return !this.finalSelectionLocked() && input.submission.status === 'submitted';

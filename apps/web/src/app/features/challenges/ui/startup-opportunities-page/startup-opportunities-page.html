@@ -7,9 +7,10 @@
         My opportunities
       </h2>
       <p class="m-0 text-color-secondary">
-        {{ opportunitySummary().submitted }} under review,
-        {{ opportunitySummary().shortlisted }} shortlisted,
-        {{ opportunitySummary().selected }} selected, {{ opportunitySummary().closed }} closed
+        {{ opportunityCountLabel({ count: opportunitySummary().submitted }) }} under review,
+        {{ opportunityCountLabel({ count: opportunitySummary().shortlisted }) }} shortlisted,
+        {{ opportunityCountLabel({ count: opportunitySummary().selected }) }} selected,
+        {{ opportunityCountLabel({ count: opportunitySummary().closed }) }} closed
       </p>
     </div>
 
@@ -41,10 +42,22 @@
   }
 
   <div class="flex gap-2 flex-wrap" aria-label="Opportunity status counters">
-    <p-tag severity="info" [value]="opportunitySummary().submitted + ' under review'" />
-    <p-tag severity="info" [value]="opportunitySummary().shortlisted + ' shortlisted'" />
-    <p-tag severity="success" [value]="opportunitySummary().selected + ' selected'" />
-    <p-tag severity="secondary" [value]="opportunitySummary().closed + ' closed'" />
+    <p-tag
+      severity="info"
+      [value]="opportunityCountLabel({ count: opportunitySummary().submitted }) + ' under review'"
+    />
+    <p-tag
+      severity="info"
+      [value]="opportunityCountLabel({ count: opportunitySummary().shortlisted }) + ' shortlisted'"
+    />
+    <p-tag
+      severity="success"
+      [value]="opportunityCountLabel({ count: opportunitySummary().selected }) + ' selected'"
+    />
+    <p-tag
+      severity="secondary"
+      [value]="opportunityCountLabel({ count: opportunitySummary().closed }) + ' closed'"
+    />
   </div>
 
   @if (focusedSubmissionId() !== null) {
@@ -73,7 +86,9 @@
         [attr.aria-pressed]="filter.selected"
         (click)="selectFilter({ filter: filter.value })"
       >
-        <span class="p-button-label">{{ filter.label }} ({{ filter.count }})</span>
+        <span class="p-button-label"
+          >{{ filter.label }} ({{ filter.count }}{{ filter.hasMore ? '+' : '' }})</span
+        >
       </button>
     }
   </div>
@@ -84,9 +99,16 @@
         Loading opportunities...
       </p>
     } @else {
-      <p-dataview [value]="dataViewOpportunities()" layout="list" [emptyMessage]="emptyMessage()">
+      <p-dataview
+        [value]="dataViewOpportunities()"
+        layout="list"
+        [emptyMessage]="emptyMessage()"
+        [rows]="localPaginatorRows"
+        [paginator]="usesLocalPaginator()"
+        [alwaysShowPaginator]="false"
+      >
         <ng-template #emptymessage>
-          <app-empty-state
+          <empty-state
             [title]="emptyTitle()"
             [description]="emptyMessage()"
             icon="pi pi-briefcase"
@@ -165,6 +187,20 @@
           </div>
         </ng-template>
       </p-dataview>
+
+      @if (store.hasMoreMyOpportunities()) {
+        <div class="flex justify-content-center mt-3">
+          <p-button
+            label="Load more opportunities"
+            icon="pi pi-chevron-down"
+            severity="secondary"
+            [outlined]="true"
+            [loading]="store.loadingMoreMyOpportunities()"
+            [disabled]="store.loadingMoreMyOpportunities()"
+            (onClick)="loadMoreOpportunities()"
+          />
+        </div>
+      }
     }
   </div>
 </section>

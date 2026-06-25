@@ -64,7 +64,7 @@
     @if (store.loading() || store.loadingMySubmissions()) {
       <p class="m-0 p-3 border-1 surface-border border-round surface-card">Loading challenges...</p>
     } @else if (displayedChallenges().length === 0) {
-      <app-empty-state
+      <empty-state
         [title]="challengeEmptyTitle()"
         [description]="challengeEmptyDescription()"
         icon="pi pi-folder-open"
