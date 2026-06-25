@@ -33,17 +33,21 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
     },
   ],
   template: `
-    <header class="p-3 mb-4 navbar-shadow border-bottom-1">
-      <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-3">
-        <div class="flex flex-column sm:flex-row sm:align-items-center gap-3">
-          <a routerLink="/" class="flex gap-2 align-items-center navbar-logo">
+    <header class="p-3 mb-4 navbar-shell navbar-shadow border-bottom-1">
+      <div class="navbar-layout">
+        <div class="navbar-brand-row">
+          <a
+            routerLink="/"
+            class="flex gap-2 align-items-center navbar-logo"
+            aria-label="Sparkflow home"
+          >
             <img ngSrc="/logo.png" alt="sparkflow logo" width="40" height="40" />
             <span class="mr-1 uppercase text-primary">Sparkflow</span>
           </a>
 
           @if (currentUser(); as user) {
-            <nav class="flex align-items-center gap-2" aria-label="Primary navigation">
-              @if (user.role === 'startup-member') {
+            @if (user.role === 'startup-member') {
+              <nav class="navbar-primary-nav" aria-label="Primary navigation">
                 <a
                   routerLink="/challenges"
                   routerLinkActive="navbar-link-active"
@@ -58,23 +62,13 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                 >
                   My opportunities
                 </a>
-              } @else if (user.role === 'company-admin') {
-                <a
-                  routerLink="/challenges"
-                  routerLinkActive="navbar-link-active"
-                  class="navbar-link"
-                >
-                  Challenges
-                </a>
-              }
-            </nav>
+              </nav>
+            }
           }
         </div>
 
         @if (currentUser(); as user) {
-          <div
-            class="flex flex-column sm:flex-row sm:align-items-center gap-2 md:justify-content-end"
-          >
+          <div class="navbar-actions">
             <div class="relative">
               @if (notificationsStore.notificationCount() > 0) {
                 <p-overlaybadge
@@ -206,7 +200,7 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
                 </div>
               </p-popover>
             </div>
-            <p-tag [value]="roleLabel()" severity="info" class="ml-2" />
+            <p-tag [value]="roleLabel()" severity="info" />
             <p-button
               icon="pi pi-sign-out"
               label="Logout"
@@ -219,21 +213,70 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
     </header>
   `,
   styles: `
+    .navbar-shell {
+      --navbar-muted-border: color-mix(in srgb, var(--p-surface-border) 75%, transparent);
+    }
+
+    .navbar-layout {
+      align-items: center;
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .navbar-brand-row {
+      align-items: center;
+      display: flex;
+      flex: 1 1 auto;
+      gap: 1.25rem;
+      min-width: 0;
+    }
+
     .navbar-logo {
+      align-items: center;
+      display: inline-flex;
+      flex: 0 0 auto;
       text-decoration: none;
       color: inherit;
       font-size: 1.5rem;
       font-weight: 600;
+      min-width: 0;
+    }
+
+    .navbar-logo span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .navbar-primary-nav {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      min-width: 0;
     }
 
     .navbar-link {
       color: var(--p-text-muted-color);
       font-weight: 600;
+      line-height: 1;
+      padding: 0.375rem 0;
       text-decoration: none;
     }
 
     .navbar-link-active {
       color: var(--p-primary-color);
+    }
+
+    .navbar-actions {
+      align-items: center;
+      display: flex;
+      flex: 0 0 auto;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      min-width: 0;
     }
 
     .notifications-panel {
@@ -261,6 +304,58 @@ import { HttpNotificationGateway } from '@features/notifications/infrastructure/
     .notification-item-unread {
       border-left-color: var(--p-primary-color);
       background: color-mix(in srgb, var(--p-primary-color) 6%, transparent);
+    }
+
+    @media (max-width: 48rem) {
+      .navbar-layout {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .navbar-brand-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.875rem;
+        width: 100%;
+      }
+
+      .navbar-logo {
+        font-size: 1.35rem;
+      }
+
+      .navbar-primary-nav {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .navbar-link {
+        align-items: center;
+        border: 1px solid var(--navbar-muted-border);
+        border-radius: 6px;
+        display: inline-flex;
+        justify-content: center;
+        min-height: 2.5rem;
+        padding: 0 0.75rem;
+        text-align: center;
+      }
+
+      .navbar-link-active {
+        background: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
+        border-color: color-mix(in srgb, var(--p-primary-color) 36%, var(--p-surface-border));
+      }
+
+      .navbar-actions {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        width: 100%;
+      }
+
+      .navbar-actions p-tag {
+        min-width: 0;
+        text-align: center;
+      }
     }
   `,
 })
